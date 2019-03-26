@@ -9,7 +9,7 @@ patterns for exchanging this schema using standard protocols. ([more...](http://
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
 ```
-go get https://github.com/elimity-com/go-scim-2.git
+go get github.com/elimity-com/go-scim-2
 ```
 
 ## Contributing
