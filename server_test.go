@@ -53,5 +53,5 @@ func TestNewServer(t *testing.T) {
 		t.Error("expected: no such file or directory")
 	}
 
-	NewServer(*user)
+	NewServer(user)
 }

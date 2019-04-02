@@ -1,10 +1,10 @@
 package scim
 
 type Server struct {
-	schemas []schema
+	schemas []Schema
 }
 
-func NewServer(schemas ...schema) Server {
+func NewServer(schemas ...Schema) Server {
 	return Server{
 		schemas: schemas,
 	}

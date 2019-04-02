@@ -14,31 +14,35 @@ func init() {
 }
 
 // NewSchemaFromFile reads the file from given filepath and returns a validated schema if no error take place.
-func NewSchemaFromFile(filepath string) (*schema, error) {
+func NewSchemaFromFile(filepath string) (Schema, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return nil, err
+		return Schema{}, err
 	}
 
 	return NewSchemaFromBytes(raw)
 }
 
 // NewSchemaFromString returns a validated schema if no errors take place.
-func NewSchemaFromString(s string) (*schema, error) {
+func NewSchemaFromString(s string) (Schema, error) {
 	return NewSchemaFromBytes([]byte(s))
 }
 
 // NewSchemaFromBytes returns a validated schema if no error take place.
-func NewSchemaFromBytes(raw []byte) (*schema, error) {
+func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	err := metaSchema.validate(raw)
 	if err != nil {
-		return nil, err
+		return Schema{}, err
 	}
 
 	var schema schema
 	json.Unmarshal(raw, &schema)
 
-	return &schema, nil
+	return Schema{schema: schema}, nil
+}
+
+type Schema struct {
+	schema schema
 }
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
@@ -52,20 +56,20 @@ type schema struct {
 	// Description is the schema's human-readable description.  OPTIONAL.
 	Description string
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
-	Attributes []attribute
+	Attributes attributes
 }
 
 // validate unmarshals given bytes into a map[string]interface and validates it based on the schema.
-func (s *schema) validate(raw []byte) error {
+func (s schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
 	if err != nil {
 		return err
 	}
-	return validate(s.Attributes, m)
+	return s.Attributes.validate(m)
 }
 
-// Attribute is a complex type that defines service provider attributes and their qualities via the following set of
+// attribute is a complex type that defines service provider attributes and their qualities via the following set of
 // sub-attributes.
 // INFO: RFC7643 - 7.  Schema Definition
 type attribute struct {
@@ -77,7 +81,7 @@ type attribute struct {
 	Type attributeType
 	// SubAttributes defines a set of sub-attributes when an attribute is of type "complex". "subAttributes" has the
 	// same schema sub-attributes as "attributes".
-	SubAttributes []attribute
+	SubAttributes attributes
 	// MultiValued is a boolean value indicating the attribute's plurality.
 	MultiValued bool
 	// Description is the attribute's human-readable description. When applicable, service providers MUST specify the
@@ -105,7 +109,7 @@ type attribute struct {
 }
 
 // validate checks whether given value is required, checks for duplicate fields in arrays and validates the type.
-func (a *attribute) validate(i interface{}) error {
+func (a attribute) validate(i interface{}) error {
 	// validate required
 	if i == nil {
 		if a.Required {
@@ -137,7 +141,7 @@ func (a *attribute) validate(i interface{}) error {
 }
 
 // validateSingle checks the type of the given interface based on the attribute.
-func (a *attribute) validateSingular(i interface{}) error {
+func (a attribute) validateSingular(i interface{}) error {
 	switch a.Type {
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
@@ -145,7 +149,7 @@ func (a *attribute) validateSingular(i interface{}) error {
 			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
 		}
 	case attributeTypeComplex:
-		if err := validate(a.SubAttributes, i); err != nil {
+		if err := a.SubAttributes.validate(i); err != nil {
 			return err
 		}
 	case attributeTypeString:
@@ -155,6 +159,38 @@ func (a *attribute) validateSingular(i interface{}) error {
 		}
 	default:
 		return fmt.Errorf("not implemented/invalid type: %v", a.Type)
+	}
+	return nil
+}
+
+type attributes []attribute
+
+// validate casts given interface to a map[string]interface, returns error if not succeeded, otherwise it checks every
+// attribute for matching keys in the map and returns an error if duplicates are found. if a unique matching field is
+// found it validates the field bases on matching attribute.
+func (as attributes) validate(i interface{}) error {
+	c, ok := i.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("cannot convert %v to type complex", i)
+	}
+
+	for _, attribute := range as {
+		// validate duplicate
+		var hit interface{}
+		var found bool
+		for k, v := range c {
+			if strings.EqualFold(attribute.Name, k) {
+				if found {
+					return fmt.Errorf("duplicate key: %s", strings.ToLower(k))
+				}
+				found = true
+				hit = v
+			}
+		}
+
+		if err := attribute.validate(hit); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -197,33 +233,3 @@ const (
 	attributeUniquenessNone                       = "none"
 	attributeUniquenessServer                     = "server"
 )
-
-// validate casts given interface to a map[string]interface, returns error if not succeeded, otherwise it checks every
-// attribute for matching keys in the map and returns an error if duplicates are found. if a unique matching field is
-// found it validates the field bases on matching attribute.
-func validate(attributes []attribute, i interface{}) error {
-	c, ok := i.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("cannot convert %v to type complex", i)
-	}
-
-	for _, attribute := range attributes {
-		// validate duplicate
-		var hit interface{}
-		var found bool
-		for k, v := range c {
-			if strings.EqualFold(attribute.Name, k) {
-				if found {
-					return fmt.Errorf("duplicate key: %s", strings.ToLower(k))
-				}
-				found = true
-				hit = v
-			}
-		}
-
-		if err := attribute.validate(hit); err != nil {
-			return err
-		}
-	}
-	return nil
-}
