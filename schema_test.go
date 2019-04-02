@@ -1,143 +1,90 @@
 package scim
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
+
+func TestNewSchemaFromString(t *testing.T) {
+	cases := []struct {
+		s   string
+		err string
+	}{
+		{
+			s: `{
+  				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+  				"name": "User",
+  				"attributes": []
+			}`,
+			err: "required array is empty",
+		},
+		{
+			s: `{
+  				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+  				"name": "User",
+  				"attributes": [
+    				{
+    		  			"name": "userName",
+    		  			"type": "string",
+    		  			"multiValued": false,
+    		  			"required": true,
+    		  			"caseExact": false,
+    		  			"mutability": "readWrite",
+    		  			"returned": "default",
+    		  			"uniqueness": "server"
+    				}
+  				]
+			}`,
+			err: "",
+		},
+	}
+
+	for idx, test := range cases {
+		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
+			if _, err := NewSchemaFromString(test.s); err == nil || err.Error() != test.err {
+				if err != nil || test.err != "" {
+					t.Errorf("expected: %s / got: %v", test.err, err)
+				}
+			}
+		})
+	}
+}
+
+func TestNewSchemaFromFile(t *testing.T) {
+	_, err := NewSchemaFromFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = NewSchemaFromFile("")
+	if err == nil {
+		t.Error("expected: no such file or directory")
+	}
+}
 
 func TestSchemaValidation(t *testing.T) {
 	// validate raw meta schema with meta schema
 	if err := metaSchema.validate([]byte(rawMetaSchema)); err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
-	s := `{
-  		"id": "urn:ietf:params:scim:schemas:core:2.0:User",
-  		"name": "User",
-  		"description": "User Account",
-  		"attributes": [
-    		{
-      			"name": "userName",
-      			"type": "string",
-      			"multiValued": false,
-      			"required": true,
-      			"caseExact": false,
-      			"mutability": "readWrite",
-      			"returned": "default",
-      			"uniqueness": "server"
-    		},
-    		{
-      			"name": "name",
-      			"type": "complex",
-      			"multiValued": false,
-      			"required": false,
-      			"subAttributes": [
-        			{
-          				"name": "familyName",
-          				"type": "string",
-          				"multiValued": false,
-          				"required": false,
-          				"caseExact": false,
-          				"mutability": "readWrite",
-          				"returned": "default",
-          				"uniqueness": "none"
-        			},
-        			{
-          				"name": "givenName",
-          				"type": "string",
-          				"multiValued": false,
-          				"required": false,
-          				"caseExact": false,
-          				"mutability": "readWrite",
-          				"returned": "default",
-          				"uniqueness": "none"
-        			}
-      			],
-      			"mutability": "readWrite",
-      			"returned": "default",
-      			"uniqueness": "none"
-    		},
-    		{
-				"name": "displayName",
-      			"type": "string",
-      			"multiValued": false,
-      			"required": false,
-      			"caseExact": false,
-      			"mutability": "readWrite",
-      			"returned": "default",
-      			"uniqueness": "none"
-    		},
-    		{
-      			"name": "emails",
-      			"type": "complex",
-      			"multiValued": true,
-      			"required": false,
-      			"subAttributes": [
-      				{
-      					"name": "value",
-      					"type": "string",
-      					"multiValued": false,
-      					"required": false,
-      					"caseExact": false,
-      					"mutability": "readWrite",
-      					"returned": "default",
-      					"uniqueness": "none"
-      				},
-      				{
-      					"name": "display",
-      					"type": "string",
-      					"multiValued": false,
-      					"required": false,
-      					"caseExact": false,
-      					"mutability": "readWrite",
-      					"returned": "default",
-      					"uniqueness": "none"
-      				},
-      				{
-      					"name": "type",
-      					"type": "string",
-      					"multiValued": false,
-      					"required": false,
-      					"caseExact": false,
-      					"canonicalValues": [
-      						"work",
-      						"home",
-      						"other"
-      					],
-      					"mutability": "readWrite",
-      					"returned": "default",
-      					"uniqueness": "none"
-      				},
-      				{
-      					"name": "primary",
-      					"type": "boolean",
-      					"multiValued": false,
-      					"required": false,
-      					"mutability": "readWrite",
-      					"returned": "default"
-      				}
-      			],
-      			"mutability": "readWrite",
-      			"returned": "default",
-      			"uniqueness": "none"
-    		}
-  		],
-  		"meta": {
-    		"resourceType": "Schema",
-    		"location": "/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
-  		}
-	}`
+	raw, err := ioutil.ReadFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
 
 	// validate simple user schema with meta schema
-	if err := metaSchema.validate([]byte(s)); err != nil {
-		t.Errorf(err.Error())
+	if err := metaSchema.validate(raw); err != nil {
+		t.Error(err)
 	}
 
-	var schema schema
-	if err := json.Unmarshal([]byte(s), &schema); err != nil {
-		t.Errorf(err.Error())
+	s, err := NewSchemaFromBytes(raw)
+	if err != nil {
+		t.Error(err)
 	}
+
+	schema := s.schema
 
 	// validate user with simple user schema
 	if err := schema.validate([]byte(`{
@@ -152,7 +99,7 @@ func TestSchemaValidation(t *testing.T) {
        		"givenName": "given name"
 		}
 	}`)); err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 
 	// invalid user
@@ -198,22 +145,8 @@ func TestSchemaValidation(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	cases := []struct {
-		s   string
-		err string
-	}{
-		{
-			s:   ``,
-			err: "unexpected end of JSON input",
-		},
-	}
-
-	for idx, test := range cases {
-		t.Run(fmt.Sprintf("json %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
-			}
-		})
+	if err := metaSchema.validate([]byte(``)); err.Error() != "unexpected end of JSON input" {
+		t.Errorf("expected: unexpected end of JSON input / got: %v", err)
 	}
 }
 
