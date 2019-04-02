@@ -13,7 +13,7 @@ func init() {
 	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
 }
 
-// NewSchemaFromFile reads the file from given filepath and returns a validated schema if no error take place.
+// NewSchemaFromFile reads the file from given filepath and returns a validated schema if no errors take place.
 func NewSchemaFromFile(filepath string) (Schema, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -28,7 +28,7 @@ func NewSchemaFromString(s string) (Schema, error) {
 	return NewSchemaFromBytes([]byte(s))
 }
 
-// NewSchemaFromBytes returns a validated schema if no error take place.
+// NewSchemaFromBytes returns a validated schema if no errors take place.
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	err := metaSchema.validate(raw)
 	if err != nil {
@@ -59,7 +59,7 @@ type schema struct {
 	Attributes attributes
 }
 
-// validate unmarshals given bytes into a map[string]interface and validates it based on the schema.
+// validate unmarshals the given bytes and validates it based on the schema.
 func (s schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
@@ -108,7 +108,6 @@ type attribute struct {
 	ReferenceTypes []string
 }
 
-// validate checks whether given value is required, checks for duplicate fields in arrays and validates the type.
 func (a attribute) validate(i interface{}) error {
 	// validate required
 	if i == nil {
@@ -140,7 +139,6 @@ func (a attribute) validate(i interface{}) error {
 	return a.validateSingular(i)
 }
 
-// validateSingle checks the type of the given interface based on the attribute.
 func (a attribute) validateSingular(i interface{}) error {
 	switch a.Type {
 	case attributeTypeBoolean:
@@ -165,9 +163,6 @@ func (a attribute) validateSingular(i interface{}) error {
 
 type attributes []attribute
 
-// validate casts given interface to a map[string]interface, returns error if not succeeded, otherwise it checks every
-// attribute for matching keys in the map and returns an error if duplicates are found. if a unique matching field is
-// found it validates the field bases on matching attribute.
 func (as attributes) validate(i interface{}) error {
 	c, ok := i.(map[string]interface{})
 	if !ok {
