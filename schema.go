@@ -177,11 +177,13 @@ func validate(attributes []attribute, i interface{}) error {
 	for _, attribute := range attributes {
 		// validate duplicate
 		var hit interface{}
+		var found bool
 		for k, v := range c {
-			if strings.ToLower(attribute.Name) == strings.ToLower(k) {
-				if hit != nil {
+			if strings.EqualFold(attribute.Name, k) {
+				if found {
 					return fmt.Errorf("duplicate key: %s", strings.ToLower(k))
 				}
+				found = true
 				hit = v
 			}
 		}
