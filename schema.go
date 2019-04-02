@@ -3,6 +3,7 @@ package scim
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"strings"
 )
 
@@ -10,6 +11,34 @@ var metaSchema schema
 
 func init() {
 	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
+}
+
+// NewSchemaFromFile reads the file from given filepath and returns a validated schema if no error take place.
+func NewSchemaFromFile(filepath string) (*schema, error) {
+	raw, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSchemaFromBytes(raw)
+}
+
+// NewSchemaFromString returns a validated schema if no errors take place.
+func NewSchemaFromString(s string) (*schema, error) {
+	return NewSchemaFromBytes([]byte(s))
+}
+
+// NewSchemaFromBytes returns a validated schema if no error take place.
+func NewSchemaFromBytes(raw []byte) (*schema, error) {
+	err := metaSchema.validate(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	var schema schema
+	json.Unmarshal(raw, &schema)
+
+	return &schema, nil
 }
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
@@ -26,8 +55,7 @@ type schema struct {
 	Attributes []attribute
 }
 
-// validate reads all bytes from given stream then unmarshals it into a map[string]interface.
-// all keys in the resulting map will all be converted to lower case before validation.
+// validate unmarshals given bytes into a map[string]interface and validates it based on the schema.
 func (s *schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
@@ -76,6 +104,7 @@ type attribute struct {
 	ReferenceTypes []string
 }
 
+// validate checks whether given value is required, checks for duplicate fields in arrays and validates the type.
 func (a *attribute) validate(i interface{}) error {
 	// validate required
 	if i == nil {
@@ -97,17 +126,18 @@ func (a *attribute) validate(i interface{}) error {
 		}
 
 		for _, sub := range arr {
-			if err := a.validateSingle(sub); err != nil {
+			if err := a.validateSingular(sub); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 
-	return a.validateSingle(i)
+	return a.validateSingular(i)
 }
 
-func (a *attribute) validateSingle(i interface{}) error {
+// validateSingle checks the type of the given interface based on the attribute.
+func (a *attribute) validateSingular(i interface{}) error {
 	switch a.Type {
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
@@ -168,6 +198,9 @@ const (
 	attributeUniquenessServer                     = "server"
 )
 
+// validate casts given interface to a map[string]interface, returns error if not succeeded, otherwise it checks every
+// attribute for matching keys in the map and returns an error if duplicates are found. if a unique matching field is
+// found it validates the field bases on matching attribute.
 func validate(attributes []attribute, i interface{}) error {
 	c, ok := i.(map[string]interface{})
 	if !ok {
