@@ -3,15 +3,13 @@ package scim
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"strings"
 )
 
 var metaSchema schema
 
 func init() {
-	_ = json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
+	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
 }
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
@@ -25,7 +23,18 @@ type schema struct {
 	// Description is the schema's human-readable description.  OPTIONAL.
 	Description string
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
-	Attributes []*attribute
+	Attributes []attribute
+}
+
+// validate reads all bytes from given stream then unmarshals it into a map[string]interface.
+// all keys in the resulting map will all be converted to lower case before validation.
+func (s *schema) validate(raw []byte) error {
+	var m interface{}
+	err := json.Unmarshal(raw, &m)
+	if err != nil {
+		return err
+	}
+	return validate(s.Attributes, m)
 }
 
 // Attribute is a complex type that defines service provider attributes and their qualities via the following set of
@@ -40,7 +49,7 @@ type attribute struct {
 	Type attributeType
 	// SubAttributes defines a set of sub-attributes when an attribute is of type "complex". "subAttributes" has the
 	// same schema sub-attributes as "attributes".
-	SubAttributes []*attribute
+	SubAttributes []attribute
 	// MultiValued is a boolean value indicating the attribute's plurality.
 	MultiValued bool
 	// Description is the attribute's human-readable description. When applicable, service providers MUST specify the
@@ -65,6 +74,59 @@ type attribute struct {
 	// ReferenceTypes is a multi-valued array of JSON strings that indicate the SCIM resource types that may be
 	// referenced.
 	ReferenceTypes []string
+}
+
+func (a *attribute) validate(i interface{}) error {
+	// validate required
+	if i == nil {
+		if a.Required {
+			return fmt.Errorf("cannot find required value %s", strings.ToLower(a.Name))
+		}
+		return nil
+	}
+
+	if a.MultiValued {
+		arr, ok := i.([]interface{})
+		if !ok {
+			return fmt.Errorf("cannot convert %v to a slice", i)
+		}
+
+		// empty array = omitted/nil
+		if len(arr) == 0 && a.Required {
+			return fmt.Errorf("required array is empty")
+		}
+
+		for _, sub := range arr {
+			if err := a.validateSingle(sub); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	return a.validateSingle(i)
+}
+
+func (a *attribute) validateSingle(i interface{}) error {
+	switch a.Type {
+	case attributeTypeBoolean:
+		_, ok := i.(bool)
+		if !ok {
+			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+		}
+	case attributeTypeComplex:
+		if err := validate(a.SubAttributes, i); err != nil {
+			return err
+		}
+	case attributeTypeString:
+		_, ok := i.(string)
+		if !ok {
+			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+		}
+	default:
+		return fmt.Errorf("not implemented/invalid type: %v", a.Type)
+	}
+	return nil
 }
 
 type attributeType string
@@ -106,136 +168,26 @@ const (
 	attributeUniquenessServer                     = "server"
 )
 
-// validate reads all bytes from given stream then unmarshals it into a map[string]interface.
-// all keys in the resulting map will all be converted to lower case before validation.
-func (s *schema) validate(stream io.Reader) error {
-	raw, err := ioutil.ReadAll(stream)
-	if err != nil {
-		return err
+func validate(attributes []attribute, i interface{}) error {
+	c, ok := i.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("cannot convert %v to type complex", i)
 	}
 
-	var m map[string]interface{}
-	err = json.Unmarshal(raw, &m)
-	if err != nil {
-		return err
-	}
-
-	i, err := lower(m)
-	if err != nil {
-		return err
-	}
-
-	m, _ = i.(map[string]interface{})
-	return validateAttributes(s.Attributes, m)
-}
-
-// lower converts all the keys in given interface to lower case.
-// returns an error on duplicate keys (e.g. "id" and "Id" are duplicates).
-func lower(v interface{}) (_ interface{}, err error) {
-	switch v := v.(type) {
-	case []interface{}:
-		for i := range v {
-			v[i], err = lower(v[i])
-			if err != nil {
-				return nil, err
+	for _, attribute := range attributes {
+		// validate duplicate
+		var hit interface{}
+		for k, v := range c {
+			if strings.ToLower(attribute.Name) == strings.ToLower(k) {
+				if hit != nil {
+					return fmt.Errorf("duplicate key: %s", strings.ToLower(k))
+				}
+				hit = v
 			}
 		}
-		return v, nil
-	case map[string]interface{}:
-		m := make(map[string]interface{}, len(v))
-		for k, v := range v {
-			// if key already exists
-			if _, ok := m[strings.ToLower(k)]; ok {
-				return nil, fmt.Errorf("duplicate key: %s", strings.ToLower(k))
-			}
-			m[strings.ToLower(k)], err = lower(v)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return m, nil
-	default:
-		return v, nil
-	}
-}
 
-// validateAttributes checks whether all required fields are present in given map and validates the type.
-// ignores fields of given attributes such as: description, required, caseExact, mutability, returned and uniqueness.
-func validateAttributes(ref []*attribute, m map[string]interface{}) error {
-	for _, attr := range ref {
-		_name, ok := m[strings.ToLower(attr.Name)]
-		if !ok {
-			if attr.Required {
-				return fmt.Errorf("could not find required value %s in %v", strings.ToLower(attr.Name), m)
-			}
-			// attribute not found and not required
-			continue
-		}
-
-		if attr.MultiValued {
-			arr, ok := _name.([]interface{})
-			if !ok {
-				return fmt.Errorf("could not convert %v to type %s", _name, attr.Type)
-			}
-
-			switch attr.Type {
-			case attributeTypeComplex:
-				for _, sub := range arr {
-					m, ok := sub.(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("element of slice was not a complex value: %v", sub)
-					}
-					if err := validateAttributes(attr.SubAttributes, m); err != nil {
-						return err
-					}
-				}
-			case attributeTypeString:
-				for _, sub := range arr {
-					_, ok := sub.(string)
-					if !ok {
-						return fmt.Errorf("could not convert %v to type %s", sub, attr.Type)
-					}
-				}
-			default:
-				return fmt.Errorf("not implemented/invalid type: %v", attr.Type)
-			}
-			continue
-		}
-
-		switch attr.Type {
-		case attributeTypeBoolean:
-			_, ok := _name.(bool)
-			if !ok {
-				return fmt.Errorf("could not convert %v to type %s", _name, attr.Type)
-			}
-		case attributeTypeComplex:
-			c, ok := _name.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("could not convert %v to type %s", _name, attr.Type)
-			}
-			if err := validateAttributes(attr.SubAttributes, c); err != nil {
-				return err
-			}
-		case attributeTypeString:
-			name, ok := _name.(string)
-			if !ok {
-				return fmt.Errorf("could not convert %v to type %s", _name, attr.Type)
-			}
-
-			if attr.CanonicalValues != nil {
-				var contains bool
-				for _, v := range attr.CanonicalValues {
-					if v == name {
-						contains = true
-					}
-				}
-				if !contains {
-					return fmt.Errorf("%v not in canonical values %v", name, attr.CanonicalValues)
-
-				}
-			}
-		default:
-			return fmt.Errorf("not implemented/invalid type: %v", attr.Type)
+		if err := attribute.validate(hit); err != nil {
+			return err
 		}
 	}
 	return nil
