@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var metaSchema schema
+var metaSchema Schema
 
 func init() {
 	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
@@ -35,20 +35,17 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 		return Schema{}, err
 	}
 
-	var schema schema
+	var schema Schema
 	json.Unmarshal(raw, &schema)
 
-	return Schema{schema: schema}, nil
-}
-
-type Schema struct {
-	schema schema
+	return schema, nil
 }
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
 // schema URI used in a resource object, there is a corresponding "Schema" resource.
+//
 // INFO: RFC7643 - 7.  Schema Definition
-type schema struct {
+type Schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
 	ID string
 	// Name is the schema's human-readable name. OPTIONAL.
@@ -60,7 +57,7 @@ type schema struct {
 }
 
 // validate unmarshals the given bytes and validates it based on the schema.
-func (s schema) validate(raw []byte) error {
+func (s Schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
 	if err != nil {
@@ -71,6 +68,7 @@ func (s schema) validate(raw []byte) error {
 
 // attribute is a complex type that defines service provider attributes and their qualities via the following set of
 // sub-attributes.
+//
 // INFO: RFC7643 - 7.  Schema Definition
 type attribute struct {
 	// Name is the attribute's name.

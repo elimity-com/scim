@@ -79,12 +79,10 @@ func TestSchemaValidation(t *testing.T) {
 		t.Error(err)
 	}
 
-	s, err := NewSchemaFromBytes(raw)
+	schema, err := NewSchemaFromBytes(raw)
 	if err != nil {
 		t.Error(err)
 	}
-
-	schema := s.schema
 
 	// validate user with simple user schema
 	if err := schema.validate([]byte(`{
