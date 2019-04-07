@@ -1,29 +1,31 @@
 package scim
 
 import (
-	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Server struct {
 	schemas []Schema
-	router  router
 }
 
 func NewServer(schemas ...Schema) Server {
-	router := newRouter(errorHandler)
-	server := Server{
+	return Server{
 		schemas: schemas,
-		router:  router,
 	}
-
-	router.Handle("GET", "/Schemas", server.schemasHandler)
-	router.Handle("GET", "/Schemas/{id}", server.schemaHandler)
-
-	return server
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.Path)
-	s.router.ServeHTTP(w, r)
+	path := r.URL.Path
+	switch {
+	case strings.HasPrefix(path, "/Schemas"):
+		path := strings.TrimPrefix(path, "/Schemas")
+		if path == "" {
+			s.schemasHandler(w, r)
+			return
+		}
+		s.schemaHandler(w, r, path[1:])
+	default:
+		errorHandler(w, r)
+	}
 }

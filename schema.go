@@ -43,6 +43,7 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
 // schema URI used in a resource object, there is a corresponding "Schema" resource.
+//
 // INFO: RFC7643 - 7.  Schema Definition
 type Schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
@@ -67,6 +68,7 @@ func (s Schema) validate(raw []byte) error {
 
 // attribute is a complex type that defines service provider attributes and their qualities via the following set of
 // sub-attributes.
+//
 // INFO: RFC7643 - 7.  Schema Definition
 type attribute struct {
 	// Name is the attribute's name.

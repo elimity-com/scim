@@ -3,19 +3,17 @@ package scim
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 )
 
-func errorHandler(w http.ResponseWriter, r *http.Request, params url.Values) {
+func errorHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte("error!"))
 }
 
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
 // provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
-func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request, params url.Values) {
-	response := ListResponse{
-		Schemas:      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
+func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
+	response := listResponse{
 		TotalResults: len(s.schemas),
 		ItemsPerPage: len(s.schemas),
 		StartIndex:   0,
@@ -27,18 +25,16 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request, params ur
 
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions can be returned by appending the schema
 // URI to the /Schemas endpoint. For example: `/Schemas/urn:ietf:params:scim:schemas:core:2.0:User`
-func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, params url.Values) {
+func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	var schema *Schema
 	for _, s := range s.schemas {
-		id, ok := params["id"]
-		if ok && len(id) == 1 && s.ID == id[0] {
+		if s.ID == id {
 			schema = &s
 			break
 		}
 	}
 
-	response := ListResponse{
-		Schemas:    []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
+	response := listResponse{
 		StartIndex: 0,
 	}
 

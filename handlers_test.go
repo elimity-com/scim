@@ -40,7 +40,7 @@ func TestServer_SchemasHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
@@ -60,7 +60,7 @@ func TestServer_SchemaHandlerInvalid(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	if response.TotalResults != 0 {
 		t.Errorf("handler returned unexpected body: got %v want no total result", rr.Body.String())
@@ -81,7 +81,7 @@ func TestServer_SchemaHandlerValid(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
