@@ -2,9 +2,9 @@ package scim
 
 import "encoding/json"
 
-// ListResponse identifies a query response.‡
+// listResponse identifies a query response.
 //
-// INFO: RFC7644 - 3.4.2. Query Resources
+// RFC: https://tools.ietf.org/html/rfc7644#section-3.4.2
 type listResponse struct {
 	// TotalResults is the total number of results returned by the list or query operation.
 	// The value may be larger than the number of resources returned, such as when returning

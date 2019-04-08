@@ -18,13 +18,14 @@ func NewServer(schemas ...Schema) Server {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	switch {
-	case strings.HasPrefix(path, "/Schemas"):
-		path := strings.TrimPrefix(path, "/Schemas")
-		if path == "" {
-			s.schemasHandler(w, r)
-			return
-		}
-		s.schemaHandler(w, r, path[1:])
+	case path == "/Schemas" && r.Method == "GET":
+		s.schemasHandler(w, r)
+	case strings.HasPrefix(path, "/Schemas/") && r.Method == "GET":
+		s.schemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
+	case path == "/ResourceTypes" && r.Method == "GET":
+		s.resourceTypesHandler(w, r)
+	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == "GET":
+		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
 	default:
 		errorHandler(w, r)
 	}

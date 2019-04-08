@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestError(t *testing.T) {
+func TestErr(t *testing.T) {
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Error(err)
@@ -69,6 +69,48 @@ func TestServer_SchemaHandlerInvalid(t *testing.T) {
 
 func TestServer_SchemaHandlerValid(t *testing.T) {
 	req, err := http.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr := httptest.NewRecorder()
+	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	NewServer(user).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var response listResponse
+	json.Unmarshal(rr.Body.Bytes(), &response)
+	if response.TotalResults != 1 {
+		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	}
+}
+
+func TestServer_ResourceTypesHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/ResourceTypes", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr := httptest.NewRecorder()
+	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	NewServer(user).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var response listResponse
+	json.Unmarshal(rr.Body.Bytes(), &response)
+	if response.TotalResults != 1 {
+		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	}
+}
+
+func TestServer_ResourceTypeHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/ResourceTypes/User", nil)
 	if err != nil {
 		t.Error(err)
 	}
