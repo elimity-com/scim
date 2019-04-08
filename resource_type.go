@@ -5,12 +5,6 @@ import (
 	"io/ioutil"
 )
 
-var resourceTypeSchema schema
-
-func init() {
-	json.Unmarshal([]byte(rawResourceTypeSchema), &resourceTypeSchema)
-}
-
 func NewResourceTypeFromFile(filepath string) (ResourceType, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -30,15 +24,15 @@ func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
 		return ResourceType{}, err
 	}
 
-	var resourceType ResourceType
+	var resourceType resourceType
 	json.Unmarshal(raw, &resourceType)
 
-	return resourceType, nil
+	return ResourceType{resourceType}, nil
 }
 
 // ResourceType specifies the metadata about a resource type.
 type ResourceType struct {
-	resourceType
+	resourceType resourceType
 }
 
 // resourceType specifies the metadata about a resource type. Unlike other core resources, all attributes are
@@ -46,7 +40,7 @@ type ResourceType struct {
 //
 // RFC: https://tools.ietf.org/html/rfc7643#section-6
 type resourceType struct {
-	// Id is the resource type's server unique id. This is often the same value as the "name" attribute.
+	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
 	// OPTIONAL.
 	ID string
 	// Name is the resource type name. This name is referenced by the "meta.resourceType" attribute in all resources.
@@ -60,9 +54,21 @@ type resourceType struct {
 	// Schema is the resource type's primary/base schema URI, e.g., "urn:ietf:params:scim:schemas:core:2.0:User". This
 	// MUST be equal to the "id" attribute of the associated "Schema" resource.
 	Schema string
-	// schemaExtensions is a list of URIs of the resource type's schema extensions.
+	// SchemaExtensions is a list of URIs of the resource type's schema extensions.
 	// OPTIONAL.
 	SchemaExtensions []schemaExtension
+}
+
+func (r resourceType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+		"id":               r.ID,
+		"name":             r.Name,
+		"description":      r.Description,
+		"endpoint":         r.Endpoint,
+		"schema":           r.Schema,
+		"schemaExtensions": r.SchemaExtensions,
+	})
 }
 
 // schemaExtension is an URI of one of the resource type's schema extensions.
@@ -79,22 +85,8 @@ type schemaExtension struct {
 	Required bool
 }
 
-func (r resourceType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Schemas          []string          `json:"schemas,omitempty"`
-		ID               string            `json:"id,omitempty"`
-		Name             string            `json:"name,omitempty"`
-		Description      string            `json:"description,omitempty"`
-		Endpoint         string            `json:"endpoint,omitempty"`
-		Schema           string            `json:"schema,omitempty"`
-		SchemaExtensions []schemaExtension `json:"schemaExtensions,omitempty"`
-	}{
-		Schemas:          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		ID:               r.ID,
-		Name:             r.Name,
-		Description:      r.Description,
-		Endpoint:         r.Endpoint,
-		Schema:           r.Schema,
-		SchemaExtensions: r.SchemaExtensions,
-	})
+var resourceTypeSchema schema
+
+func init() {
+	json.Unmarshal([]byte(rawResourceTypeSchema), &resourceTypeSchema)
 }

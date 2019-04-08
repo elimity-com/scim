@@ -85,7 +85,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate user with simple user schema
-	if err := schema.validate([]byte(`{
+	if err := schema.schema.validate([]byte(`{
 		"schemas": [
 			"schemas"
 		],
@@ -135,7 +135,7 @@ func TestSchemaValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid user %d", idx), func(t *testing.T) {
-			if err := schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if err := schema.schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})

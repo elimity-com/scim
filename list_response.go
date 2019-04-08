@@ -27,17 +27,11 @@ type listResponse struct {
 }
 
 func (l listResponse) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Schemas      []string    `json:"schemas,omitempty"`
-		TotalResults int         `json:"totalResults,omitempty"`
-		ItemsPerPage int         `json:"itemsPerPage,omitempty"`
-		StartIndex   int         `json:"startIndex,omitempty"`
-		Resources    interface{} `json:"Resources,omitempty"`
-	}{
-		Schemas:      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
-		TotalResults: l.TotalResults,
-		ItemsPerPage: l.ItemsPerPage,
-		StartIndex:   l.StartIndex,
-		Resources:    l.Resources,
+	return json.Marshal(map[string]interface{}{
+		"schemas":      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
+		"totalResults": l.TotalResults,
+		"itemsPerPage": l.ItemsPerPage,
+		"startIndex":   l.StartIndex,
+		"Resources":    l.Resources,
 	})
 }

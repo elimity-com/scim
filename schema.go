@@ -7,12 +7,6 @@ import (
 	"strings"
 )
 
-var metaSchema schema
-
-func init() {
-	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
-}
-
 // NewSchemaFromFile reads the file from given filepath and returns a validated schema if no errors take place.
 func NewSchemaFromFile(filepath string) (Schema, error) {
 	raw, err := ioutil.ReadFile(filepath)
@@ -35,15 +29,15 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 		return Schema{}, err
 	}
 
-	var schema Schema
+	var schema schema
 	json.Unmarshal(raw, &schema)
 
-	return schema, nil
+	return Schema{schema}, nil
 }
 
 // Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc).
 type Schema struct {
-	schema
+	schema schema
 }
 
 // schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
@@ -231,3 +225,11 @@ const (
 	attributeUniquenessNone                       = "none"
 	attributeUniquenessServer                     = "server"
 )
+
+var metaSchema schema
+
+func init() {
+	if err := json.Unmarshal([]byte(rawMetaSchema), &metaSchema); err != nil {
+		panic(err)
+	}
+}
