@@ -6,12 +6,14 @@ import (
 )
 
 type Server struct {
-	schemas []Schema
+	schemas       []Schema
+	resourceTypes []ResourceType
 }
 
-func NewServer(schemas ...Schema) Server {
+func NewServer(schemas []Schema, resourceTypes []ResourceType) Server {
 	return Server{
-		schemas: schemas,
+		schemas:       schemas,
+		resourceTypes: resourceTypes,
 	}
 }
 

@@ -60,30 +60,24 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	schemas := make([]resourceTypeSchema, len(s.schemas))
-	for idx, schema := range s.schemas {
-		schemas[idx] = newResourceTypeSchema(schema)
-	}
-
 	response := listResponse{
-		TotalResults: len(s.schemas),
-		ItemsPerPage: len(s.schemas),
+		TotalResults: len(s.resourceTypes),
+		ItemsPerPage: len(s.resourceTypes),
 		StartIndex:   0,
-		Resources:    schemas,
+		Resources:    s.resourceTypes,
 	}
-
 	raw, _ := json.Marshal(response)
 	w.WriteHeader(http.StatusOK)
 	w.Write(raw)
 }
 
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
-// schema URI to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
-func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, id string) {
-	var schema *Schema
-	for _, s := range s.schemas {
-		if s.Name == id {
-			schema = &s
+// resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
+func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
+	var resourceType *ResourceType
+	for _, t := range s.resourceTypes {
+		if t.Name == name {
+			resourceType = &t
 			break
 		}
 	}
@@ -92,10 +86,10 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, id s
 		StartIndex: 0,
 	}
 
-	if schema != nil {
+	if resourceType != nil {
 		response.TotalResults = 1
 		response.ItemsPerPage = 1
-		response.Resources = newResourceTypeSchema(*schema)
+		response.Resources = resourceType
 	}
 
 	raw, _ := json.Marshal(response)

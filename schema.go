@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var metaSchema Schema
+var metaSchema schema
 
 func init() {
 	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
@@ -41,11 +41,16 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	return schema, nil
 }
 
-// Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
+// Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc).
+type Schema struct {
+	schema
+}
+
+// schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
 // schema URI used in a resource object, there is a corresponding "Schema" resource.
 //
 // RFC: RFC7643 - https://tools.ietf.org/html/rfc7643#section-7
-type Schema struct {
+type schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
 	ID string
 	// Name is the schema's human-readable name. OPTIONAL.
@@ -57,7 +62,7 @@ type Schema struct {
 }
 
 // validate unmarshals the given bytes and validates it based on the schema.
-func (s Schema) validate(raw []byte) error {
+func (s schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
 	if err != nil {
@@ -148,7 +153,7 @@ func (a attribute) validateSingular(i interface{}) error {
 		if err := a.SubAttributes.validate(i); err != nil {
 			return err
 		}
-	case attributeTypeString:
+	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
 			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
@@ -226,71 +231,3 @@ const (
 	attributeUniquenessNone                       = "none"
 	attributeUniquenessServer                     = "server"
 )
-
-// resourceTypeSchema specifies the metadata about a resource type. Unlike other core resources, all attributes are
-// required unless otherwise specified.
-//
-// RFC: https://tools.ietf.org/html/rfc7643#section-6
-type resourceTypeSchema struct {
-	// Id is the resource type's server unique id. This is often the same value as the "name" attribute.
-	// OPTIONAL.
-	ID string
-	// Name is the resource type name. This name is referenced by the "meta.resourceType" attribute in all resources.
-	Name string
-	// Description is the resource type's human-readable description.
-	// OPTIONAL.
-	Description string
-	// Endpoint is the resource type's HTTP-addressable endpoint relative to the Base URL of the service provider,
-	// e.g., "/Users".
-	Endpoint string
-	// Schema is the resource type's primary/base schema URI, e.g., "urn:ietf:params:scim:schemas:core:2.0:User". This
-	// MUST be equal to the "id" attribute of the associated "Schema" resource.
-	Schema string
-	// schemaExtensions is a list of URIs of the resource type's schema extensions.
-	// OPTIONAL.
-	SchemaExtensions []schemaExtension
-}
-
-// schemaExtension is an URI of one of the resource type's schema extensions.
-//
-// RFC: https://tools.ietf.org/html/rfc7643#section-6
-type schemaExtension struct {
-	// Schema is the URI of an extended schema, e.g., "urn:edu:2.0:Staff". This MUST be equal to the "id" attribute
-	// of a "Schema" resource.
-	Schema string
-	// Required is a boolean value that specifies whether or not the schema extension is required for the resource
-	// type. If true, a resource of this type MUST include this schema extension and also include any attributes
-	// declared as required in this schema extension. If false, a resource of this type MAY omit this schema
-	// extension.
-	Required bool
-}
-
-func newResourceTypeSchema(s Schema) resourceTypeSchema {
-	return resourceTypeSchema{
-		ID:          s.Name,
-		Name:        s.Name,
-		Endpoint:    "/" + s.Name + "s",
-		Description: s.Description,
-		Schema:      s.ID,
-	}
-}
-
-func (r resourceTypeSchema) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Schemas          []string          `json:"schemas,omitempty"`
-		ID               string            `json:"id,omitempty"`
-		Name             string            `json:"name,omitempty"`
-		Description      string            `json:"description,omitempty"`
-		Endpoint         string            `json:"endpoint,omitempty"`
-		Schema           string            `json:"schema,omitempty"`
-		SchemaExtensions []schemaExtension `json:"schemaExtensions,omitempty"`
-	}{
-		Schemas:          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		ID:               r.ID,
-		Name:             r.Name,
-		Description:      r.Description,
-		Endpoint:         r.Endpoint,
-		Schema:           r.Schema,
-		SchemaExtensions: r.SchemaExtensions,
-	})
-}
