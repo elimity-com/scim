@@ -1,6 +1,7 @@
 package scim
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -58,7 +59,11 @@ type schema struct {
 // validate unmarshals the given bytes and validates it based on the schema.
 func (s schema) validate(raw []byte) error {
 	var m interface{}
-	err := json.Unmarshal(raw, &m)
+	r := bytes.NewReader(raw)
+	d := json.NewDecoder(r)
+	d.UseNumber()
+
+	err := d.Decode(&m)
 	if err != nil {
 		return err
 	}
@@ -151,6 +156,14 @@ func (a attribute) validateSingular(i interface{}) error {
 		_, ok := i.(string)
 		if !ok {
 			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+		}
+	case attributeTypeInteger:
+		n, ok := i.(json.Number)
+		if !ok {
+			return fmt.Errorf("cannot convert %v to a json.Number", i)
+		}
+		if strings.Contains(n.String(), ".") || strings.Contains(n.String(), "e") {
+			return fmt.Errorf("%s is not an integer value", n)
 		}
 	default:
 		return fmt.Errorf("not implemented/invalid type: %v", a.Type)

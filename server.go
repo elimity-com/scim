@@ -6,11 +6,12 @@ import (
 )
 
 type Server struct {
+	config        serviceProviderConfig
 	schemas       map[string]schema
 	resourceTypes map[string]resourceType
 }
 
-func NewServer(schemas []Schema, resourceTypes []ResourceType) Server {
+func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []ResourceType) Server {
 	schemasMap := make(map[string]schema)
 	for _, s := range schemas {
 		schemasMap[s.schema.ID] = s.schema
@@ -39,6 +40,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.resourceTypesHandler(w, r)
 	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == "GET":
 		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
+	case path == "/ServiceProviderConfig":
+		s.serviceProviderConfigHandler(w, r)
 	default:
 		errorHandler(w, r)
 	}
