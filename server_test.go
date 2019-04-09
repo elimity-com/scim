@@ -6,10 +6,7 @@ import (
 )
 
 func ExampleNewServer() {
-	log.Fatal(http.ListenAndServe(":8080", NewServer()))
-}
-
-func ExampleNewServer_schema() {
 	schema, _ := NewSchemaFromFile("/path/to/schema")
-	log.Fatal(http.ListenAndServe(":8080", NewServer(schema)))
+	resourceType, _ := NewResourceTypeFromFile("/path/to/resourceType")
+	log.Fatal(http.ListenAndServe(":8080", NewServer([]Schema{schema}, []ResourceType{resourceType})))
 }

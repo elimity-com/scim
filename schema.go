@@ -7,12 +7,6 @@ import (
 	"strings"
 )
 
-var metaSchema Schema
-
-func init() {
-	json.Unmarshal([]byte(rawMetaSchema), &metaSchema)
-}
-
 // NewSchemaFromFile reads the file from given filepath and returns a validated schema if no errors take place.
 func NewSchemaFromFile(filepath string) (Schema, error) {
 	raw, err := ioutil.ReadFile(filepath)
@@ -35,17 +29,22 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 		return Schema{}, err
 	}
 
-	var schema Schema
+	var schema schema
 	json.Unmarshal(raw, &schema)
 
-	return schema, nil
+	return Schema{schema}, nil
 }
 
-// Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
+// Schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc).
+type Schema struct {
+	schema schema
+}
+
+// schema specifies the defined attribute(s) and their characteristics (mutability, returnability, etc). For every
 // schema URI used in a resource object, there is a corresponding "Schema" resource.
 //
-// INFO: RFC7643 - 7.  Schema Definition
-type Schema struct {
+// RFC: RFC7643 - https://tools.ietf.org/html/rfc7643#section-7
+type schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
 	ID string
 	// Name is the schema's human-readable name. OPTIONAL.
@@ -57,7 +56,7 @@ type Schema struct {
 }
 
 // validate unmarshals the given bytes and validates it based on the schema.
-func (s Schema) validate(raw []byte) error {
+func (s schema) validate(raw []byte) error {
 	var m interface{}
 	err := json.Unmarshal(raw, &m)
 	if err != nil {
@@ -69,7 +68,7 @@ func (s Schema) validate(raw []byte) error {
 // attribute is a complex type that defines service provider attributes and their qualities via the following set of
 // sub-attributes.
 //
-// INFO: RFC7643 - 7.  Schema Definition
+// RFC: https://tools.ietf.org/html/rfc7643#section-7
 type attribute struct {
 	// Name is the attribute's name.
 	Name string
@@ -148,7 +147,7 @@ func (a attribute) validateSingular(i interface{}) error {
 		if err := a.SubAttributes.validate(i); err != nil {
 			return err
 		}
-	case attributeTypeString:
+	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
 			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
@@ -226,3 +225,11 @@ const (
 	attributeUniquenessNone                       = "none"
 	attributeUniquenessServer                     = "server"
 )
+
+var metaSchema schema
+
+func init() {
+	if err := json.Unmarshal([]byte(rawMetaSchema), &metaSchema); err != nil {
+		panic(err)
+	}
+}

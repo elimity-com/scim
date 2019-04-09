@@ -13,28 +13,28 @@ func TestNewSchemaFromString(t *testing.T) {
 	}{
 		{
 			s: `{
-  				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
-  				"name": "User",
-  				"attributes": []
+				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+				"name": "User",
+				"attributes": []
 			}`,
 			err: "required array is empty",
 		},
 		{
 			s: `{
-  				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
-  				"name": "User",
-  				"attributes": [
-    				{
-    		  			"name": "userName",
-    		  			"type": "string",
-    		  			"multiValued": false,
-    		  			"required": true,
-    		  			"caseExact": false,
-    		  			"mutability": "readWrite",
-    		  			"returned": "default",
-    		  			"uniqueness": "server"
-    				}
-  				]
+				"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+				"name": "User",
+				"attributes": [
+					{
+						"name": "userName",
+			  			"type": "string",
+			  			"multiValued": false,
+			  			"required": true,
+			  			"caseExact": false,
+			  			"mutability": "readWrite",
+			  			"returned": "default",
+			  			"uniqueness": "server"
+					}
+				]
 			}`,
 			err: "",
 		},
@@ -85,16 +85,16 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate user with simple user schema
-	if err := schema.validate([]byte(`{
+	if err := schema.schema.validate([]byte(`{
 		"schemas": [
 			"schemas"
 		],
 		"id": "id",
-     	"userName": "username",
-     	"externalId": "eid",
+		"userName": "username",
+		"externalId": "eid",
 		"name": {
-       		"familyName": "family name",
-       		"givenName": "given name"
+			"familyName": "family name",
+			"givenName": "given name"
 		}
 	}`)); err != nil {
 		t.Error(err)
@@ -111,8 +111,8 @@ func TestSchemaValidation(t *testing.T) {
 					"schemas"
 				],
 				"id": "id",
-    		 	"userName": "username",
-    		 	"externalId": "eid",
+			 	"userName": "username",
+			 	"externalId": "eid",
 				"name": "name"
 			}`,
 			err: "cannot convert name to type complex",
@@ -123,10 +123,10 @@ func TestSchemaValidation(t *testing.T) {
 					"test"
 				],
 				"id": "test",
-    		 	"userName": "test",
-    		 	"externalId": "test",
+			 	"userName": "test",
+			 	"externalId": "test",
 				"name": {
-    		   		"familyName": {}
+					"familyName": {}
 				}
 			}`,
 			err: "cannot convert map[] to type string",
@@ -135,7 +135,7 @@ func TestSchemaValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid user %d", idx), func(t *testing.T) {
-			if err := schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if err := schema.schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})

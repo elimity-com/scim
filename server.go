@@ -6,25 +6,39 @@ import (
 )
 
 type Server struct {
-	schemas []Schema
+	schemas       map[string]schema
+	resourceTypes map[string]resourceType
 }
 
-func NewServer(schemas ...Schema) Server {
+func NewServer(schemas []Schema, resourceTypes []ResourceType) Server {
+	schemasMap := make(map[string]schema)
+	for _, s := range schemas {
+		schemasMap[s.schema.ID] = s.schema
+	}
+
+	resourceTypesMap := make(map[string]resourceType)
+	for _, t := range resourceTypes {
+		resourceTypesMap[t.resourceType.Name] = t.resourceType
+	}
+
 	return Server{
-		schemas: schemas,
+		schemas:       schemasMap,
+		resourceTypes: resourceTypesMap,
 	}
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	path := r.URL.Path
 	switch {
-	case strings.HasPrefix(path, "/Schemas"):
-		path := strings.TrimPrefix(path, "/Schemas")
-		if path == "" {
-			s.schemasHandler(w, r)
-			return
-		}
-		s.schemaHandler(w, r, path[1:])
+	case path == "/Schemas" && r.Method == "GET":
+		s.schemasHandler(w, r)
+	case strings.HasPrefix(path, "/Schemas/") && r.Method == "GET":
+		s.schemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
+	case path == "/ResourceTypes" && r.Method == "GET":
+		s.resourceTypesHandler(w, r)
+	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == "GET":
+		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
 	default:
 		errorHandler(w, r)
 	}

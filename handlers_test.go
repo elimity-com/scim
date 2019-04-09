@@ -7,34 +7,21 @@ import (
 	"testing"
 )
 
-func TestError(t *testing.T) {
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestErr(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Invalid", nil)
 	rr := httptest.NewRecorder()
-	NewServer().ServeHTTP(rr, req)
+	NewServer(nil, nil).ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
-
-	expected := `error!`
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
-	}
 }
 
-func TestServer_SchemasHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerSchemasHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas", nil)
 	rr := httptest.NewRecorder()
 	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	NewServer(user).ServeHTTP(rr, req)
+	NewServer([]Schema{user}, nil).ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -45,37 +32,62 @@ func TestServer_SchemasHandler(t *testing.T) {
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
-}
 
-func TestServer_SchemaHandlerInvalid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
-	if err != nil {
-		t.Error(err)
+	schemas, ok := response.Resources.([]interface{})
+	if !ok {
+		t.Errorf("resources is not a list of objects")
 	}
 
+	if len(schemas) != 1 {
+		t.Errorf("resources contains more than one schema")
+		return
+	}
+
+	schema, ok := schemas[0].(map[string]interface{})
+	if !ok {
+		t.Errorf("schema is not an object")
+	}
+
+	if schema["ID"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" {
+		t.Errorf("schema does not contain the correct id: %v", schema["ID"])
+	}
+}
+
+func TestServerSchemaHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
-	NewServer().ServeHTTP(rr, req)
+	NewServer(nil, nil).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+}
+
+func TestServerSchemaHandlerValid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
+	rr := httptest.NewRecorder()
+	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	NewServer([]Schema{user}, nil).ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
-	if response.TotalResults != 0 {
-		t.Errorf("handler returned unexpected body: got %v want no total result", rr.Body.String())
-	}
-}
-
-func TestServer_SchemaHandlerValid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
-	if err != nil {
+	var schema schema
+	if err := json.Unmarshal(rr.Body.Bytes(), &schema); err != nil {
 		t.Error(err)
 	}
 
+	if schema.ID != "urn:ietf:params:scim:schemas:core:2.0:User" {
+		t.Errorf("schema does not contain the correct id: %s", schema.ID)
+	}
+}
+
+func TestServerResourceTypesHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes", nil)
 	rr := httptest.NewRecorder()
-	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	NewServer(user).ServeHTTP(rr, req)
+	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	NewServer(nil, []ResourceType{user}).ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -85,5 +97,51 @@ func TestServer_SchemaHandlerValid(t *testing.T) {
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	}
+
+	schemas, ok := response.Resources.([]interface{})
+	if !ok {
+		t.Errorf("resources is not a list of objects")
+	}
+
+	if len(schemas) != 1 {
+		t.Errorf("resources contains more than one schema")
+		return
+	}
+
+	resourceType, ok := schemas[0].(map[string]interface{})
+	if !ok {
+		t.Errorf("schema is not an object")
+	}
+
+	if resourceType["name"].(string) != "User" {
+		t.Errorf("schema does not contain the correct id: %v", resourceType["Name"])
+	}
+}
+
+func TestServerResourceTypeHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
+	rr := httptest.NewRecorder()
+	NewServer(nil, nil).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+}
+
+func TestServerResourceTypeHandlerValid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
+	rr := httptest.NewRecorder()
+	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	NewServer(nil, []ResourceType{user}).ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resourceType resourceType
+	json.Unmarshal(rr.Body.Bytes(), &resourceType)
+	if resourceType.ID != "User" {
+		t.Errorf("schema does not contain the correct name: %s", resourceType.Name)
 	}
 }
