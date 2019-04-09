@@ -98,7 +98,7 @@ func (config serviceProviderConfig) MarshalJSON() ([]byte, error) {
 
 func (config *serviceProviderConfig) UnmarshalJSON(data []byte) error {
 	var tmpConfig struct {
-		DocumentationUri string
+		DocumentationUri *string
 		Patch            struct {
 			Supported bool
 		}
@@ -128,7 +128,7 @@ func (config *serviceProviderConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	*config = serviceProviderConfig{
-		DocumentationUri:        &tmpConfig.DocumentationUri,
+		DocumentationUri:        tmpConfig.DocumentationUri,
 		PatchSupported:          tmpConfig.Patch.Supported,
 		BulkSupported:           tmpConfig.Bulk.Supported,
 		MaxBulkOperations:       tmpConfig.Bulk.MaxOperations,
