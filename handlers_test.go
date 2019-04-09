@@ -8,11 +8,7 @@ import (
 )
 
 func TestErr(t *testing.T) {
-	req, err := http.NewRequest("GET", "", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+	req := httptest.NewRequest("GET", "/Invalid", nil)
 	rr := httptest.NewRecorder()
 	NewServer(nil, nil).ServeHTTP(rr, req)
 
@@ -21,12 +17,8 @@ func TestErr(t *testing.T) {
 	}
 }
 
-func TestServer_SchemasHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerSchemasHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas", nil)
 	rr := httptest.NewRecorder()
 	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
 	NewServer([]Schema{user}, nil).ServeHTTP(rr, req)
@@ -61,12 +53,8 @@ func TestServer_SchemasHandler(t *testing.T) {
 	}
 }
 
-func TestServer_SchemaHandlerInvalid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerSchemaHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
 	NewServer(nil, nil).ServeHTTP(rr, req)
 
@@ -75,12 +63,8 @@ func TestServer_SchemaHandlerInvalid(t *testing.T) {
 	}
 }
 
-func TestServer_SchemaHandlerValid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerSchemaHandlerValid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
 	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
 	NewServer([]Schema{user}, nil).ServeHTTP(rr, req)
@@ -99,12 +83,8 @@ func TestServer_SchemaHandlerValid(t *testing.T) {
 	}
 }
 
-func TestServer_ResourceTypesHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/ResourceTypes", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerResourceTypesHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes", nil)
 	rr := httptest.NewRecorder()
 	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
 	NewServer(nil, []ResourceType{user}).ServeHTTP(rr, req)
@@ -139,12 +119,8 @@ func TestServer_ResourceTypesHandler(t *testing.T) {
 	}
 }
 
-func TestServer_ResourceTypeHandlerInvalid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/ResourceTypes/User", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerResourceTypeHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
 	rr := httptest.NewRecorder()
 	NewServer(nil, nil).ServeHTTP(rr, req)
 
@@ -153,12 +129,8 @@ func TestServer_ResourceTypeHandlerInvalid(t *testing.T) {
 	}
 }
 
-func TestServer_ResourceTypeHandlerValid(t *testing.T) {
-	req, err := http.NewRequest("GET", "/ResourceTypes/User", nil)
-	if err != nil {
-		t.Error(err)
-	}
-
+func TestServerResourceTypeHandlerValid(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
 	rr := httptest.NewRecorder()
 	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
 	NewServer(nil, []ResourceType{user}).ServeHTTP(rr, req)
