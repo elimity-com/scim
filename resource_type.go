@@ -88,5 +88,7 @@ type schemaExtension struct {
 var resourceTypeSchema schema
 
 func init() {
-	json.Unmarshal([]byte(rawResourceTypeSchema), &resourceTypeSchema)
+	if err := json.Unmarshal([]byte(rawResourceTypeSchema), &resourceTypeSchema); err != nil {
+		panic(err)
+	}
 }

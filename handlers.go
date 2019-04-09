@@ -22,8 +22,6 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := listResponse{
 		TotalResults: len(schemas),
-		ItemsPerPage: len(schemas),
-		StartIndex:   1,
 		Resources:    schemas,
 	}
 	raw, _ := json.Marshal(response)
@@ -60,8 +58,6 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := listResponse{
 		TotalResults: len(resourceTypes),
-		ItemsPerPage: len(resourceTypes),
-		StartIndex:   0,
 		Resources:    resourceTypes,
 	}
 	raw, _ := json.Marshal(response)
@@ -71,6 +67,8 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
 // resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
 	resourceType, ok := s.resourceTypes[name]
 	if !ok {
@@ -79,6 +77,16 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 	}
 
 	raw, _ := json.Marshal(resourceType)
+	w.WriteHeader(http.StatusOK)
+	w.Write(raw)
+}
+
+// serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
+// SCIM specification features available on a service provider.
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-4
+func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
+	raw, _ := json.Marshal(s.config)
 	w.WriteHeader(http.StatusOK)
 	w.Write(raw)
 }

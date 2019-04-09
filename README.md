@@ -21,4 +21,7 @@ If you’d like to propose a change please ensure the following:
 - all already existing tests are passing
 - you have written tests that cover the code you are making
 - there is documentation for at least all public functions you have added
-- your changes are compliant with SCIM v2.0 (released as RFC7642, RFC7643 and RFC7644 under IETF)
+- your changes are compliant with SCIM v2.0 (released as 
+[RFC7642](https://tools.ietf.org/html/rfc7642), 
+[RFC7643](https://tools.ietf.org/html/rfc7643) and 
+[RFC7644](https://tools.ietf.org/html/rfc7644) under [IETF](https://ietf.org/))

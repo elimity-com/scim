@@ -143,7 +143,7 @@ func TestSchemaValidation(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	if err := metaSchema.validate([]byte(``)); err.Error() != "unexpected end of JSON input" {
+	if err := metaSchema.validate([]byte(``)); err.Error() != "EOF" {
 		t.Errorf("expected: unexpected end of JSON input / got: %v", err)
 	}
 }
