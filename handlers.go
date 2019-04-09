@@ -2,12 +2,14 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
 func errorHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte(`{"status": "404"}`))
+	io.WriteString(w, `{"status": "404"}`)
 }
 
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
@@ -89,4 +91,46 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 	raw, _ := json.Marshal(s.config)
 	w.WriteHeader(http.StatusOK)
 	w.Write(raw)
+}
+
+// resourcePostHandler receives an HTTP POST request to the resource endpoint, such as "/Users" or "/Groups", as
+// defined by the associated resource type endpoint discovery to create new resources.
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-3.3
+func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"desc": "create %s (%s)"}`, resourceType.Name, s.schemas[resourceType.Schema].ID))
+}
+
+// resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
+// where "{id}" is a resource identifier to retrieve a known resource.
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-3.4
+func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"desc": "get %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
+}
+
+// resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
+// all known resources.
+func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"desc": "get all %ss (%s)"}`, resourceType.Name, s.schemas[resourceType.Schema].ID))
+}
+
+// resourcePutHandler receives an HTTP PUT  to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// "{id}" is a resource identifier to replace a resource's attributes.
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
+func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"desc": "replace %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
+}
+
+// resourceDeleteHandler
+//
+// RFC: https://tools.ietf.org/html/rfc7644#section-3.6
+func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"desc": "delete %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
 }

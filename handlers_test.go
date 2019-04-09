@@ -8,13 +8,17 @@ import (
 )
 
 func TestErr(t *testing.T) {
-	req := httptest.NewRequest("GET", "/Invalid", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Invalid", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	NewServer(config, nil, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
@@ -22,14 +26,18 @@ func TestErr(t *testing.T) {
 }
 
 func TestServerSchemasHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/Schemas", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Schemas", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
 	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	NewServer(config, []Schema{user}, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, []Schema{user}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -62,13 +70,17 @@ func TestServerSchemasHandler(t *testing.T) {
 }
 
 func TestServerSchemaHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	NewServer(config, nil, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
@@ -76,14 +88,18 @@ func TestServerSchemaHandlerInvalid(t *testing.T) {
 }
 
 func TestServerSchemaHandlerValid(t *testing.T) {
-	req := httptest.NewRequest("GET", "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
 	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	NewServer(config, []Schema{user}, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, []Schema{user}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -100,14 +116,19 @@ func TestServerSchemaHandlerValid(t *testing.T) {
 }
 
 func TestServerResourceTypesHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/ResourceTypes", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	NewServer(config, nil, []ResourceType{user}).ServeHTTP(rr, req)
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -140,13 +161,17 @@ func TestServerResourceTypesHandler(t *testing.T) {
 }
 
 func TestServerResourceTypeHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/User", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	NewServer(config, nil, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
@@ -154,14 +179,19 @@ func TestServerResourceTypeHandlerInvalid(t *testing.T) {
 }
 
 func TestServerResourceTypeHandlerValid(t *testing.T) {
-	req := httptest.NewRequest("GET", "/ResourceTypes/User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/User", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	user, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	NewServer(config, nil, []ResourceType{user}).ServeHTTP(rr, req)
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -175,13 +205,117 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 }
 
 func TestServerServiceProviderConfigHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/ServiceProviderConfig", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ServiceProviderConfig", nil)
 	rr := httptest.NewRecorder()
 	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		t.Error(err)
 	}
-	NewServer(config, nil, nil).ServeHTTP(rr, req)
+	server, err := NewServer(config, nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcePostHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/Users", nil)
+	rr := httptest.NewRecorder()
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourceGetHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users/test", nil)
+	rr := httptest.NewRecorder()
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcesGetHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
+	rr := httptest.NewRecorder()
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcePutHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/Users/test", nil)
+	rr := httptest.NewRecorder()
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourceDeleteHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/Users/test", nil)
+	rr := httptest.NewRecorder()
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
+	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
