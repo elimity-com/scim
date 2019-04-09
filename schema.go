@@ -59,8 +59,7 @@ type schema struct {
 // validate unmarshals the given bytes and validates it based on the schema.
 func (s schema) validate(raw []byte) error {
 	var m interface{}
-	r := bytes.NewReader(raw)
-	d := json.NewDecoder(r)
+	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	err := d.Decode(&m)

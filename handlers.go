@@ -22,8 +22,6 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := listResponse{
 		TotalResults: len(schemas),
-		ItemsPerPage: s.config.MaxFilterResults,
-		StartIndex:   1,
 		Resources:    schemas,
 	}
 	raw, _ := json.Marshal(response)
@@ -60,8 +58,6 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := listResponse{
 		TotalResults: len(resourceTypes),
-		ItemsPerPage: s.config.MaxFilterResults,
-		StartIndex:   0,
 		Resources:    resourceTypes,
 	}
 	raw, _ := json.Marshal(response)
