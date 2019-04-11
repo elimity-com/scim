@@ -94,6 +94,32 @@ func TestNewServer(t *testing.T) {
 			},
 			err: "schemas does not contain a schema with id: other, referenced by resource type extension with index: 0",
 		},
+		{
+			s: []Schema{
+				{
+					schema: schema{
+						ID: "id",
+					},
+				},
+			},
+			t: []ResourceType{
+				{
+					resourceType: resourceType{
+						Name:   "name",
+						Endpoint: "/",
+						Schema: "id",
+					},
+				},
+				{
+					resourceType: resourceType{
+						Name:   "other",
+						Endpoint: "/",
+						Schema: "id",
+					},
+				},
+			},
+			err: "duplicate endpoints in resource types: /",
+		},
 	}
 
 	for idx, test := range cases {
