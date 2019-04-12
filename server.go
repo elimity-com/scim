@@ -23,7 +23,7 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 		schemasMap[s.schema.ID] = s.schema
 	}
 
-	tmpEndpoints := make(map[string]bool)
+	tmpEndpoints := make(map[string]unitType)
 	resourceTypesMap := make(map[string]resourceType)
 	for _, t := range resourceTypes {
 		if _, ok := schemasMap[t.resourceType.Schema]; !ok {
@@ -50,9 +50,9 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 				"duplicate endpoints in resource types: %s",
 				t.resourceType.Endpoint,
 			)
-		} else {
-			tmpEndpoints[t.resourceType.Endpoint] = true
 		}
+
+		tmpEndpoints[t.resourceType.Endpoint] = unit
 		resourceTypesMap[t.resourceType.Name] = t.resourceType
 	}
 
