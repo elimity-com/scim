@@ -4,17 +4,36 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+func newTestServer() (*Server, error) {
+	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		return nil, err
+	}
+	userSchema, err := NewSchemaFromFile("testdata/simple_user_schema.json")
+	if err != nil {
+		return nil, err
+	}
+	userResourceType, err := NewResourceTypeFromFile("testdata/simple_user_resource_type.json", newTestResourceHandler())
+	if err != nil {
+		return nil, err
+	}
+	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	if err != nil {
+		return nil, err
+	}
+
+	return &server, err
+}
 
 func TestErr(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Invalid", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	server, err := NewServer(config, nil, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -28,12 +47,8 @@ func TestErr(t *testing.T) {
 func TestServerSchemasHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Schemas", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	server, err := NewServer(config, []Schema{user}, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -70,13 +85,10 @@ func TestServerSchemasHandler(t *testing.T) {
 }
 
 func TestServerSchemaHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	server, err := NewServer(config, nil, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,12 +102,8 @@ func TestServerSchemaHandlerInvalid(t *testing.T) {
 func TestServerSchemaHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	user, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	server, err := NewServer(config, []Schema{user}, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -118,13 +126,8 @@ func TestServerSchemaHandlerValid(t *testing.T) {
 func TestServerResourceTypesHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -161,13 +164,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 }
 
 func TestServerResourceTypeHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/User", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/Group", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	server, err := NewServer(config, nil, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -181,13 +181,8 @@ func TestServerResourceTypeHandlerInvalid(t *testing.T) {
 func TestServerResourceTypeHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/User", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,11 +202,8 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 func TestServerServiceProviderConfigHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/ServiceProviderConfig", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	server, err := NewServer(config, nil, nil)
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
@@ -222,41 +214,56 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 	}
 }
 
-func TestServerResourcePostHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/Users", nil)
+func TestServerResourcePostHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other"}`))
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
 	server.ServeHTTP(rr, req)
 
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcePostHandlerValid(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other", "userName": "test"}`))
+	rr := httptest.NewRecorder()
+
+	server, err := newTestServer()
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	var resource Resource
+	json.Unmarshal(rr.Body.Bytes(), &resource)
+	if resource.CoreAttributes["userName"] != "test" {
+		t.Errorf("handler did not return the resource correctly")
+	}
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
 	server.ServeHTTP(rr, req)
 
+	var resource Resource
+	json.Unmarshal(rr.Body.Bytes(), &resource)
+	if resource.CoreAttributes["userName"] != "test" {
+		t.Errorf("handler did not return the resource correctly")
+	}
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
@@ -265,59 +272,71 @@ func TestServerResourceGetHandler(t *testing.T) {
 func TestServerResourcesGetHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
 	server.ServeHTTP(rr, req)
+
+	var response listResponse
+	json.Unmarshal(rr.Body.Bytes(), &response)
+
+	if response.TotalResults != 1 {
+		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	}
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
 
-func TestServerResourcePutHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/Users/test", nil)
+func TestServerResourcePutHandlerInvalid(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"more": "test"}`))
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
 	server.ServeHTTP(rr, req)
 
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcePutHandlerValid(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"id": "test", "userName": "other"}`))
+	rr := httptest.NewRecorder()
+
+	server, err := newTestServer()
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	var resource Resource
+	json.Unmarshal(rr.Body.Bytes(), &resource)
+	if resource.CoreAttributes["userName"] != "other" {
+		t.Errorf("handler did not replace previous resource")
+	}
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
 
 func TestServerResourceDeleteHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/Users/test", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
-	if err != nil {
-		t.Error(err)
-	}
-	userSchema, _ := NewSchemaFromFile("testdata/simple_user_schema.json")
-	userResourceType, _ := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+
+	server, err := newTestServer()
 	if err != nil {
 		t.Error(err)
 	}
 	server.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusNoContent {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNoContent)
 	}
 }

@@ -27,6 +27,17 @@ type listResponse struct {
 }
 
 func (l listResponse) MarshalJSON() ([]byte, error) {
+	if l.StartIndex == 0 {
+		l.StartIndex = 1
+	}
+	if l.ItemsPerPage == 0 {
+		if resources, ok := l.Resources.([]interface{}); ok {
+			l.ItemsPerPage = len(resources)
+		} else {
+			l.ItemsPerPage = 1
+		}
+	}
+
 	return json.Marshal(map[string]interface{}{
 		"schemas":      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
 		"totalResults": l.TotalResults,

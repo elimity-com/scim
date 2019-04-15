@@ -5,21 +5,21 @@ import (
 	"io/ioutil"
 )
 
-func NewResourceTypeFromFile(filepath string) (ResourceType, error) {
+func NewResourceTypeFromFile(filepath string, handler ResourceHandler) (ResourceType, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return ResourceType{}, err
 	}
 
-	return NewResourceTypeFromBytes(raw)
+	return NewResourceTypeFromBytes(raw, handler)
 }
 
-func NewResourceTypeFromString(s string) (ResourceType, error) {
-	return NewResourceTypeFromBytes([]byte(s))
+func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType, error) {
+	return NewResourceTypeFromBytes([]byte(s), handler)
 }
 
-func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
-	err := resourceTypeSchema.validate(raw)
+func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
+	_, err := resourceTypeSchema.validate(raw, read)
 	if err != nil {
 		return ResourceType{}, err
 	}
@@ -27,7 +27,10 @@ func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
 	var resourceType resourceType
 	json.Unmarshal(raw, &resourceType)
 
-	return ResourceType{resourceType}, nil
+	resourceType.handler = handler
+	return ResourceType{
+		resourceType: resourceType,
+	}, nil
 }
 
 // ResourceType specifies the metadata about a resource type.
@@ -57,6 +60,8 @@ type resourceType struct {
 	// SchemaExtensions is a list of URIs of the resource type's schema extensions.
 	// OPTIONAL.
 	SchemaExtensions []schemaExtension
+
+	handler ResourceHandler
 }
 
 func (r resourceType) MarshalJSON() ([]byte, error) {

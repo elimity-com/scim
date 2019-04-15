@@ -2,8 +2,8 @@ package scim
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -98,8 +98,23 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.3
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+	data, _ := ioutil.ReadAll(r.Body)
+
+	attributes, err := s.schemas[resourceType.Schema].validate(data, write)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	resource, err := resourceType.handler.Create(attributes)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	raw, _ := json.Marshal(resource)
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"desc": "create %s (%s)"}`, resourceType.Name, s.schemas[resourceType.Schema].ID))
+	w.Write(raw)
 }
 
 // resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
@@ -107,15 +122,33 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+	resource, err := resourceType.handler.Get(id)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	raw, _ := json.Marshal(resource)
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"desc": "get %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
+	w.Write(raw)
 }
 
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+	resources, err := resourceType.handler.GetAll()
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	response := listResponse{
+		TotalResults: len(resources),
+		Resources:    resources,
+	}
+	raw, _ := json.Marshal(response)
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"desc": "get all %ss (%s)"}`, resourceType.Name, s.schemas[resourceType.Schema].ID))
+	w.Write(raw)
 }
 
 // resourcePutHandler receives an HTTP PUT  to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
@@ -123,14 +156,34 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+	data, _ := ioutil.ReadAll(r.Body)
+
+	attributes, err := s.schemas[resourceType.Schema].validate(data, replace)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	resource, err := resourceType.handler.Replace(id, attributes)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+
+	raw, _ := json.Marshal(resource)
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"desc": "replace %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
+	w.Write(raw)
 }
 
-// resourceDeleteHandler
+// resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
+// where "{id}" is a resource identifier to delete a known resource.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.6
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"desc": "delete %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
+	err := resourceType.handler.Delete(id)
+	if err != nil {
+		errorHandler(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -65,7 +65,7 @@ func TestNewSchemaFromFile(t *testing.T) {
 
 func TestSchemaValidation(t *testing.T) {
 	// validate raw meta schema with meta schema
-	if err := metaSchema.validate([]byte(rawMetaSchema)); err != nil {
+	if _, err := metaSchema.validate([]byte(rawMetaSchema), read); err != nil {
 		t.Error(err)
 	}
 
@@ -75,7 +75,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate simple user schema with meta schema
-	if err := metaSchema.validate(raw); err != nil {
+	if _, err := metaSchema.validate(raw, read); err != nil {
 		t.Error(err)
 	}
 
@@ -85,7 +85,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate user with simple user schema
-	if err := schema.schema.validate([]byte(`{
+	if _, err := schema.schema.validate([]byte(`{
 		"schemas": [
 			"schemas"
 		],
@@ -96,7 +96,7 @@ func TestSchemaValidation(t *testing.T) {
 			"familyName": "family name",
 			"givenName": "given name"
 		}
-	}`)); err != nil {
+	}`), read); err != nil {
 		t.Error(err)
 	}
 
@@ -135,7 +135,7 @@ func TestSchemaValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid user %d", idx), func(t *testing.T) {
-			if err := schema.schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if _, err := schema.schema.validate([]byte(test.s), read); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})
@@ -143,7 +143,7 @@ func TestSchemaValidation(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	if err := metaSchema.validate([]byte(``)); err.Error() != "EOF" {
+	if _, err := metaSchema.validate([]byte(``), read); err.Error() != "EOF" {
 		t.Errorf("expected: unexpected end of JSON input / got: %v", err)
 	}
 }
@@ -179,7 +179,7 @@ func TestDuplicate(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("duplicate %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), read); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})
@@ -207,7 +207,7 @@ func TestDuplicate(t *testing.T) {
 
 	for idx, test := range valid {
 		t.Run(fmt.Sprintf("valid %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err != nil {
+			if _, err := metaSchema.validate([]byte(test.s), read); err != nil {
 				t.Errorf("no error expected / got: %v", err)
 			}
 		})
@@ -246,7 +246,7 @@ func TestRequired(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("required %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), read); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})
@@ -335,7 +335,7 @@ func TestConverting(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("converting %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), read); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})
@@ -360,7 +360,7 @@ func TestNil(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), read); err == nil || err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			}
 		})

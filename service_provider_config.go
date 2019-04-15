@@ -19,7 +19,7 @@ func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error)
 }
 
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
-	err := serviceProviderConfigSchema.validate(raw)
+	_, err := serviceProviderConfigSchema.validate(raw, read)
 	if err != nil {
 		return ServiceProviderConfig{}, err
 	}
