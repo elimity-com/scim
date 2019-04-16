@@ -25,7 +25,10 @@ func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
 	}
 
 	var resourceType resourceType
-	json.Unmarshal(raw, &resourceType)
+	err = json.Unmarshal(raw, &resourceType)
+	if err != nil {
+		return ResourceType{}, err
+	}
 
 	return ResourceType{resourceType}, nil
 }

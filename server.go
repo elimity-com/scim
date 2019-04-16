@@ -111,5 +111,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, r)
+	errorHandler(w, r, scimError{
+		detail: "Specified endpoint does not exist.",
+		status: http.StatusNotFound,
+	})
 }

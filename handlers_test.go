@@ -44,7 +44,10 @@ func TestServerSchemasHandler(t *testing.T) {
 	}
 
 	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Error(err)
+	}
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
@@ -135,7 +138,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 	}
 
 	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Error(err)
+	}
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
@@ -198,7 +204,10 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 	}
 
 	var resourceType resourceType
-	json.Unmarshal(rr.Body.Bytes(), &resourceType)
+	err = json.Unmarshal(rr.Body.Bytes(), &resourceType)
+	if err != nil {
+		t.Error(err)
+	}
 	if resourceType.ID != "User" {
 		t.Errorf("schema does not contain the correct name: %s", resourceType.Name)
 	}
