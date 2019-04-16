@@ -9,12 +9,11 @@ import (
 )
 
 func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
-	w.WriteHeader(scimErr.status)
 	raw, err := json.Marshal(scimErr)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling scim error: %v", err)
 	}
+	w.WriteHeader(scimErr.status)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -37,10 +36,8 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, err := json.Marshal(response)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling list response: %v", err)
 	}
-	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -60,10 +57,8 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 
 	raw, err := json.Marshal(schema)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling schema: %v", err)
 	}
-	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -87,10 +82,8 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, err := json.Marshal(response)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling list response: %v", err)
 	}
-	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -110,10 +103,8 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 
 	raw, err := json.Marshal(resourceType)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling resource type: %v", err)
 	}
-	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -127,10 +118,8 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
 	raw, err := json.Marshal(s.config)
 	if err != nil {
-		errorHandler(w, r, invalidSyntax)
-		return
+		log.Fatalf("failed marshaling service provider config: %v", err)
 	}
-	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -154,7 +143,6 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	w.WriteHeader(http.StatusOK)
 	_, err := io.WriteString(w, fmt.Sprintf(`{"desc": "get %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -164,7 +152,6 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	w.WriteHeader(http.StatusOK)
 	_, err := io.WriteString(w, fmt.Sprintf(`{"desc": "get all %ss (%s)"}`, resourceType.Name, s.schemas[resourceType.Schema].ID))
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -176,7 +163,6 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	w.WriteHeader(http.StatusOK)
 	_, err := io.WriteString(w, fmt.Sprintf(`{"desc": "replace %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -188,7 +174,6 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.6
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	w.WriteHeader(http.StatusOK)
 	_, err := io.WriteString(w, fmt.Sprintf(`{"desc": "delete %s (%s) with id: %s"}`, resourceType.Name, s.schemas[resourceType.Schema].ID, id))
 	if err != nil {
 		log.Printf("failed writing response: %v", err)

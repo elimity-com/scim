@@ -65,20 +65,17 @@ type scimError struct {
 
 func (e scimError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		schemas  []string
-		scimType scimType
-		detail   string
-		status   string
+		Schemas  []string
+		ScimType scimType `json:",omitempty"`
+		Detail   string   `json:",omitempty"`
+		Status   string
 	}{
-		schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
-		scimType: e.scimType,
-		detail:   e.detail,
-		status:   strconv.Itoa(e.status),
+		Schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
+		ScimType: e.scimType,
+		Detail:   e.detail,
+		Status:   strconv.Itoa(e.status),
 	})
 }
-
-// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
-var GetErrorNil GetError
 
 // GetError represents an error that is returned by a GET HTTP request.
 type GetError struct {
@@ -86,9 +83,11 @@ type GetError struct {
 }
 
 var (
-	// InvalidValueGetError shall be returned when a required field is missing or a value is not compatible with the
+	// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
+	GetErrorNil GetError
+	// GetErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	InvalidValueGetError = GetError{invalidValue}
+	GetErrorInvalidValue = GetError{invalidValue}
 )
 
 // NewResourceNotFoundGetError returns an error with status code 404 and a human readable message containing the identifier
@@ -97,27 +96,23 @@ func NewResourceNotFoundGetError(id string) GetError {
 	return GetError{resourceNotFound(id)}
 }
 
-// PostErrorNil indicates that no error occurred during handling a POST HTTP request.
-var PostErrorNil PostError
-
 // PostError represents an error that is returned by a POST HTTP request.
 type PostError struct {
 	err scimError
 }
 
 var (
-	// UniquenessPostError shall be returned when one or more of the attribute values are already in use or are reserved.
-	UniquenessPostError = PostError{uniqueness}
-	// InvalidSyntaxPostError shall be returned when the request body message structure was invalid or did not conform
+	// PostErrorNil indicates that no error occurred during handling a POST HTTP request.
+	PostErrorNil PostError
+	// PostErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
+	PostErrorUniqueness = PostError{uniqueness}
+	// PostErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	InvalidSyntaxPostError = PostError{invalidSyntax}
-	// InvalidValuePostError shall be returned when a required field is missing or a value is not compatible with the
+	PostErrorInvalidSyntax = PostError{invalidSyntax}
+	// PostErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	InvalidValuePostError = PostError{invalidValue}
+	PostErrorInvalidValue = PostError{invalidValue}
 )
-
-// PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
-var PutErrorNil PutError
 
 // PutError represents an error that is returned by a PUT HTTP request.
 type PutError struct {
@@ -125,17 +120,19 @@ type PutError struct {
 }
 
 var (
-	// UniquenessPutError shall be returned when one or more of the attribute values are already in use or are reserved.
-	UniquenessPutError = PutError{uniqueness}
-	// MutabilityPutError shall be returned when the attempted modification is not compatible with the target
+	// PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
+	PutErrorNil PutError
+	// PutErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
+	PutErrorUniqueness = PutError{uniqueness}
+	// PutErrorMutability shall be returned when the attempted modification is not compatible with the target
 	// attribute's mutability or current state.
-	MutabilityPutError = PutError{mutability}
-	// InvalidSyntaxPutError shall be returned when the request body message structure was invalid or did not conform
+	PutErrorMutability = PutError{mutability}
+	// PutErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	InvalidSyntaxPutError = PutError{invalidSyntax}
-	// InvalidValuePutError shall be returned when a required field is missing or a value is not compatible with the
+	PutErrorInvalidSyntax = PutError{invalidSyntax}
+	// PutErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	InvalidValuePutError = PutError{invalidValue}
+	PutErrorInvalidValue = PutError{invalidValue}
 )
 
 // NewResourceNotFoundPutError returns an error with status code 404 and a human readable message containing the identifier
@@ -144,13 +141,15 @@ func NewResourceNotFoundPutError(id string) PutError {
 	return PutError{resourceNotFound(id)}
 }
 
-// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
-var DeleteErrorNil DeleteError
-
 // DeleteError represents an error that is returned by a DELETE HTTP request.
 type DeleteError struct {
 	err scimError
 }
+
+var (
+	// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
+	DeleteErrorNil DeleteError
+)
 
 // NewResourceNotFoundDeleteError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested to be deleted but not found.
