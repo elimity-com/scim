@@ -83,10 +83,6 @@ type GetError struct {
 	err scimError
 }
 
-func (e GetError) Error() string {
-	return e.err.Error()
-}
-
 // A required value was missing, or the value specified was not compatible with the operation or attribute type or resource.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4.2
@@ -104,10 +100,6 @@ var PostErrorNil PostError
 
 type PostError struct {
 	err scimError
-}
-
-func (e PostError) Error() string {
-	return e.err.Error()
 }
 
 // If the service provider determines that the creation of the requested resource conflicts with existing resources
@@ -136,10 +128,6 @@ var PutErrorNil PutError
 
 type PutError struct {
 	err scimError
-}
-
-func (e PutError) Error() string {
-	return e.err.Error()
 }
 
 // If the service provider determines that the creation of the requested resource conflicts with existing resources
@@ -184,10 +172,6 @@ var DeleteErrorNil DeleteError
 
 type DeleteError struct {
 	err scimError
-}
-
-func (e DeleteError) Error() string {
-	return e.err.Error()
 }
 
 // NewResourceNotFoundDeleteError returns an error with status code 404 and a human readable message containing the identifier
