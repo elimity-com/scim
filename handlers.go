@@ -9,8 +9,13 @@ import (
 )
 
 func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
-	w.WriteHeader(http.StatusNotFound)
-	_, err := io.WriteString(w, `{"status": "404"}`)
+	w.WriteHeader(scimErr.status)
+	raw, err := json.Marshal(scimErr)
+	if err != nil {
+		errorHandler(w, r, invalidSyntax)
+		return
+	}
+	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
 	}
@@ -166,7 +171,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 }
 
-// resourcePutHandler receives an HTTP PUT  to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
 // "{id}" is a resource identifier to replace a resource's attributes.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
@@ -178,7 +183,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 	}
 }
 
-// resourceDeleteHandler
+// resourceDeleteHandler receives an HTTP DELETE to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// "{id}" is a resource identifier to delete a resource.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.6
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {

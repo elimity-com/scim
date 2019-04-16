@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 )
 
+// NewResourceTypeFromFile reads the file from given filepath and returns a validated resource type if no errors take place.
 func NewResourceTypeFromFile(filepath string) (ResourceType, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -14,10 +15,12 @@ func NewResourceTypeFromFile(filepath string) (ResourceType, error) {
 	return NewResourceTypeFromBytes(raw)
 }
 
+// NewResourceTypeFromString returns a validated resource type if no errors take place.
 func NewResourceTypeFromString(s string) (ResourceType, error) {
 	return NewResourceTypeFromBytes([]byte(s))
 }
 
+// NewResourceTypeFromBytes returns a validated resource type if no errors take place.
 func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
 	err := resourceTypeSchema.validate(raw)
 	if err != nil {

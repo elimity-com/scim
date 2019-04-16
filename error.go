@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 type scimType string
@@ -19,7 +20,6 @@ const (
 	// A required value was missing, or the value specified was not compatible with the operation or attribute type,
 	// or resource schema.
 	scimTypeInvalidValue = "invalidValue"
-	// The specified SCIM protocol version is not supported.
 )
 
 var uniqueness = scimError{
@@ -63,32 +63,33 @@ type scimError struct {
 	status int
 }
 
-func (e scimError) Error() string {
-	raw, _ := e.MarshalJSON()
-	return string(raw)
-}
-
 func (e scimError) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"schemas":  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
-		"scimType": e.scimType,
-		"detail":   e.detail,
-		"status":   e.status,
+	return json.Marshal(struct {
+		schemas  []string
+		scimType scimType
+		detail   string
+		status   string
+	}{
+		schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
+		scimType: e.scimType,
+		detail:   e.detail,
+		status:   strconv.Itoa(e.status),
 	})
 }
 
+// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
 var GetErrorNil GetError
 
+// GetError represents an error that is returned by a GET HTTP request.
 type GetError struct {
 	err scimError
 }
 
-// A required value was missing, or the value specified was not compatible with the operation or attribute type or resource.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.4.2
-func NewInvalidValueGetError() GetError {
-	return GetError{invalidValue}
-}
+var (
+	// InvalidValueGetError shall be returned when a required field is missing or a value is not compatible with the
+	// attribute type.
+	InvalidValueGetError = GetError{invalidValue}
+)
 
 // NewResourceNotFoundGetError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested but not found.
@@ -96,71 +97,46 @@ func NewResourceNotFoundGetError(id string) GetError {
 	return GetError{resourceNotFound(id)}
 }
 
+// PostErrorNil indicates that no error occurred during handling a POST HTTP request.
 var PostErrorNil PostError
 
+// PostError represents an error that is returned by a POST HTTP request.
 type PostError struct {
 	err scimError
 }
 
-// If the service provider determines that the creation of the requested resource conflicts with existing resources
-// (e.g., a "User" resource with a duplicate "userName"), the service provider MUST return HTTP status code 409
-// (Conflict) with a "scimType" error code of "uniqueness".
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.3
-func NewUniquenessPostError() PostError {
-	return PostError{uniqueness}
-}
+var (
+	// UniquenessPostError shall be returned when one or more of the attribute values are already in use or are reserved.
+	UniquenessPostError = PostError{uniqueness}
+	// InvalidSyntaxPostError shall be returned when the request body message structure was invalid or did not conform
+	// to the request schema.
+	InvalidSyntaxPostError = PostError{invalidSyntax}
+	// InvalidValuePostError shall be returned when a required field is missing or a value is not compatible with the
+	// attribute type.
+	InvalidValuePostError = PostError{invalidValue}
+)
 
-// Request is unparsable, syntactically incorrect, or violates schema.
-func NewInvalidSyntaxPostError() PostError {
-	return PostError{invalidSyntax}
-}
-
-// A required value was missing, or the value specified was not compatible with the operation or attribute type or resource.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.3
-//		https://tools.ietf.org/html/rfc7644#section-3.4.3
-func NewInvalidValuePostError() PostError {
-	return PostError{invalidValue}
-}
-
+// PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
 var PutErrorNil PutError
 
+// PutError represents an error that is returned by a PUT HTTP request.
 type PutError struct {
 	err scimError
 }
 
-// If the service provider determines that the creation of the requested resource conflicts with existing resources
-// (e.g., a "User" resource with a duplicate "userName"), the service provider MUST return HTTP status code 409
-// (Conflict) with a "scimType" error code of "uniqueness".
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
-func NewUniquenessPutError() PutError {
-	return PutError{uniqueness}
-}
-
-// If the attribute is immutable and one or more values are already set for the attribute, the input value(s) MUST match,
-// or HTTP status code 400 SHOULD be returned with a "scimType" error code of "mutability". If the service provider has
-// no existing values, the new value(s) SHALL be applied.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
-func NewMutabilityPutError() PutError {
-	return PutError{mutability}
-}
-
-// Request is unparsable, syntactically incorrect, or violates schema.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.4.3
-func NewInvalidSyntaxPutError() PutError {
-	return PutError{invalidSyntax}
-}
-
-// A required value was missing, or the value specified was not compatible with the operation or attribute type or resource.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
-func NewInvalidValuePutError() PutError {
-	return PutError{invalidValue}
-}
+var (
+	// UniquenessPutError shall be returned when one or more of the attribute values are already in use or are reserved.
+	UniquenessPutError = PutError{uniqueness}
+	// MutabilityPutError shall be returned when the attempted modification is not compatible with the target
+	// attribute's mutability or current state.
+	MutabilityPutError = PutError{mutability}
+	// InvalidSyntaxPutError shall be returned when the request body message structure was invalid or did not conform
+	// to the request schema.
+	InvalidSyntaxPutError = PutError{invalidSyntax}
+	// InvalidValuePutError shall be returned when a required field is missing or a value is not compatible with the
+	// attribute type.
+	InvalidValuePutError = PutError{invalidValue}
+)
 
 // NewResourceNotFoundPutError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested to be replaced but not found.
@@ -168,8 +144,10 @@ func NewResourceNotFoundPutError(id string) PutError {
 	return PutError{resourceNotFound(id)}
 }
 
+// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
 var DeleteErrorNil DeleteError
 
+// DeleteError represents an error that is returned by a DELETE HTTP request.
 type DeleteError struct {
 	err scimError
 }

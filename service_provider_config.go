@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 )
 
+// NewServiceProviderConfigFromFile reads the file from given filepath and returns a validated service provider config
+// if no errors take place.
 func NewServiceProviderConfigFromFile(filepath string) (ServiceProviderConfig, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -14,10 +16,12 @@ func NewServiceProviderConfigFromFile(filepath string) (ServiceProviderConfig, e
 	return NewServiceProviderConfigFromBytes(raw)
 }
 
+// NewServiceProviderConfigFromString returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error) {
 	return NewServiceProviderConfigFromBytes([]byte(s))
 }
 
+// NewServiceProviderConfigFromBytes returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
 	err := serviceProviderConfigSchema.validate(raw)
 	if err != nil {
