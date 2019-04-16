@@ -31,7 +31,10 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	}
 
 	var schema schema
-	json.Unmarshal(raw, &schema)
+	err = json.Unmarshal(raw, &schema)
+	if err != nil {
+		return Schema{}, err
+	}
 
 	return Schema{schema}, nil
 }
@@ -201,42 +204,46 @@ func (as attributes) validate(i interface{}) error {
 
 type attributeType string
 
+// TODO: binary, dateTime and decimal
 const (
-	attributeTypeBinary    attributeType = "binary"
-	attributeTypeBoolean                 = "boolean"
-	attributeTypeComplex                 = "complex"
-	attributeTypeDateTime                = "dateTime"
-	attributeTypeDecimal                 = "decimal"
-	attributeTypeInteger                 = "integer"
-	attributeTypeReference               = "reference"
-	attributeTypeString                  = "string"
+	// attributeTypeBinary    attributeType = "binary"
+	attributeTypeBoolean attributeType = "boolean"
+	attributeTypeComplex attributeType = "complex"
+	// attributeTypeDateTime  attributeType = "dateTime"
+	// attributeTypeDecimal   attributeType = "decimal"
+	attributeTypeInteger   attributeType = "integer"
+	attributeTypeReference attributeType = "reference"
+	attributeTypeString    attributeType = "string"
 )
 
 type attributeMutability string
 
-const (
-	attributeMutabilityImmutable attributeMutability = "immutable"
-	attributeMutabilityReadOnly                      = "readOnly"
-	attributeMutabilityReadWrite                     = "readWrite"
-	attributeMutabilityWriteOnly                     = "writeOnly"
-)
+// TODO: readWrite and writeOnly
+// const (
+// attributeMutabilityImmutable attributeMutability = "immutable"
+// attributeMutabilityReadOnly  attributeMutability = "readOnly"
+// attributeMutabilityReadWrite attributeMutability = "readWrite"
+// attributeMutabilityWriteOnly attributeMutability = "writeOnly"
+// )
 
 type attributeReturned string
 
-const (
-	attributeReturnedAlways  attributeReturned = "always"
-	attributeReturnedDefault                   = "default"
-	attributeReturnedNever                     = "never"
-	attributeReturnedRequest                   = "request"
-)
+// TODO: never and request
+// const (
+// attributeReturnedAlways  attributeReturned = "always"
+// attributeReturnedDefault attributeReturned = "default"
+// attributeReturnedNever   attributeReturned = "never"
+// attributeReturnedRequest attributeReturned = "request"
+// )
 
 type attributeUniqueness string
 
-const (
-	attributeUniquenessGlobal attributeUniqueness = "global"
-	attributeUniquenessNone                       = "none"
-	attributeUniquenessServer                     = "server"
-)
+// TODO global, none and server
+// const (
+// attributeUniquenessGlobal attributeUniqueness = "global"
+// attributeUniquenessNone   attributeUniqueness = "none"
+// attributeUniquenessServer attributeUniqueness = "server"
+// )
 
 var metaSchema schema
 

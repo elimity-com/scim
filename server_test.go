@@ -105,16 +105,16 @@ func TestNewServer(t *testing.T) {
 			t: []ResourceType{
 				{
 					resourceType: resourceType{
-						Name:   "name",
+						Name:     "name",
 						Endpoint: "/",
-						Schema: "id",
+						Schema:   "id",
 					},
 				},
 				{
 					resourceType: resourceType{
-						Name:   "other",
+						Name:     "other",
 						Endpoint: "/",
-						Schema: "id",
+						Schema:   "id",
 					},
 				},
 			},
