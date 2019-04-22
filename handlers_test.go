@@ -59,7 +59,10 @@ func TestServerSchemasHandler(t *testing.T) {
 	}
 
 	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Error(err)
+	}
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
@@ -138,7 +141,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 	}
 
 	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Error(err)
+	}
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
@@ -193,7 +199,10 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 	}
 
 	var resourceType resourceType
-	json.Unmarshal(rr.Body.Bytes(), &resourceType)
+	err = json.Unmarshal(rr.Body.Bytes(), &resourceType)
+	if err != nil {
+		t.Error(err)
+	}
 	if resourceType.ID != "User" {
 		t.Errorf("schema does not contain the correct name: %s", resourceType.Name)
 	}
@@ -224,8 +233,17 @@ func TestServerResourcePostHandlerInvalid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+
+	var scimErr scimError
+	err = json.Unmarshal(rr.Body.Bytes(), &scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+	if scimErr != scimErrorInvalidValue {
+		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
 
@@ -239,13 +257,17 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	var resource Resource
-	json.Unmarshal(rr.Body.Bytes(), &resource)
-	if resource.CoreAttributes["userName"] != "test" {
-		t.Errorf("handler did not return the resource correctly")
-	}
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resource Resource
+	err = json.Unmarshal(rr.Body.Bytes(), &resource)
+	if err != nil {
+		t.Error(err)
+	}
+	if resource.CoreAttributes["userName"] != "test" {
+		t.Errorf("handler did not return the resource correctly")
 	}
 }
 
@@ -259,13 +281,41 @@ func TestServerResourceGetHandler(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
 	var resource Resource
-	json.Unmarshal(rr.Body.Bytes(), &resource)
+	err = json.Unmarshal(rr.Body.Bytes(), &resource)
+	if err != nil {
+		t.Error(err)
+	}
 	if resource.CoreAttributes["userName"] != "test" {
 		t.Errorf("handler did not return the resource correctly")
 	}
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+}
+
+func TestServerResourceGetHandlerNotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users/9999", nil)
+	rr := httptest.NewRecorder()
+
+	server, err := newTestServer()
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+
+	var scimErr scimError
+	err = json.Unmarshal(rr.Body.Bytes(), &scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+	if scimErr != scimErrorResourceNotFound("9999") {
+		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
 
@@ -280,7 +330,10 @@ func TestServerResourcesGetHandler(t *testing.T) {
 	server.ServeHTTP(rr, req)
 
 	var response listResponse
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	err = json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if response.TotalResults != 1 {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
@@ -301,8 +354,17 @@ func TestServerResourcePutHandlerInvalid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+
+	var scimErr scimError
+	err = json.Unmarshal(rr.Body.Bytes(), &scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+	if scimErr != scimErrorInvalidValue {
+		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
 
@@ -317,12 +379,39 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 	server.ServeHTTP(rr, req)
 
 	var resource Resource
-	json.Unmarshal(rr.Body.Bytes(), &resource)
+	err = json.Unmarshal(rr.Body.Bytes(), &resource)
+	if err != nil {
+		t.Error(err)
+	}
 	if resource.CoreAttributes["userName"] != "other" {
 		t.Errorf("handler did not replace previous resource")
 	}
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestServerResourcePutHandlerNotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
+	rr := httptest.NewRecorder()
+
+	server, err := newTestServer()
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+
+	var scimErr scimError
+	err = json.Unmarshal(rr.Body.Bytes(), &scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+	if scimErr != scimErrorResourceNotFound("9999") {
+		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
 
@@ -338,5 +427,29 @@ func TestServerResourceDeleteHandler(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNoContent)
+	}
+}
+
+func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
+	rr := httptest.NewRecorder()
+
+	server, err := newTestServer()
+	if err != nil {
+		t.Error(err)
+	}
+	server.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+
+	var scimErr scimError
+	err = json.Unmarshal(rr.Body.Bytes(), &scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+	if scimErr != scimErrorResourceNotFound("9999") {
+		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }

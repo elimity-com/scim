@@ -10,7 +10,7 @@ jobs:
     steps:
       - checkout
       - run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.16.0
-      - run: ./bin/golangci-lint -E goimports run
+      - run: ./bin/golangci-lint -E goimports,golint --exclude-use-default=false run
   test:
     executor: main
     environment:

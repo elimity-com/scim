@@ -2,14 +2,21 @@ package scim
 
 import (
 	"encoding/json"
-	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
-func errorHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	io.WriteString(w, `{"status": "404"}`)
+func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
+	raw, err := json.Marshal(scimErr)
+	if err != nil {
+		log.Fatalf("failed marshaling scim error: %v", err)
+	}
+	w.WriteHeader(scimErr.Status)
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
@@ -26,9 +33,14 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		TotalResults: len(schemas),
 		Resources:    schemas,
 	}
-	raw, _ := json.Marshal(response)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(response)
+	if err != nil {
+		log.Fatalf("failed marshaling list response: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
@@ -38,13 +50,18 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	schema, ok := s.schemas[id]
 	if !ok {
-		errorHandler(w, r)
+		errorHandler(w, r, scimErrorResourceNotFound(id))
 		return
 	}
 
-	raw, _ := json.Marshal(schema)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(schema)
+	if err != nil {
+		log.Fatalf("failed marshaling schema: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourceTypesHandler receives an HTTP GET to this endpoint, "/ResourceTypes", which is used to discover the types of
@@ -62,9 +79,14 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 		TotalResults: len(resourceTypes),
 		Resources:    resourceTypes,
 	}
-	raw, _ := json.Marshal(response)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(response)
+	if err != nil {
+		log.Fatalf("failed marshaling list response: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
@@ -74,13 +96,18 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
 	resourceType, ok := s.resourceTypes[name]
 	if !ok {
-		errorHandler(w, r)
+		errorHandler(w, r, scimErrorResourceNotFound(name))
 		return
 	}
 
-	raw, _ := json.Marshal(resourceType)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(resourceType)
+	if err != nil {
+		log.Fatalf("failed marshaling resource type: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
@@ -88,9 +115,14 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, _ := json.Marshal(s.config)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(s.config)
+	if err != nil {
+		log.Fatalf("failed marshaling service provider config: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourcePostHandler receives an HTTP POST request to the resource endpoint, such as "/Users" or "/Groups", as
@@ -100,21 +132,26 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, err := s.schemas[resourceType.Schema].validate(data, write)
-	if err != nil {
-		errorHandler(w, r)
+	attributes, scimErr := s.schemas[resourceType.Schema].validate(data, write)
+	if scimErr != scimErrorNil {
+		errorHandler(w, r, scimErr)
 		return
 	}
 
-	resource, err := resourceType.handler.Create(attributes)
-	if err != nil {
-		errorHandler(w, r)
+	resource, postErr := resourceType.handler.Create(attributes)
+	if postErr != PostErrorNil {
+		errorHandler(w, r, postErr.err)
 		return
 	}
 
-	raw, _ := json.Marshal(resource)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(resource)
+	if err != nil {
+		log.Fatalf("failed marshaling resource: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
@@ -122,23 +159,30 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	resource, err := resourceType.handler.Get(id)
-	if err != nil {
-		errorHandler(w, r)
+	resource, getErr := resourceType.handler.Get(id)
+	if getErr != GetErrorNil {
+		errorHandler(w, r, getErr.err)
 		return
 	}
 
-	raw, _ := json.Marshal(resource)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(resource)
+	if err != nil {
+		errorHandler(w, r, scimErrorInternalServer)
+		log.Fatalf("failed marshaling resource: %v", err)
+		return
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	resources, err := resourceType.handler.GetAll()
-	if err != nil {
-		errorHandler(w, r)
+	resources, getErr := resourceType.handler.GetAll()
+	if getErr != GetErrorNil {
+		errorHandler(w, r, getErr.err)
 		return
 	}
 
@@ -146,33 +190,45 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		TotalResults: len(resources),
 		Resources:    resources,
 	}
-	raw, _ := json.Marshal(response)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(response)
+	if err != nil {
+		errorHandler(w, r, scimErrorInternalServer)
+		log.Fatalf("failed list response %v", err)
+		return
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
-// resourcePutHandler receives an HTTP PUT  to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
 // "{id}" is a resource identifier to replace a resource's attributes.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, err := s.schemas[resourceType.Schema].validate(data, replace)
-	if err != nil {
-		errorHandler(w, r)
+	attributes, scimErr := s.schemas[resourceType.Schema].validate(data, replace)
+	if scimErr != scimErrorNil {
+		errorHandler(w, r, scimErr)
 		return
 	}
 
-	resource, err := resourceType.handler.Replace(id, attributes)
-	if err != nil {
-		errorHandler(w, r)
+	resource, putError := resourceType.handler.Replace(id, attributes)
+	if putError != PutErrorNil {
+		errorHandler(w, r, putError.err)
 		return
 	}
 
-	raw, _ := json.Marshal(resource)
-	w.WriteHeader(http.StatusOK)
-	w.Write(raw)
+	raw, err := json.Marshal(resource)
+	if err != nil {
+		log.Fatalf("failed marshaling resource: %v", err)
+	}
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }
 
 // resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
@@ -180,9 +236,9 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.6
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	err := resourceType.handler.Delete(id)
-	if err != nil {
-		errorHandler(w, r)
+	deleteErr := resourceType.handler.Delete(id)
+	if deleteErr != DeleteErrorNil {
+		errorHandler(w, r, deleteErr.err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

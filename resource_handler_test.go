@@ -21,28 +21,28 @@ type testResourceHandler struct {
 	data map[string]CoreAttributes
 }
 
-func (h testResourceHandler) Create(attributes CoreAttributes) (Resource, error) {
+func (h testResourceHandler) Create(attributes CoreAttributes) (Resource, PostError) {
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
 	h.data[id] = attributes
 	return Resource{
 		ID:             id,
 		CoreAttributes: attributes,
-	}, nil
+	}, PostErrorNil
 }
 
-func (h testResourceHandler) Get(id string) (Resource, error) {
+func (h testResourceHandler) Get(id string) (Resource, GetError) {
 	data, ok := h.data[id]
 	if !ok {
-		return Resource{}, fmt.Errorf("resource not found with id: %s", id)
+		return Resource{}, NewResourceNotFoundGetError(id)
 	}
 	return Resource{
 		ID:             id,
 		CoreAttributes: data,
-	}, nil
+	}, GetErrorNil
 }
 
-func (h testResourceHandler) GetAll() ([]Resource, error) {
+func (h testResourceHandler) GetAll() ([]Resource, GetError) {
 	all := make([]Resource, 0)
 	for k, v := range h.data {
 		all = append(all, Resource{
@@ -50,26 +50,26 @@ func (h testResourceHandler) GetAll() ([]Resource, error) {
 			CoreAttributes: v,
 		})
 	}
-	return all, nil
+	return all, GetErrorNil
 }
 
-func (h testResourceHandler) Replace(id string, attributes CoreAttributes) (Resource, error) {
+func (h testResourceHandler) Replace(id string, attributes CoreAttributes) (Resource, PutError) {
 	_, ok := h.data[id]
 	if !ok {
-		return Resource{}, fmt.Errorf("resource not found with id: %s", id)
+		return Resource{}, NewResourceNotFoundPutError(id)
 	}
 	h.data[id] = attributes
 	return Resource{
 		ID:             id,
 		CoreAttributes: attributes,
-	}, nil
+	}, PutErrorNil
 }
 
-func (h testResourceHandler) Delete(id string) error {
+func (h testResourceHandler) Delete(id string) DeleteError {
 	_, ok := h.data[id]
 	if !ok {
-		return fmt.Errorf("resource not found with id: %s", id)
+		return NewResourceNotFoundDeleteError(id)
 	}
 	delete(h.data, id)
-	return nil
+	return DeleteErrorNil
 }

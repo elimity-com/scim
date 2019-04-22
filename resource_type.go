@@ -2,9 +2,12 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 )
 
+// NewResourceTypeFromFile reads the file from given filepath and returns a validated resource type if no errors take place.
 func NewResourceTypeFromFile(filepath string, handler ResourceHandler) (ResourceType, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -14,18 +17,23 @@ func NewResourceTypeFromFile(filepath string, handler ResourceHandler) (Resource
 	return NewResourceTypeFromBytes(raw, handler)
 }
 
+// NewResourceTypeFromString returns a validated resource type if no errors take place.
 func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType, error) {
 	return NewResourceTypeFromBytes([]byte(s), handler)
 }
 
+// NewResourceTypeFromBytes returns a validated resource type if no errors take place.
 func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
-	_, err := resourceTypeSchema.validate(raw, read)
-	if err != nil {
-		return ResourceType{}, err
+	_, scimErr := resourceTypeSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return ResourceType{}, fmt.Errorf(scimErr.Detail)
 	}
 
 	var resourceType resourceType
-	json.Unmarshal(raw, &resourceType)
+	err := json.Unmarshal(raw, &resourceType)
+	if err != nil {
+		log.Fatalf("failed parsing resource type: %v", err)
+	}
 
 	resourceType.handler = handler
 	return ResourceType{

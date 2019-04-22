@@ -24,7 +24,7 @@ func TestNewResourceTypeFromString(t *testing.T) {
 				"endpoint": "/Users",
 				"schema": "urn:ietf:params:scim:schemas:core:2.0:User"
 			}`,
-			err: "cannot find required value name",
+			err: scimErrorInvalidValue.Detail,
 		},
 		{
 			s: `{
@@ -39,7 +39,7 @@ func TestNewResourceTypeFromString(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot find required value required",
+			err: scimErrorInvalidValue.Detail,
 		},
 	}
 

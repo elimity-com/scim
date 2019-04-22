@@ -6,14 +6,17 @@ import (
 	"strings"
 )
 
+// Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
+// domain scenarios easier to support via a standardized service.
 type Server struct {
 	config        serviceProviderConfig
 	schemas       map[string]schema
 	resourceTypes map[string]resourceType
 }
 
-// Schemas must contain every schema referenced in by given resource types. Given schemas and resource types must not
-// contain duplicates based on their identifier.
+// NewServer returns a SCIM server with given config, resource types and matching schemas. Given schemas must contain
+// every schema referenced in by given resource types. The given schemas and resource types cannot contain duplicates
+// based on their identifier and no duplicate endpoints can be defined. An error is returned otherwise.
 func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []ResourceType) (Server, error) {
 	schemasMap := make(map[string]schema)
 	for _, s := range schemas {
@@ -111,5 +114,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, r)
+	errorHandler(w, r, scimError{
+		Detail: "Specified endpoint does not exist.",
+		Status: http.StatusNotFound,
+	})
 }

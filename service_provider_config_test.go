@@ -57,7 +57,7 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 					"maxOperations": 1.0
 				}
 			}`,
-			err: "1.0 is not an integer value",
+			err: scimErrorInvalidValue.Detail,
 		},
 		{
 			s: `{
@@ -70,7 +70,7 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 					"maxOperations": "one"
 				}
 			}`,
-			err: "cannot convert one to a json.Number",
+			err: scimErrorInvalidValue.Detail,
 		},
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"strings"
 )
 
@@ -25,13 +26,16 @@ func NewSchemaFromString(s string) (Schema, error) {
 
 // NewSchemaFromBytes returns a validated schema if no errors take place.
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
-	_, err := metaSchema.validate(raw, read)
-	if err != nil {
-		return Schema{}, err
+	_, scimErr := metaSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return Schema{}, fmt.Errorf(scimErr.Detail)
 	}
 
 	var schema schema
-	json.Unmarshal(raw, &schema)
+	err := json.Unmarshal(raw, &schema)
+	if err != nil {
+		log.Fatalf("failed parsing schema: %v", err)
+	}
 
 	return Schema{schema}, nil
 }
@@ -57,14 +61,14 @@ type schema struct {
 }
 
 // validate validates given bytes based on the schema and validation mode.
-func (s schema) validate(raw []byte, mode validationMode) (CoreAttributes, error) {
+func (s schema) validate(raw []byte, mode validationMode) (CoreAttributes, scimError) {
 	var m interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	err := d.Decode(&m)
 	if err != nil {
-		return CoreAttributes{}, err
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 	return s.Attributes.validate(m, mode)
 }
@@ -109,51 +113,51 @@ type attribute struct {
 	ReferenceTypes []string
 }
 
-func (a attribute) validate(i interface{}, mode validationMode) (CoreAttributes, error) {
+func (a attribute) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	// validate required
 	if i == nil {
 		if a.Required {
-			return CoreAttributes{}, fmt.Errorf("cannot find required value %s", strings.ToLower(a.Name))
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
-		return CoreAttributes{}, nil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	if a.MultiValued {
 		arr, ok := i.([]interface{})
 		if !ok {
-			return CoreAttributes{}, fmt.Errorf("cannot convert %v to a slice", i)
+			return CoreAttributes{}, scimErrorInvalidSyntax
 		}
 
 		// empty array = omitted/nil
 		if len(arr) == 0 && a.Required {
-			return CoreAttributes{}, fmt.Errorf("required array is empty")
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 
 		coreAttributes := make([]CoreAttributes, 0)
 		for _, sub := range arr {
 			attributes, err := a.validateSingular(sub, mode)
-			if err != nil {
+			if err != scimErrorNil {
 				return CoreAttributes{}, err
 			}
 			coreAttributes = append(coreAttributes, attributes)
 		}
 
 		if mode != read {
-			return CoreAttributes{a.Name: coreAttributes}, nil
+			return CoreAttributes{a.Name: coreAttributes}, scimErrorNil
 		}
-		return CoreAttributes{}, nil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	return a.validateSingular(i, mode)
 }
 
-func (a attribute) validateSingular(i interface{}, mode validationMode) (CoreAttributes, error) {
+func (a attribute) validateSingular(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	if mode == replace {
 		switch a.Mutability {
 		case attributeMutabilityImmutable:
-			return CoreAttributes{}, fmt.Errorf("immutable field: %s", a.Name)
+			return CoreAttributes{}, scimErrorMutability
 		case attributeMutabilityReadOnly:
-			return CoreAttributes{}, nil
+			return CoreAttributes{}, scimErrorNil
 		}
 	}
 
@@ -161,43 +165,44 @@ func (a attribute) validateSingular(i interface{}, mode validationMode) (CoreAtt
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
 		if !ok {
-			return CoreAttributes{}, fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeComplex:
-		if _, err := a.SubAttributes.validate(i, mode); err != nil {
+		if _, err := a.SubAttributes.validate(i, mode); err != scimErrorNil {
 			return CoreAttributes{}, err
 		}
 	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
-			return CoreAttributes{}, fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeInteger:
 		n, ok := i.(json.Number)
 		if !ok {
-			return CoreAttributes{}, fmt.Errorf("cannot convert %v to a json.Number", i)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 		if strings.Contains(n.String(), ".") || strings.Contains(n.String(), "e") {
-			return CoreAttributes{}, fmt.Errorf("%s is not an integer value", n)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	default:
-		return CoreAttributes{}, fmt.Errorf("not implemented/invalid type: %v", a.Type)
+		log.Fatalf("attribute type not implemented: %s", a.Type)
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	if mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
-		return CoreAttributes{a.Name: i}, nil
+		return CoreAttributes{a.Name: i}, scimErrorNil
 	}
-	return CoreAttributes{}, nil
+	return CoreAttributes{}, scimErrorNil
 }
 
 type attributes []attribute
 
-func (as attributes) validate(i interface{}, mode validationMode) (CoreAttributes, error) {
+func (as attributes) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	coreAttributes := make(CoreAttributes)
 
 	c, ok := i.(map[string]interface{})
 	if !ok {
-		return CoreAttributes{}, fmt.Errorf("cannot convert %v to type complex", i)
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 
 	for _, attribute := range as {
@@ -207,7 +212,7 @@ func (as attributes) validate(i interface{}, mode validationMode) (CoreAttribute
 		for k, v := range c {
 			if strings.EqualFold(attribute.Name, k) {
 				if found {
-					return CoreAttributes{}, fmt.Errorf("duplicate key: %s", strings.ToLower(k))
+					return CoreAttributes{}, scimErrorUniqueness
 				}
 				found = true
 				hit = v
@@ -215,7 +220,7 @@ func (as attributes) validate(i interface{}, mode validationMode) (CoreAttribute
 		}
 
 		attribute, err := attribute.validate(hit, mode)
-		if err != nil {
+		if err != scimErrorNil {
 			return CoreAttributes{}, err
 		}
 
@@ -225,47 +230,51 @@ func (as attributes) validate(i interface{}, mode validationMode) (CoreAttribute
 			}
 		}
 	}
-	return coreAttributes, nil
+	return coreAttributes, scimErrorNil
 }
 
 type attributeType string
 
+// TODO: binary, dateTime and decimal
 const (
-	attributeTypeBinary    attributeType = "binary"
-	attributeTypeBoolean                 = "boolean"
-	attributeTypeComplex                 = "complex"
-	attributeTypeDateTime                = "dateTime"
-	attributeTypeDecimal                 = "decimal"
-	attributeTypeInteger                 = "integer"
-	attributeTypeReference               = "reference"
-	attributeTypeString                  = "string"
+	// attributeTypeBinary    attributeType = "binary"
+	attributeTypeBoolean attributeType = "boolean"
+	attributeTypeComplex attributeType = "complex"
+	// attributeTypeDateTime  attributeType = "dateTime"
+	// attributeTypeDecimal   attributeType = "decimal"
+	attributeTypeInteger   attributeType = "integer"
+	attributeTypeReference attributeType = "reference"
+	attributeTypeString    attributeType = "string"
 )
 
 type attributeMutability string
 
+// TODO: readWrite and writeOnly
 const (
 	attributeMutabilityImmutable attributeMutability = "immutable"
-	attributeMutabilityReadOnly                      = "readOnly"
-	attributeMutabilityReadWrite                     = "readWrite"
-	attributeMutabilityWriteOnly                     = "writeOnly"
+	attributeMutabilityReadOnly  attributeMutability = "readOnly"
+	// attributeMutabilityReadWrite attributeMutability = "readWrite"
+	// attributeMutabilityWriteOnly attributeMutability = "writeOnly"
 )
 
 type attributeReturned string
 
+// TODO: never and request
 const (
 	attributeReturnedAlways  attributeReturned = "always"
-	attributeReturnedDefault                   = "default"
-	attributeReturnedNever                     = "never"
-	attributeReturnedRequest                   = "request"
+	attributeReturnedDefault attributeReturned = "default"
+	// attributeReturnedNever   attributeReturned = "never"
+	// attributeReturnedRequest attributeReturned = "request"
 )
 
 type attributeUniqueness string
 
-const (
-	attributeUniquenessGlobal attributeUniqueness = "global"
-	attributeUniquenessNone                       = "none"
-	attributeUniquenessServer                     = "server"
-)
+// TODO global, none and server
+// const (
+// attributeUniquenessGlobal attributeUniqueness = "global"
+// attributeUniquenessNone   attributeUniqueness = "none"
+// attributeUniquenessServer attributeUniqueness = "server"
+// )
 
 type validationMode int
 

@@ -2,9 +2,13 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 )
 
+// NewServiceProviderConfigFromFile reads the file from given filepath and returns a validated service provider config
+// if no errors take place.
 func NewServiceProviderConfigFromFile(filepath string) (ServiceProviderConfig, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -14,18 +18,23 @@ func NewServiceProviderConfigFromFile(filepath string) (ServiceProviderConfig, e
 	return NewServiceProviderConfigFromBytes(raw)
 }
 
+// NewServiceProviderConfigFromString returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error) {
 	return NewServiceProviderConfigFromBytes([]byte(s))
 }
 
+// NewServiceProviderConfigFromBytes returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
-	_, err := serviceProviderConfigSchema.validate(raw, read)
-	if err != nil {
-		return ServiceProviderConfig{}, err
+	_, scimErr := serviceProviderConfigSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return ServiceProviderConfig{}, fmt.Errorf(scimErr.Detail)
 	}
 
 	var serviceProviderConfig serviceProviderConfig
-	json.Unmarshal(raw, &serviceProviderConfig)
+	err := json.Unmarshal(raw, &serviceProviderConfig)
+	if err != nil {
+		log.Fatalf("failed parsing service provider config: %v", err)
+	}
 
 	return ServiceProviderConfig{serviceProviderConfig}, nil
 }
@@ -41,9 +50,9 @@ type ServiceProviderConfig struct {
 //
 // RFC: https://tools.ietf.org/html/rfc7643#section-5
 type serviceProviderConfig struct {
-	// DocumentationUri is an HTTP-addressable URL pointing to the service provider's human-consumable help
+	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
 	// documentation. OPTIONAL.
-	DocumentationUri *string `json:",omitempty"`
+	DocumentationURI *string `json:",omitempty"`
 	// PatchSupported is a boolean value specifying whether or not PATCH is supported.
 	PatchSupported bool
 	// BulkSupported is a boolean value specifying whether or not bulk is supported.
@@ -70,7 +79,7 @@ type serviceProviderConfig struct {
 func (config serviceProviderConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
-		"documentationUri": config.DocumentationUri,
+		"documentationUri": config.DocumentationURI,
 		"patch": map[string]bool{
 			"supported": config.PatchSupported,
 		},
@@ -98,7 +107,7 @@ func (config serviceProviderConfig) MarshalJSON() ([]byte, error) {
 
 func (config *serviceProviderConfig) UnmarshalJSON(data []byte) error {
 	var tmpConfig struct {
-		DocumentationUri *string
+		DocumentationURI *string
 		Patch            struct {
 			Supported bool
 		}
@@ -128,7 +137,7 @@ func (config *serviceProviderConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	*config = serviceProviderConfig{
-		DocumentationUri:        tmpConfig.DocumentationUri,
+		DocumentationURI:        tmpConfig.DocumentationURI,
 		PatchSupported:          tmpConfig.Patch.Supported,
 		BulkSupported:           tmpConfig.Bulk.Supported,
 		MaxBulkOperations:       tmpConfig.Bulk.MaxOperations,
@@ -152,23 +161,24 @@ type authenticationScheme struct {
 	Name string
 	// Description of the authentication scheme.
 	Description string
-	// SpecUri is an HTTP-addressable URL pointing to the authentication scheme's specification. OPTIONAL.
-	SpecUri *string `json:",omitempty"`
-	// DocumentationUri is an HTTP-addressable URL pointing to the authentication scheme's usage documentation. OPTIONAL.
-	DocumentationUri *string `json:",omitempty"`
+	// SpecURI is an HTTP-addressable URL pointing to the authentication scheme's specification. OPTIONAL.
+	SpecURI *string `json:",omitempty"`
+	// DocumentationURI is an HTTP-addressable URL pointing to the authentication scheme's usage documentation. OPTIONAL.
+	DocumentationURI *string `json:",omitempty"`
 	// Primary is a boolean value indicating the 'primary' or preferred authentication scheme.
 	Primary *bool `json:",omitempty"`
 }
 
 type authenticationType string
 
-const (
-	authenticationTypeOauth            = "oauth"
-	authenticationTypeOauth2           = "oauth2"
-	authenticationTypeOauthBearerToken = "oauthbearertoken"
-	authenticationTypeHTTPBasic        = "httpbasic"
-	authenticationTypeHTTPDigest       = "httpdigest"
-)
+// TODO: authentication types
+// const (
+// authenticationTypeOauth            authenticationType = "oauth"
+// authenticationTypeOauth2           authenticationType = "oauth2"
+// authenticationTypeOauthBearerToken authenticationType = "oauthbearertoken"
+// authenticationTypeHTTPBasic        authenticationType = "httpbasic"
+// authenticationTypeHTTPDigest       authenticationType = "httpdigest"
+// )
 
 var serviceProviderConfigSchema schema
 
