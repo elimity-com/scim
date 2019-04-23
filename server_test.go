@@ -58,14 +58,16 @@ func TestNewServer(t *testing.T) {
 			t: []ResourceType{
 				{
 					resourceType: resourceType{
-						Name:   "name",
-						Schema: "id",
+						Name:     "name",
+						Endpoint: "/Name",
+						Schema:   "id",
 					},
 				},
 				{
 					resourceType: resourceType{
-						Name:   "name",
-						Schema: "id",
+						Name:     "name",
+						Endpoint: "/Name",
+						Schema:   "id",
 					},
 				},
 			},
@@ -106,19 +108,57 @@ func TestNewServer(t *testing.T) {
 				{
 					resourceType: resourceType{
 						Name:     "name",
-						Endpoint: "/",
+						Endpoint: "/id",
 						Schema:   "id",
 					},
 				},
 				{
 					resourceType: resourceType{
 						Name:     "other",
+						Endpoint: "/id",
+						Schema:   "id",
+					},
+				},
+			},
+			err: "duplicate endpoints in resource types: /id",
+		},
+		{
+			s: []Schema{
+				{
+					schema: schema{
+						ID: "id",
+					},
+				},
+			},
+			t: []ResourceType{
+				{
+					resourceType: resourceType{
+						Name:     "name",
 						Endpoint: "/",
 						Schema:   "id",
 					},
 				},
 			},
 			err: "duplicate endpoints in resource types: /",
+		},
+		{
+			s: []Schema{
+				{
+					schema: schema{
+						ID: "id",
+					},
+				},
+			},
+			t: []ResourceType{
+				{
+					resourceType: resourceType{
+						Name:     "name",
+						Endpoint: "other",
+						Schema:   "id",
+					},
+				},
+			},
+			err: "endpoint does not start with a (forward) slash: other",
 		},
 	}
 

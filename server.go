@@ -26,7 +26,12 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 		schemasMap[s.schema.ID] = s.schema
 	}
 
-	tmpEndpoints := make(map[string]unitType)
+	tmpEndpoints := map[string]unitType{
+		"/":                      unit,
+		"/Schemas":               unit,
+		"/ResourceTypes":         unit,
+		"/ServiceProviderConfig": unit,
+	}
 	resourceTypesMap := make(map[string]resourceType)
 	for _, t := range resourceTypes {
 		if _, ok := schemasMap[t.resourceType.Schema]; !ok {
@@ -48,6 +53,12 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 			return Server{}, fmt.Errorf("duplicate resource type with name: %s", t.resourceType.Name)
 		}
 
+		if !strings.HasPrefix(t.resourceType.Endpoint, "/") {
+			return Server{}, fmt.Errorf(
+				"endpoint does not start with a (forward) slash: %s",
+				t.resourceType.Endpoint,
+			)
+		}
 		if _, ok := tmpEndpoints[t.resourceType.Endpoint]; ok {
 			return Server{}, fmt.Errorf(
 				"duplicate endpoints in resource types: %s",
