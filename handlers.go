@@ -144,7 +144,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	raw, err := json.Marshal(resource)
+	raw, err := json.Marshal(resource.response(resourceType, r.Host+r.RequestURI+"/"+resource.ID))
 	if err != nil {
 		log.Fatalf("failed marshaling resource: %v", err)
 	}
@@ -166,7 +166,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource)
+	raw, err := json.Marshal(resource.response(resourceType, r.Host+r.RequestURI))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -187,9 +187,14 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
+	respResources := make([]CoreAttributes, 0)
+	for _, resource := range resources {
+		respResources = append(respResources, resource.response(resourceType, r.Host+r.RequestURI+"/"+resource.ID))
+	}
+
 	response := listResponse{
 		TotalResults: len(resources),
-		Resources:    resources,
+		Resources:    respResources,
 	}
 	raw, err := json.Marshal(response)
 	if err != nil {
@@ -222,7 +227,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource)
+	raw, err := json.Marshal(resource.response(resourceType, r.Host+r.RequestURI))
 	if err != nil {
 		log.Fatalf("failed marshaling resource: %v", err)
 	}

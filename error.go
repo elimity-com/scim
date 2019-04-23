@@ -69,10 +69,10 @@ type scimError struct {
 
 func (e scimError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Schemas  []string
-		ScimType scimType `json:",omitempty"`
-		Detail   string   `json:",omitempty"`
-		Status   string
+		Schemas  []string `json:"schemas"`
+		ScimType scimType `json:"scimType,omitempty"`
+		Detail   string   `json:"detail,omitempty"`
+		Status   string   `json:"status"`
 	}{
 		Schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
 		ScimType: e.ScimType,

@@ -65,7 +65,7 @@ func TestNewSchemaFromFile(t *testing.T) {
 
 func TestSchemaValidation(t *testing.T) {
 	// validate raw meta schema with meta schema
-	if _, err := metaSchema.validate([]byte(rawMetaSchema), read); err != scimErrorNil {
+	if _, err := metaSchema.validate([]byte(rawSchemaSchema), read); err != scimErrorNil {
 		t.Error(err)
 	}
 

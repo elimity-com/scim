@@ -51,13 +51,13 @@ type Schema struct {
 // RFC: RFC7643 - https://tools.ietf.org/html/rfc7643#section-7
 type schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
-	ID string
+	ID string `json:"id"`
 	// Name is the schema's human-readable name. OPTIONAL.
-	Name string
+	Name string `json:"name"`
 	// Description is the schema's human-readable description.  OPTIONAL.
-	Description string
+	Description string `json:"description,omitempty"`
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
-	Attributes attributes
+	Attributes attributes `json:"attributes"`
 }
 
 // validate validates given bytes based on the schema and validation mode.
@@ -79,38 +79,38 @@ func (s schema) validate(raw []byte, mode validationMode) (CoreAttributes, scimE
 // RFC: https://tools.ietf.org/html/rfc7643#section-7
 type attribute struct {
 	// Name is the attribute's name.
-	Name string
+	Name string `json:"name"`
 	// Type is the attribute's data type. Valid values are "string", "boolean", "decimal", "integer", "dateTime",
 	// "reference", and "complex".  When an attribute is of type "complex", there SHOULD be a corresponding schema
 	// attribute "subAttributes" defined, listing the sub-attributes of the attribute.
-	Type attributeType
+	Type attributeType `json:"type"`
 	// SubAttributes defines a set of sub-attributes when an attribute is of type "complex". "subAttributes" has the
 	// same schema sub-attributes as "attributes".
-	SubAttributes attributes
+	SubAttributes attributes `json:"subAttributes,omitempty"`
 	// MultiValued is a boolean value indicating the attribute's plurality.
-	MultiValued bool
+	MultiValued bool `json:"multiValued"`
 	// Description is the attribute's human-readable description. When applicable, service providers MUST specify the
 	// description.
-	Description string
+	Description string `json:"description,omitempty"`
 	// Required is a boolean value that specifies whether or not the attribute is required.
-	Required bool
+	Required bool `json:"required,omitempty"`
 	// CanonicalValues is a collection of suggested canonical values that MAY be used (e.g., "work" and "home").
 	// OPTIONAL.
-	CanonicalValues []string
+	CanonicalValues []string `json:"canonicalValues,omitempty"`
 	// CaseExact is a boolean value that specifies whether or not a string attribute is case sensitive.
-	CaseExact bool
+	CaseExact bool `json:"caseExact,omitempty"`
 	// Mutability is a single keyword indicating the circumstances under which the value of the attribute can be
 	// (re)defined.
-	Mutability attributeMutability
+	Mutability attributeMutability `json:"mutability,omitempty"`
 	// Returned is a single keyword that indicates when an attribute and associated values are returned in response to
 	// a GET request or in response to a PUT, POST, or PATCH request.
-	Returned attributeReturned
+	Returned attributeReturned `json:"returned,omitempty"`
 	// Uniqueness is a single keyword value that specifies how the service provider enforces uniqueness of attribute
 	// values.
-	Uniqueness attributeUniqueness
+	Uniqueness attributeUniqueness `json:"uniqueness,omitempty"`
 	// ReferenceTypes is a multi-valued array of JSON strings that indicate the SCIM resource types that may be
 	// referenced.
-	ReferenceTypes []string
+	ReferenceTypes []string `json:"referenceTypes,omitempty"`
 }
 
 func (a attribute) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
@@ -290,7 +290,7 @@ const (
 var metaSchema schema
 
 func init() {
-	if err := json.Unmarshal([]byte(rawMetaSchema), &metaSchema); err != nil {
+	if err := json.Unmarshal([]byte(rawSchemaSchema), &metaSchema); err != nil {
 		panic(err)
 	}
 }

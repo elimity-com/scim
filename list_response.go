@@ -1,6 +1,9 @@
 package scim
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"reflect"
+)
 
 // listResponse identifies a query response.
 //
@@ -31,11 +34,7 @@ func (l listResponse) MarshalJSON() ([]byte, error) {
 		l.StartIndex = 1
 	}
 	if l.ItemsPerPage == 0 {
-		if resources, ok := l.Resources.([]interface{}); ok {
-			l.ItemsPerPage = len(resources)
-		} else {
-			l.ItemsPerPage = 1
-		}
+		l.ItemsPerPage = reflect.ValueOf(l.Resources).Len()
 	}
 
 	return json.Marshal(map[string]interface{}{

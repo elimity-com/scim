@@ -82,7 +82,7 @@ func TestServerSchemasHandler(t *testing.T) {
 		t.Errorf("schema is not an object")
 	}
 
-	if schema["ID"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" {
+	if schema["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" {
 		t.Errorf("schema does not contain the correct id: %v", schema["ID"])
 	}
 }
@@ -257,16 +257,16 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
 
-	var resource Resource
+	var resource map[string]interface{}
 	err = json.Unmarshal(rr.Body.Bytes(), &resource)
 	if err != nil {
 		t.Error(err)
 	}
-	if resource.CoreAttributes["userName"] != "test" {
+	if resource["userName"] != "test" {
 		t.Errorf("handler did not return the resource correctly")
 	}
 }
@@ -285,12 +285,12 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var resource Resource
+	var resource map[string]interface{}
 	err = json.Unmarshal(rr.Body.Bytes(), &resource)
 	if err != nil {
 		t.Error(err)
 	}
-	if resource.CoreAttributes["userName"] != "test" {
+	if resource["userName"] != "test" {
 		t.Errorf("handler did not return the resource correctly")
 	}
 }
@@ -378,12 +378,12 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	var resource Resource
+	var resource map[string]interface{}
 	err = json.Unmarshal(rr.Body.Bytes(), &resource)
 	if err != nil {
 		t.Error(err)
 	}
-	if resource.CoreAttributes["userName"] != "other" {
+	if resource["userName"] != "other" {
 		t.Errorf("handler did not replace previous resource")
 	}
 	if status := rr.Code; status != http.StatusOK {
