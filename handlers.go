@@ -148,6 +148,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	if err != nil {
 		log.Fatalf("failed marshaling resource: %v", err)
 	}
+	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
