@@ -58,6 +58,8 @@ type schema struct {
 	Description string `json:"description,omitempty"`
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
 	Attributes attributes `json:"attributes"`
+	// Meta is a complex attribute containing resource metadata
+	Meta meta `json:"meta"`
 }
 
 // validate validates given bytes based on the schema and validation mode.

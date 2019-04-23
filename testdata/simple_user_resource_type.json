@@ -4,5 +4,9 @@
   "endpoint": "/Users",
   "description": "User Account",
   "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
-  "schemaExtensions": []
+  "schemaExtensions": [],
+  "meta": {
+    "resourceType": "ResourceType",
+    "location": "/v2/ResourceTypes/User"
+  }
 }

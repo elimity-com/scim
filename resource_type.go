@@ -68,19 +68,21 @@ type resourceType struct {
 	// SchemaExtensions is a list of URIs of the resource type's schema extensions.
 	// OPTIONAL.
 	SchemaExtensions []schemaExtension
+	// Meta is a complex attribute containing resource metadata
+	Meta meta `json:"meta"`
 
 	handler ResourceHandler
 }
 
-func (r resourceType) MarshalJSON() ([]byte, error) {
+func (t resourceType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"id":               r.ID,
-		"name":             r.Name,
-		"description":      r.Description,
-		"endpoint":         r.Endpoint,
-		"schema":           r.Schema,
-		"schemaExtensions": r.SchemaExtensions,
+		"id":               t.ID,
+		"name":             t.Name,
+		"description":      t.Description,
+		"endpoint":         t.Endpoint,
+		"schema":           t.Schema,
+		"schemaExtensions": t.SchemaExtensions,
 	})
 }
 
