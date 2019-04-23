@@ -1,0 +1,29 @@
+{
+  "id": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+  "name": "EnterpriseUser",
+  "description": "Enterprise User",
+  "attributes": [
+    {
+      "name": "employeeNumber",
+      "type": "string",
+      "multiValued": false,
+      "description": "Numeric or alphanumeric identifier assigned to a person, typically based on order of hire or association with anorganization.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "organization",
+      "type": "string",
+      "multiValued": false,
+      "description": "Identifies the name of an organization.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    }
+  ]
+}
