@@ -257,8 +257,8 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	}
 	server.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
 
 	var resource Resource
