@@ -57,7 +57,7 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 					"maxOperations": 1.0
 				}
 			}`,
-			err: scimErrorInvalidValue.Detail,
+			err: scimErrorInvalidValue.detail,
 		},
 		{
 			s: `{
@@ -70,7 +70,7 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 					"maxOperations": "one"
 				}
 			}`,
-			err: scimErrorInvalidValue.Detail,
+			err: scimErrorInvalidValue.detail,
 		},
 	}
 

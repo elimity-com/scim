@@ -24,8 +24,8 @@ const (
 
 func scimErrorResourceNotFound(id string) scimError {
 	return scimError{
-		Detail: fmt.Sprintf("Resource %s not found.", id),
-		Status: http.StatusNotFound,
+		detail: fmt.Sprintf("Resource %s not found.", id),
+		status: http.StatusNotFound,
 	}
 }
 
@@ -33,38 +33,38 @@ var scimErrorNil scimError
 
 var (
 	scimErrorUniqueness = scimError{
-		ScimType: scimTypeUniqueness,
-		Detail:   "One or more of the attribute values are already in use or are reserved.",
-		Status:   http.StatusConflict,
+		scimType: scimTypeUniqueness,
+		detail:   "One or more of the attribute values are already in use or are reserved.",
+		status:   http.StatusConflict,
 	}
 	scimErrorMutability = scimError{
-		ScimType: scimTypeMutability,
-		Detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
-		Status:   http.StatusBadRequest,
+		scimType: scimTypeMutability,
+		detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
+		status:   http.StatusBadRequest,
 	}
 	scimErrorInvalidSyntax = scimError{
-		ScimType: scimTypeInvalidSyntax,
-		Detail:   "The request body message structure was invalid or did not conform to the request schema.",
-		Status:   http.StatusBadRequest,
+		scimType: scimTypeInvalidSyntax,
+		detail:   "The request body message structure was invalid or did not conform to the request schema.",
+		status:   http.StatusBadRequest,
 	}
 	scimErrorInvalidValue = scimError{
-		ScimType: scimTypeInvalidValue,
-		Detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
-		Status:   http.StatusBadRequest,
+		scimType: scimTypeInvalidValue,
+		detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
+		status:   http.StatusBadRequest,
 	}
 	scimErrorInternalServer = scimError{
-		Status: http.StatusInternalServerError,
+		status: http.StatusInternalServerError,
 	}
 )
 
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.12
 type scimError struct {
 	// scimType is a SCIM detail error keyword. OPTIONAL.
-	ScimType scimType
-	// Detail is a detailed human-readable message. OPTIONAL.
-	Detail string
+	scimType scimType
+	// detail is a detailed human-readable message. OPTIONAL.
+	detail string
 	// status is the HTTP status code expressed as a JSON string. REQUIRED.
-	Status int
+	status int
 }
 
 func (e scimError) MarshalJSON() ([]byte, error) {
@@ -75,9 +75,9 @@ func (e scimError) MarshalJSON() ([]byte, error) {
 		Status   string
 	}{
 		Schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
-		ScimType: e.ScimType,
-		Detail:   e.Detail,
-		Status:   strconv.Itoa(e.Status),
+		ScimType: e.scimType,
+		Detail:   e.detail,
+		Status:   strconv.Itoa(e.status),
 	})
 }
 
@@ -99,9 +99,9 @@ func (e *scimError) UnmarshalJSON(data []byte) error {
 	}
 
 	*e = scimError{
-		ScimType: tmpScimError.ScimType,
-		Detail:   tmpScimError.Detail,
-		Status:   status,
+		scimType: tmpScimError.ScimType,
+		detail:   tmpScimError.Detail,
+		status:   status,
 	}
 
 	return nil

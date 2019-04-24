@@ -28,7 +28,7 @@ func NewSchemaFromString(s string) (Schema, error) {
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	_, scimErr := metaSchema.validate(raw, read)
 	if scimErr != scimErrorNil {
-		return Schema{}, fmt.Errorf(scimErr.Detail)
+		return Schema{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var schema schema

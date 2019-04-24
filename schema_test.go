@@ -17,7 +17,7 @@ func TestNewSchemaFromString(t *testing.T) {
 				"name": "User",
 				"attributes": []
 			}`,
-			err: scimErrorInvalidValue.Detail,
+			err: scimErrorInvalidValue.detail,
 		},
 		{
 			s: `{

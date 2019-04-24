@@ -24,7 +24,7 @@ func TestNewResourceTypeFromString(t *testing.T) {
 				"endpoint": "/Users",
 				"schema": "urn:ietf:params:scim:schemas:core:2.0:User"
 			}`,
-			err: scimErrorInvalidValue.Detail,
+			err: scimErrorInvalidValue.detail,
 		},
 		{
 			s: `{
@@ -39,7 +39,7 @@ func TestNewResourceTypeFromString(t *testing.T) {
 					}
 				]
 			}`,
-			err: scimErrorInvalidValue.Detail,
+			err: scimErrorInvalidValue.detail,
 		},
 	}
 

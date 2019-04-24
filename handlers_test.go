@@ -67,17 +67,12 @@ func TestServerSchemasHandler(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
 
-	schemas, ok := response.Resources.([]interface{})
-	if !ok {
-		t.Errorf("resources is not a list of objects")
-	}
-
-	if len(schemas) != 1 {
+	if len(response.Resources) != 1 {
 		t.Errorf("resources contains more than one schema")
 		return
 	}
 
-	schema, ok := schemas[0].(map[string]interface{})
+	schema, ok := response.Resources[0].(map[string]interface{})
 	if !ok {
 		t.Errorf("schema is not an object")
 	}
@@ -149,17 +144,12 @@ func TestServerResourceTypesHandler(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
 	}
 
-	schemas, ok := response.Resources.([]interface{})
-	if !ok {
-		t.Errorf("resources is not a list of objects")
-	}
-
-	if len(schemas) != 1 {
+	if len(response.Resources) != 1 {
 		t.Errorf("resources contains more than one schema")
 		return
 	}
 
-	resourceType, ok := schemas[0].(map[string]interface{})
+	resourceType, ok := response.Resources[0].(map[string]interface{})
 	if !ok {
 		t.Errorf("schema is not an object")
 	}

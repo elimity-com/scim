@@ -12,7 +12,7 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 	if err != nil {
 		log.Fatalf("failed marshaling scim error: %v", err)
 	}
-	w.WriteHeader(scimErr.Status)
+	w.WriteHeader(scimErr.status)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -24,16 +24,12 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	var schemas []schema
+	var schemas []interface{}
 	for _, v := range s.schemas {
 		schemas = append(schemas, v)
 	}
 
-	response := listResponse{
-		TotalResults: len(schemas),
-		Resources:    schemas,
-	}
-	raw, err := json.Marshal(response)
+	raw, err := json.Marshal(newListResponse(schemas))
 	if err != nil {
 		log.Fatalf("failed marshaling list response: %v", err)
 	}
@@ -70,16 +66,12 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	var resourceTypes []resourceType
+	var resourceTypes []interface{}
 	for _, v := range s.resourceTypes {
 		resourceTypes = append(resourceTypes, v)
 	}
 
-	response := listResponse{
-		TotalResults: len(resourceTypes),
-		Resources:    resourceTypes,
-	}
-	raw, err := json.Marshal(response)
+	raw, err := json.Marshal(newListResponse(resourceTypes))
 	if err != nil {
 		log.Fatalf("failed marshaling list response: %v", err)
 	}
@@ -181,20 +173,21 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	resources, getErr := resourceType.handler.GetAll()
+	res, getErr := resourceType.handler.GetAll()
 	if getErr != GetErrorNil {
 		errorHandler(w, r, getErr.err)
 		return
 	}
 
-	response := listResponse{
-		TotalResults: len(resources),
-		Resources:    resources,
+	var resources []interface{}
+	for _, v := range res {
+		resources = append(resources, v)
 	}
-	raw, err := json.Marshal(response)
+
+	raw, err := json.Marshal(newListResponse(resources))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
-		log.Fatalf("failed list response %v", err)
+		log.Fatalf("failed marshalling list response: %v", err)
 		return
 	}
 	_, err = w.Write(raw)

@@ -26,7 +26,7 @@ func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType,
 func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
 	_, scimErr := resourceTypeSchema.validate(raw, read)
 	if scimErr != scimErrorNil {
-		return ResourceType{}, fmt.Errorf(scimErr.Detail)
+		return ResourceType{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var resourceType resourceType
