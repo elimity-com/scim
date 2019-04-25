@@ -28,7 +28,7 @@ func NewSchemaFromString(s string) (Schema, error) {
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	_, scimErr := metaSchema.validate(raw, read)
 	if scimErr != scimErrorNil {
-		return Schema{}, fmt.Errorf(scimErr.Detail)
+		return Schema{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var schema schema
@@ -58,8 +58,6 @@ type schema struct {
 	Description string `json:"description,omitempty"`
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
 	Attributes attributes `json:"attributes"`
-	// Meta is a complex attribute containing resource metadata
-	Meta meta `json:"meta"`
 }
 
 // validate validates given bytes based on the schema and validation mode.

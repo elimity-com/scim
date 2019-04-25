@@ -2,8 +2,16 @@ package scim
 
 import (
 	"encoding/json"
-	"reflect"
 )
+
+func newListResponse(resources []interface{}) listResponse {
+	return listResponse{
+		TotalResults: len(resources),
+		ItemsPerPage: len(resources),
+		StartIndex:   1,
+		Resources:    resources,
+	}
+}
 
 // listResponse identifies a query response.
 //
@@ -26,17 +34,10 @@ type listResponse struct {
 	// Resources is a multi-valued list of complex objects containing the requested resources.
 	// This may be a subset of the full set of resources if pagination is requested.
 	// REQUIRED if TotalResults is non-zero.
-	Resources interface{}
+	Resources []interface{}
 }
 
 func (l listResponse) MarshalJSON() ([]byte, error) {
-	if l.StartIndex == 0 {
-		l.StartIndex = 1
-	}
-	if l.ItemsPerPage == 0 {
-		l.ItemsPerPage = reflect.ValueOf(l.Resources).Len()
-	}
-
 	return json.Marshal(map[string]interface{}{
 		"schemas":      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
 		"totalResults": l.TotalResults,

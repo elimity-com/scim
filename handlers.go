@@ -2,6 +2,7 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,7 +13,7 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 	if err != nil {
 		log.Fatalf("failed marshaling scim error: %v", err)
 	}
-	w.WriteHeader(scimErr.Status)
+	w.WriteHeader(scimErr.status)
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -24,16 +25,21 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	var schemas []schema
+	var schemas []interface{}
 	for _, v := range s.schemas {
-		schemas = append(schemas, v)
+		schemas = append(schemas, struct {
+			schema
+			Meta meta `json:"meta"`
+		}{
+			schema: v,
+			Meta: meta{
+				ResourceType: "Schema",
+				Location:     "/v2/Schemas/" + v.ID,
+			},
+		})
 	}
 
-	response := listResponse{
-		TotalResults: len(schemas),
-		Resources:    schemas,
-	}
-	raw, err := json.Marshal(response)
+	raw, err := json.Marshal(newListResponse(schemas))
 	if err != nil {
 		log.Fatalf("failed marshaling list response: %v", err)
 	}
@@ -48,13 +54,22 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	schema, ok := s.schemas[id]
+	hit, ok := s.schemas[id]
 	if !ok {
 		errorHandler(w, r, scimErrorResourceNotFound(id))
 		return
 	}
 
-	raw, err := json.Marshal(schema)
+	raw, err := json.Marshal(struct {
+		schema
+		Meta meta `json:"meta"`
+	}{
+		schema: hit,
+		Meta: meta{
+			ResourceType: "Schema",
+			Location:     "/v2/Schemas/" + hit.ID,
+		},
+	})
 	if err != nil {
 		log.Fatalf("failed marshaling schema: %v", err)
 	}
@@ -70,16 +85,23 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	var resourceTypes []resourceType
+	var resourceTypes []interface{}
 	for _, v := range s.resourceTypes {
-		resourceTypes = append(resourceTypes, v)
+		resourceTypes = append(resourceTypes, struct {
+			schemas []string
+			resourceType
+			Meta meta `json:"meta"`
+		}{
+			schemas:      []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+			resourceType: v,
+			Meta: meta{
+				ResourceType: "ResourceType",
+				Location:     "/v2/ResourceTypes/" + v.Name,
+			},
+		})
 	}
 
-	response := listResponse{
-		TotalResults: len(resourceTypes),
-		Resources:    resourceTypes,
-	}
-	raw, err := json.Marshal(response)
+	raw, err := json.Marshal(newListResponse(resourceTypes))
 	if err != nil {
 		log.Fatalf("failed marshaling list response: %v", err)
 	}
@@ -94,13 +116,25 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	resourceType, ok := s.resourceTypes[name]
+	hit, ok := s.resourceTypes[name]
 	if !ok {
 		errorHandler(w, r, scimErrorResourceNotFound(name))
 		return
 	}
 
-	raw, err := json.Marshal(resourceType)
+	raw, err := json.Marshal(struct {
+		schemas []string
+		resourceType
+		Meta meta `json:"meta"`
+	}{
+		schemas:      []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+		resourceType: hit,
+		Meta: meta{
+			ResourceType: "ResourceType",
+			Location:     "/v2/ResourceTypes/" + hit.Name,
+		},
+	})
+	fmt.Println(string(raw))
 	if err != nil {
 		log.Fatalf("failed marshaling resource type: %v", err)
 	}
@@ -181,25 +215,21 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	resources, getErr := resourceType.handler.GetAll()
+	res, getErr := resourceType.handler.GetAll()
 	if getErr != GetErrorNil {
 		errorHandler(w, r, getErr.err)
 		return
 	}
 
-	respResources := make([]CoreAttributes, 0)
-	for _, resource := range resources {
-		respResources = append(respResources, resource.response(resourceType, r.Host+r.RequestURI+"/"+resource.ID))
+	var resources []interface{}
+	for _, v := range res {
+		resources = append(resources, v)
 	}
 
-	response := listResponse{
-		TotalResults: len(resources),
-		Resources:    respResources,
-	}
-	raw, err := json.Marshal(response)
+	raw, err := json.Marshal(newListResponse(resources))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
-		log.Fatalf("failed list response %v", err)
+		log.Fatalf("failed marshalling list response: %v", err)
 		return
 	}
 	_, err = w.Write(raw)
