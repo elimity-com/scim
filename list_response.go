@@ -2,6 +2,15 @@ package scim
 
 import "encoding/json"
 
+func newListResponse(resources []interface{}) listResponse {
+	return listResponse{
+		TotalResults: len(resources),
+		ItemsPerPage: len(resources),
+		StartIndex:   1,
+		Resources:    resources,
+	}
+}
+
 // listResponse identifies a query response.
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4.2
@@ -23,7 +32,7 @@ type listResponse struct {
 	// Resources is a multi-valued list of complex objects containing the requested resources.
 	// This may be a subset of the full set of resources if pagination is requested.
 	// REQUIRED if TotalResults is non-zero.
-	Resources interface{}
+	Resources []interface{}
 }
 
 func (l listResponse) MarshalJSON() ([]byte, error) {

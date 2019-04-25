@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"strings"
 )
 
@@ -25,15 +26,15 @@ func NewSchemaFromString(s string) (Schema, error) {
 
 // NewSchemaFromBytes returns a validated schema if no errors take place.
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
-	err := metaSchema.validate(raw)
-	if err != nil {
-		return Schema{}, err
+	_, scimErr := metaSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return Schema{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var schema schema
-	err = json.Unmarshal(raw, &schema)
+	err := json.Unmarshal(raw, &schema)
 	if err != nil {
-		return Schema{}, err
+		log.Fatalf("failed parsing schema: %v", err)
 	}
 
 	return Schema{schema}, nil
@@ -59,17 +60,17 @@ type schema struct {
 	Attributes attributes
 }
 
-// validate unmarshals the given bytes and validates it based on the schema.
-func (s schema) validate(raw []byte) error {
+// validate validates given bytes based on the schema and validation mode.
+func (s schema) validate(raw []byte, mode validationMode) (CoreAttributes, scimError) {
 	var m interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	err := d.Decode(&m)
 	if err != nil {
-		return err
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
-	return s.Attributes.validate(m)
+	return s.Attributes.validate(m, mode)
 }
 
 // attribute is a complex type that defines service provider attributes and their qualities via the following set of
@@ -112,73 +113,96 @@ type attribute struct {
 	ReferenceTypes []string
 }
 
-func (a attribute) validate(i interface{}) error {
+func (a attribute) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	// validate required
 	if i == nil {
 		if a.Required {
-			return fmt.Errorf("cannot find required value %s", strings.ToLower(a.Name))
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
-		return nil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	if a.MultiValued {
 		arr, ok := i.([]interface{})
 		if !ok {
-			return fmt.Errorf("cannot convert %v to a slice", i)
+			return CoreAttributes{}, scimErrorInvalidSyntax
 		}
 
 		// empty array = omitted/nil
 		if len(arr) == 0 && a.Required {
-			return fmt.Errorf("required array is empty")
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 
+		coreAttributes := make([]CoreAttributes, 0)
 		for _, sub := range arr {
-			if err := a.validateSingular(sub); err != nil {
-				return err
+			attributes, err := a.validateSingular(sub, mode)
+			if err != scimErrorNil {
+				return CoreAttributes{}, err
 			}
+			coreAttributes = append(coreAttributes, attributes)
 		}
-		return nil
+
+		if mode != read {
+			return CoreAttributes{a.Name: coreAttributes}, scimErrorNil
+		}
+		return CoreAttributes{}, scimErrorNil
 	}
 
-	return a.validateSingular(i)
+	return a.validateSingular(i, mode)
 }
 
-func (a attribute) validateSingular(i interface{}) error {
+func (a attribute) validateSingular(i interface{}, mode validationMode) (CoreAttributes, scimError) {
+	if mode == replace {
+		switch a.Mutability {
+		case attributeMutabilityImmutable:
+			return CoreAttributes{}, scimErrorMutability
+		case attributeMutabilityReadOnly:
+			return CoreAttributes{}, scimErrorNil
+		}
+	}
+
 	switch a.Type {
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
 		if !ok {
-			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeComplex:
-		if err := a.SubAttributes.validate(i); err != nil {
-			return err
+		if _, err := a.SubAttributes.validate(i, mode); err != scimErrorNil {
+			return CoreAttributes{}, err
 		}
 	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
-			return fmt.Errorf("cannot convert %v to type %s", i, a.Type)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeInteger:
 		n, ok := i.(json.Number)
 		if !ok {
-			return fmt.Errorf("cannot convert %v to a json.Number", i)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 		if strings.Contains(n.String(), ".") || strings.Contains(n.String(), "e") {
-			return fmt.Errorf("%s is not an integer value", n)
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	default:
-		return fmt.Errorf("not implemented/invalid type: %v", a.Type)
+		log.Fatalf("attribute type not implemented: %s", a.Type)
+		return CoreAttributes{}, scimErrorNil
 	}
-	return nil
+
+	if mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
+		return CoreAttributes{a.Name: i}, scimErrorNil
+	}
+	return CoreAttributes{}, scimErrorNil
 }
 
 type attributes []attribute
 
-func (as attributes) validate(i interface{}) error {
+func (as attributes) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
+	coreAttributes := make(CoreAttributes)
+
 	c, ok := i.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("cannot convert %v to type complex", i)
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 
 	for _, attribute := range as {
@@ -188,18 +212,25 @@ func (as attributes) validate(i interface{}) error {
 		for k, v := range c {
 			if strings.EqualFold(attribute.Name, k) {
 				if found {
-					return fmt.Errorf("duplicate key: %s", strings.ToLower(k))
+					return CoreAttributes{}, scimErrorUniqueness
 				}
 				found = true
 				hit = v
 			}
 		}
 
-		if err := attribute.validate(hit); err != nil {
-			return err
+		attribute, err := attribute.validate(hit, mode)
+		if err != scimErrorNil {
+			return CoreAttributes{}, err
+		}
+
+		if mode != read {
+			for k, v := range attribute {
+				coreAttributes[k] = v
+			}
 		}
 	}
-	return nil
+	return coreAttributes, scimErrorNil
 }
 
 type attributeType string
@@ -219,22 +250,22 @@ const (
 type attributeMutability string
 
 // TODO: readWrite and writeOnly
-// const (
-// attributeMutabilityImmutable attributeMutability = "immutable"
-// attributeMutabilityReadOnly  attributeMutability = "readOnly"
-// attributeMutabilityReadWrite attributeMutability = "readWrite"
-// attributeMutabilityWriteOnly attributeMutability = "writeOnly"
-// )
+const (
+	attributeMutabilityImmutable attributeMutability = "immutable"
+	attributeMutabilityReadOnly  attributeMutability = "readOnly"
+	// attributeMutabilityReadWrite attributeMutability = "readWrite"
+	// attributeMutabilityWriteOnly attributeMutability = "writeOnly"
+)
 
 type attributeReturned string
 
 // TODO: never and request
-// const (
-// attributeReturnedAlways  attributeReturned = "always"
-// attributeReturnedDefault attributeReturned = "default"
-// attributeReturnedNever   attributeReturned = "never"
-// attributeReturnedRequest attributeReturned = "request"
-// )
+const (
+	attributeReturnedAlways  attributeReturned = "always"
+	attributeReturnedDefault attributeReturned = "default"
+	// attributeReturnedNever   attributeReturned = "never"
+	// attributeReturnedRequest attributeReturned = "request"
+)
 
 type attributeUniqueness string
 
@@ -244,6 +275,17 @@ type attributeUniqueness string
 // attributeUniquenessNone   attributeUniqueness = "none"
 // attributeUniquenessServer attributeUniqueness = "server"
 // )
+
+type validationMode int
+
+const (
+	// read will validate required and the type, but does not return core attributes.
+	read validationMode = iota
+	// write will validate required, returnability and the type.
+	write
+	// replace will validate required, mutability, returnability and type.
+	replace
+)
 
 var metaSchema schema
 

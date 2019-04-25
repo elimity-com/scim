@@ -2,38 +2,43 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 )
 
 // NewResourceTypeFromFile reads the file from given filepath and returns a validated resource type if no errors take place.
-func NewResourceTypeFromFile(filepath string) (ResourceType, error) {
+func NewResourceTypeFromFile(filepath string, handler ResourceHandler) (ResourceType, error) {
 	raw, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return ResourceType{}, err
 	}
 
-	return NewResourceTypeFromBytes(raw)
+	return NewResourceTypeFromBytes(raw, handler)
 }
 
 // NewResourceTypeFromString returns a validated resource type if no errors take place.
-func NewResourceTypeFromString(s string) (ResourceType, error) {
-	return NewResourceTypeFromBytes([]byte(s))
+func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType, error) {
+	return NewResourceTypeFromBytes([]byte(s), handler)
 }
 
 // NewResourceTypeFromBytes returns a validated resource type if no errors take place.
-func NewResourceTypeFromBytes(raw []byte) (ResourceType, error) {
-	err := resourceTypeSchema.validate(raw)
-	if err != nil {
-		return ResourceType{}, err
+func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
+	_, scimErr := resourceTypeSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return ResourceType{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var resourceType resourceType
-	err = json.Unmarshal(raw, &resourceType)
+	err := json.Unmarshal(raw, &resourceType)
 	if err != nil {
-		return ResourceType{}, err
+		log.Fatalf("failed parsing resource type: %v", err)
 	}
 
-	return ResourceType{resourceType}, nil
+	resourceType.handler = handler
+	return ResourceType{
+		resourceType: resourceType,
+	}, nil
 }
 
 // ResourceType specifies the metadata about a resource type.
@@ -63,6 +68,8 @@ type resourceType struct {
 	// SchemaExtensions is a list of URIs of the resource type's schema extensions.
 	// OPTIONAL.
 	SchemaExtensions []schemaExtension
+
+	handler ResourceHandler
 }
 
 func (r resourceType) MarshalJSON() ([]byte, error) {

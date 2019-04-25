@@ -22,36 +22,40 @@ const (
 	scimTypeInvalidValue = "invalidValue"
 )
 
-var uniqueness = scimError{
-	scimType: scimTypeUniqueness,
-	detail:   "One or more of the attribute values are already in use or are reserved.",
-	status:   http.StatusConflict,
-}
-
-var mutability = scimError{
-	scimType: scimTypeMutability,
-	detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
-	status:   http.StatusBadRequest,
-}
-
-var invalidSyntax = scimError{
-	scimType: scimTypeInvalidSyntax,
-	detail:   "The request body message structure was invalid or did not conform to the request schema.",
-	status:   http.StatusBadRequest,
-}
-
-var invalidValue = scimError{
-	scimType: scimTypeInvalidValue,
-	detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
-	status:   http.StatusBadRequest,
-}
-
-func resourceNotFound(id string) scimError {
+func scimErrorResourceNotFound(id string) scimError {
 	return scimError{
 		detail: fmt.Sprintf("Resource %s not found.", id),
 		status: http.StatusNotFound,
 	}
 }
+
+var scimErrorNil scimError
+
+var (
+	scimErrorUniqueness = scimError{
+		scimType: scimTypeUniqueness,
+		detail:   "One or more of the attribute values are already in use or are reserved.",
+		status:   http.StatusConflict,
+	}
+	scimErrorMutability = scimError{
+		scimType: scimTypeMutability,
+		detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
+		status:   http.StatusBadRequest,
+	}
+	scimErrorInvalidSyntax = scimError{
+		scimType: scimTypeInvalidSyntax,
+		detail:   "The request body message structure was invalid or did not conform to the request schema.",
+		status:   http.StatusBadRequest,
+	}
+	scimErrorInvalidValue = scimError{
+		scimType: scimTypeInvalidValue,
+		detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
+		status:   http.StatusBadRequest,
+	}
+	scimErrorInternalServer = scimError{
+		status: http.StatusInternalServerError,
+	}
+)
 
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.12
 type scimError struct {
@@ -77,23 +81,50 @@ func (e scimError) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (e *scimError) UnmarshalJSON(data []byte) error {
+	var tmpScimError struct {
+		ScimType scimType
+		Detail   string
+		Status   string
+	}
+
+	err := json.Unmarshal(data, &tmpScimError)
+	if err != nil {
+		return err
+	}
+
+	status, err := strconv.Atoi(tmpScimError.Status)
+	if err != nil {
+		return err
+	}
+
+	*e = scimError{
+		scimType: tmpScimError.ScimType,
+		detail:   tmpScimError.Detail,
+		status:   status,
+	}
+
+	return nil
+}
+
 // GetError represents an error that is returned by a GET HTTP request.
 type GetError struct {
 	err scimError
 }
 
+// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
+var GetErrorNil GetError
+
 var (
-	// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
-	GetErrorNil GetError
 	// GetErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	GetErrorInvalidValue = GetError{invalidValue}
+	GetErrorInvalidValue = GetError{err: scimErrorInvalidValue}
 )
 
 // NewResourceNotFoundGetError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested but not found.
 func NewResourceNotFoundGetError(id string) GetError {
-	return GetError{resourceNotFound(id)}
+	return GetError{scimErrorResourceNotFound(id)}
 }
 
 // PostError represents an error that is returned by a POST HTTP request.
@@ -101,17 +132,18 @@ type PostError struct {
 	err scimError
 }
 
+// PostErrorNil indicates that no error occurred during handling a POST HTTP request.
+var PostErrorNil PostError
+
 var (
-	// PostErrorNil indicates that no error occurred during handling a POST HTTP request.
-	PostErrorNil PostError
 	// PostErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
-	PostErrorUniqueness = PostError{uniqueness}
+	PostErrorUniqueness = PostError{err: scimErrorUniqueness}
 	// PostErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	PostErrorInvalidSyntax = PostError{invalidSyntax}
+	PostErrorInvalidSyntax = PostError{err: scimErrorInvalidSyntax}
 	// PostErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	PostErrorInvalidValue = PostError{invalidValue}
+	PostErrorInvalidValue = PostError{err: scimErrorInvalidValue}
 )
 
 // PutError represents an error that is returned by a PUT HTTP request.
@@ -119,26 +151,27 @@ type PutError struct {
 	err scimError
 }
 
+// PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
+var PutErrorNil PutError
+
 var (
-	// PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
-	PutErrorNil PutError
 	// PutErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
-	PutErrorUniqueness = PutError{uniqueness}
+	PutErrorUniqueness = PutError{err: scimErrorUniqueness}
 	// PutErrorMutability shall be returned when the attempted modification is not compatible with the target
 	// attribute's mutability or current state.
-	PutErrorMutability = PutError{mutability}
+	PutErrorMutability = PutError{err: scimErrorMutability}
 	// PutErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	PutErrorInvalidSyntax = PutError{invalidSyntax}
+	PutErrorInvalidSyntax = PutError{err: scimErrorInvalidSyntax}
 	// PutErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	PutErrorInvalidValue = PutError{invalidValue}
+	PutErrorInvalidValue = PutError{err: scimErrorInvalidValue}
 )
 
 // NewResourceNotFoundPutError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested to be replaced but not found.
 func NewResourceNotFoundPutError(id string) PutError {
-	return PutError{resourceNotFound(id)}
+	return PutError{scimErrorResourceNotFound(id)}
 }
 
 // DeleteError represents an error that is returned by a DELETE HTTP request.
@@ -146,13 +179,11 @@ type DeleteError struct {
 	err scimError
 }
 
-var (
-	// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
-	DeleteErrorNil DeleteError
-)
+// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
+var DeleteErrorNil DeleteError
 
 // NewResourceNotFoundDeleteError returns an error with status code 404 and a human readable message containing the identifier
 // of the resource that was requested to be deleted but not found.
 func NewResourceNotFoundDeleteError(id string) DeleteError {
-	return DeleteError{resourceNotFound(id)}
+	return DeleteError{scimErrorResourceNotFound(id)}
 }

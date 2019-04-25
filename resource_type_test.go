@@ -24,7 +24,7 @@ func TestNewResourceTypeFromString(t *testing.T) {
 				"endpoint": "/Users",
 				"schema": "urn:ietf:params:scim:schemas:core:2.0:User"
 			}`,
-			err: "cannot find required value name",
+			err: scimErrorInvalidValue.detail,
 		},
 		{
 			s: `{
@@ -39,13 +39,13 @@ func TestNewResourceTypeFromString(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot find required value required",
+			err: scimErrorInvalidValue.detail,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
-			if _, err := NewResourceTypeFromString(test.s); err == nil || err.Error() != test.err {
+			if _, err := NewResourceTypeFromString(test.s, nil); err == nil || err.Error() != test.err {
 				if err != nil || test.err != "" {
 					t.Errorf("expected: %s / got: %v", test.err, err)
 				}
@@ -55,12 +55,12 @@ func TestNewResourceTypeFromString(t *testing.T) {
 }
 
 func TestNewResourceTypeFromFile(t *testing.T) {
-	_, err := NewResourceTypeFromFile("testdata/simple_user_resource_type.json")
+	_, err := NewResourceTypeFromFile("testdata/simple_user_resource_type.json", nil)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = NewResourceTypeFromFile("")
+	_, err = NewResourceTypeFromFile("", nil)
 	if err == nil {
 		t.Error("expected: no such file or directory")
 	}

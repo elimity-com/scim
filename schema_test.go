@@ -17,7 +17,7 @@ func TestNewSchemaFromString(t *testing.T) {
 				"name": "User",
 				"attributes": []
 			}`,
-			err: "required array is empty",
+			err: scimErrorInvalidValue.detail,
 		},
 		{
 			s: `{
@@ -36,16 +36,16 @@ func TestNewSchemaFromString(t *testing.T) {
 					}
 				]
 			}`,
-			err: "",
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
-			if _, err := NewSchemaFromString(test.s); err == nil || err.Error() != test.err {
-				if err != nil || test.err != "" {
-					t.Errorf("expected: %s / got: %v", test.err, err)
-				}
+			_, err := NewSchemaFromString(test.s)
+			if err != nil && err.Error() != test.err {
+				t.Errorf("expected: %s / got: %v", test.err, err)
+			} else if err == nil && test.err != "" {
+				t.Errorf("no error expected")
 			}
 		})
 	}
@@ -59,13 +59,13 @@ func TestNewSchemaFromFile(t *testing.T) {
 
 	_, err = NewSchemaFromFile("")
 	if err == nil {
-		t.Error("expected: no such file or directory")
+		t.Error("error expected")
 	}
 }
 
 func TestSchemaValidation(t *testing.T) {
 	// validate raw meta schema with meta schema
-	if err := metaSchema.validate([]byte(rawMetaSchema)); err != nil {
+	if _, err := metaSchema.validate([]byte(rawMetaSchema), read); err != scimErrorNil {
 		t.Error(err)
 	}
 
@@ -75,7 +75,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate simple user schema with meta schema
-	if err := metaSchema.validate(raw); err != nil {
+	if _, err := metaSchema.validate(raw, read); err != scimErrorNil {
 		t.Error(err)
 	}
 
@@ -85,7 +85,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate user with simple user schema
-	if err := schema.schema.validate([]byte(`{
+	if _, err := schema.schema.validate([]byte(`{
 		"schemas": [
 			"schemas"
 		],
@@ -96,14 +96,14 @@ func TestSchemaValidation(t *testing.T) {
 			"familyName": "family name",
 			"givenName": "given name"
 		}
-	}`)); err != nil {
+	}`), read); err != scimErrorNil {
 		t.Error(err)
 	}
 
 	// invalid user
 	cases := []struct {
 		s   string
-		err string
+		err scimError
 	}{
 		{
 			s: `{
@@ -115,7 +115,7 @@ func TestSchemaValidation(t *testing.T) {
 			 	"externalId": "eid",
 				"name": "name"
 			}`,
-			err: "cannot convert name to type complex",
+			err: scimErrorInvalidSyntax,
 		},
 		{
 			s: `{
@@ -129,36 +129,36 @@ func TestSchemaValidation(t *testing.T) {
 					"familyName": {}
 				}
 			}`,
-			err: "cannot convert map[] to type string",
+			err: scimErrorInvalidValue,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid user %d", idx), func(t *testing.T) {
-			if err := schema.schema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
+			if _, err := schema.schema.validate([]byte(test.s), read); err != test.err {
+				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
 	}
 }
 
 func TestInvalidJSON(t *testing.T) {
-	if err := metaSchema.validate([]byte(``)); err.Error() != "EOF" {
-		t.Errorf("expected: unexpected end of JSON input / got: %v", err)
+	if _, err := metaSchema.validate([]byte(``), read); err != scimErrorInvalidSyntax {
+		t.Errorf("invalid error: %v", err)
 	}
 }
 
 func TestDuplicate(t *testing.T) {
 	cases := []struct {
 		s   string
-		err string
+		err scimError
 	}{
 		{
 			s: `{
 				"id": "test",
 				"ID": "test"
 			}`,
-			err: "duplicate key: id",
+			err: scimErrorUniqueness,
 		},
 		{
 			s: `{
@@ -173,14 +173,14 @@ func TestDuplicate(t *testing.T) {
 					}
 				]
 			}`,
-			err: "duplicate key: name",
+			err: scimErrorUniqueness,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("duplicate %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
+			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
 	}
@@ -207,7 +207,7 @@ func TestDuplicate(t *testing.T) {
 
 	for idx, test := range valid {
 		t.Run(fmt.Sprintf("valid %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err != nil {
+			if _, err := metaSchema.validate([]byte(test.s), read); err != scimErrorNil {
 				t.Errorf("no error expected / got: %v", err)
 			}
 		})
@@ -217,18 +217,18 @@ func TestDuplicate(t *testing.T) {
 func TestRequired(t *testing.T) {
 	cases := []struct {
 		s   string
-		err string
+		err scimError
 	}{
 		{
 			s:   `{}`,
-			err: "cannot find required value id",
+			err: scimErrorInvalidValue,
 		},
 		{
 			s: `{
 				"id": "test",
 				"name": "test"
 			}`,
-			err: "cannot find required value attributes",
+			err: scimErrorInvalidValue,
 		},
 		{
 			s: `{
@@ -240,14 +240,14 @@ func TestRequired(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot find required value type",
+			err: scimErrorInvalidValue,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("required %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
+			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
 	}
@@ -256,7 +256,7 @@ func TestRequired(t *testing.T) {
 func TestConverting(t *testing.T) {
 	cases := []struct {
 		s   string
-		err string
+		err scimError
 	}{
 		{
 			s: `{
@@ -264,7 +264,7 @@ func TestConverting(t *testing.T) {
 				"name": "test",
 				"attributes": "test"
 			}`,
-			err: "cannot convert test to a slice",
+			err: scimErrorInvalidSyntax,
 		},
 		{
 			s: `{
@@ -274,7 +274,7 @@ func TestConverting(t *testing.T) {
 					"test"
 				]
 			}`,
-			err: "cannot convert test to type complex",
+			err: scimErrorInvalidSyntax,
 		},
 		{
 			s: `{
@@ -289,7 +289,7 @@ func TestConverting(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot convert map[] to a slice",
+			err: scimErrorInvalidSyntax,
 		},
 		{
 			s: `{
@@ -306,7 +306,7 @@ func TestConverting(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot convert map[] to type string",
+			err: scimErrorInvalidValue,
 		},
 		{
 			s: `{
@@ -320,7 +320,7 @@ func TestConverting(t *testing.T) {
 					}
 				]
 			}`,
-			err: "cannot convert true to type boolean",
+			err: scimErrorInvalidValue,
 		},
 		{
 			s: `{
@@ -329,14 +329,14 @@ func TestConverting(t *testing.T) {
 				"attributes": [
 				]
 			}`,
-			err: "cannot convert map[] to type string",
+			err: scimErrorInvalidValue,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("converting %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
+			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
 	}
@@ -345,7 +345,7 @@ func TestConverting(t *testing.T) {
 func TestNil(t *testing.T) {
 	cases := []struct {
 		s   string
-		err string
+		err scimError
 	}{
 		{
 			s: `{
@@ -354,15 +354,63 @@ func TestNil(t *testing.T) {
 				"attributes": [
 				]
 			}`,
-			err: "required array is empty",
+			err: scimErrorInvalidValue,
 		},
 	}
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if err := metaSchema.validate([]byte(test.s)); err == nil || err.Error() != test.err {
-				t.Errorf("expected: %s / got: %v", test.err, err)
+			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
+	}
+}
+
+func TestValidationModeRead(t *testing.T) {
+	raw, err := ioutil.ReadFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
+
+	attributes, scimErr := metaSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		t.Error(scimErr)
+	}
+
+	if len(attributes) != 0 {
+		t.Errorf("no attributes exprected")
+	}
+}
+
+func TestValidationModeWrite(t *testing.T) {
+	raw, err := ioutil.ReadFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
+
+	attributes, scimErr := metaSchema.validate(raw, write)
+	if scimErr != scimErrorNil {
+		t.Error(scimErr)
+	}
+
+	if len(attributes) == 0 {
+		t.Errorf("no attributes exprected")
+	}
+}
+
+func TestValidationModeReplace(t *testing.T) {
+	raw, err := ioutil.ReadFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
+
+	attributes, scimErr := metaSchema.validate(raw, replace)
+	if scimErr != scimErrorNil {
+		t.Error(scimErr)
+	}
+
+	if len(attributes) == 0 {
+		t.Errorf("no attributes exprected")
 	}
 }

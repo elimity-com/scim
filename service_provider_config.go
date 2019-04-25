@@ -2,7 +2,9 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 )
 
 // NewServiceProviderConfigFromFile reads the file from given filepath and returns a validated service provider config
@@ -23,15 +25,15 @@ func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error)
 
 // NewServiceProviderConfigFromBytes returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
-	err := serviceProviderConfigSchema.validate(raw)
-	if err != nil {
-		return ServiceProviderConfig{}, err
+	_, scimErr := serviceProviderConfigSchema.validate(raw, read)
+	if scimErr != scimErrorNil {
+		return ServiceProviderConfig{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var serviceProviderConfig serviceProviderConfig
-	err = json.Unmarshal(raw, &serviceProviderConfig)
+	err := json.Unmarshal(raw, &serviceProviderConfig)
 	if err != nil {
-		return ServiceProviderConfig{}, err
+		log.Fatalf("failed parsing service provider config: %v", err)
 	}
 
 	return ServiceProviderConfig{serviceProviderConfig}, nil
