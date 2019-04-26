@@ -193,7 +193,7 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resourceType.ID != "User" {
+	if *resourceType.ID != "User" {
 		t.Errorf("schema does not contain the correct name: %s", resourceType.Name)
 	}
 }

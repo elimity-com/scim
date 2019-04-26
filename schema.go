@@ -51,13 +51,31 @@ type Schema struct {
 // RFC: RFC7643 - https://tools.ietf.org/html/rfc7643#section-7
 type schema struct {
 	// ID is the unique URI of the schema. REQUIRED.
-	ID string `json:"id"`
+	ID string
 	// Name is the schema's human-readable name. OPTIONAL.
-	Name string `json:"name"`
+	Name string
 	// Description is the schema's human-readable description.  OPTIONAL.
-	Description string `json:"description,omitempty"`
+	Description *string
 	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
-	Attributes attributes `json:"attributes"`
+	Attributes attributes
+}
+
+func (s schema) MarshalJSON() ([]byte, error) {
+	schema := map[string]interface{}{
+		"id":         s.ID,
+		"name":       s.Name,
+		"attributes": s.Attributes,
+		"meta": meta{
+			ResourceType: "Schema",
+			Location:     "/v2/Schemas/" + s.ID,
+		},
+	}
+
+	if s.Description != nil {
+		schema["description"] = s.Description
+	}
+
+	return json.Marshal(schema)
 }
 
 // validate validates given bytes based on the schema and validation mode.

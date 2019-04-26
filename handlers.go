@@ -2,7 +2,6 @@ package scim
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,16 +26,7 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	var schemas []interface{}
 	for _, v := range s.schemas {
-		schemas = append(schemas, struct {
-			schema
-			Meta meta `json:"meta"`
-		}{
-			schema: v,
-			Meta: meta{
-				ResourceType: "Schema",
-				Location:     "/v2/Schemas/" + v.ID,
-			},
-		})
+		schemas = append(schemas, v)
 	}
 
 	raw, err := json.Marshal(newListResponse(schemas))
@@ -54,22 +44,13 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	hit, ok := s.schemas[id]
+	schema, ok := s.schemas[id]
 	if !ok {
 		errorHandler(w, r, scimErrorResourceNotFound(id))
 		return
 	}
 
-	raw, err := json.Marshal(struct {
-		schema
-		Meta meta `json:"meta"`
-	}{
-		schema: hit,
-		Meta: meta{
-			ResourceType: "Schema",
-			Location:     "/v2/Schemas/" + hit.ID,
-		},
-	})
+	raw, err := json.Marshal(schema)
 	if err != nil {
 		log.Fatalf("failed marshaling schema: %v", err)
 	}
@@ -87,18 +68,7 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	var resourceTypes []interface{}
 	for _, v := range s.resourceTypes {
-		resourceTypes = append(resourceTypes, struct {
-			schemas []string
-			resourceType
-			Meta meta `json:"meta"`
-		}{
-			schemas:      []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-			resourceType: v,
-			Meta: meta{
-				ResourceType: "ResourceType",
-				Location:     "/v2/ResourceTypes/" + v.Name,
-			},
-		})
+		resourceTypes = append(resourceTypes, v)
 	}
 
 	raw, err := json.Marshal(newListResponse(resourceTypes))
@@ -116,25 +86,13 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 //
 // RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	hit, ok := s.resourceTypes[name]
+	resourceType, ok := s.resourceTypes[name]
 	if !ok {
 		errorHandler(w, r, scimErrorResourceNotFound(name))
 		return
 	}
 
-	raw, err := json.Marshal(struct {
-		schemas []string
-		resourceType
-		Meta meta `json:"meta"`
-	}{
-		schemas:      []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		resourceType: hit,
-		Meta: meta{
-			ResourceType: "ResourceType",
-			Location:     "/v2/ResourceTypes/" + hit.Name,
-		},
-	})
-	fmt.Println(string(raw))
+	raw, err := json.Marshal(resourceType)
 	if err != nil {
 		log.Fatalf("failed marshaling resource type: %v", err)
 	}
