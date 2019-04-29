@@ -115,7 +115,7 @@ func (t resourceType) MarshalJSON() ([]byte, error) {
 		"schema":   t.Schema,
 		"meta": meta{
 			ResourceType: "ResourceType",
-			Location:     "/v2/ResourceTypes/" + t.Name,
+			Location:     "ResourceTypes/" + t.Name,
 		},
 	}
 

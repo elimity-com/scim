@@ -1,5 +1,10 @@
 package scim
 
+import (
+	"fmt"
+	"net/url"
+)
+
 // Attributes represents a list of attributes given to the callback method to create or replace a resource based
 // on given attributes.
 type Attributes map[string]interface{}
@@ -10,7 +15,7 @@ type Resource struct {
 	Attributes Attributes
 }
 
-func (r Resource) response(resourceType resourceType, location string) Attributes {
+func (r Resource) response(resourceType resourceType) Attributes {
 	response := r.Attributes
 	response["id"] = r.ID
 	schemas := []string{resourceType.Schema}
@@ -20,7 +25,7 @@ func (r Resource) response(resourceType resourceType, location string) Attribute
 	response["schemas"] = schemas
 	response["meta"] = meta{
 		ResourceType: resourceType.Name,
-		Location:     location,
+		Location:     fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
 	}
 
 	return response
