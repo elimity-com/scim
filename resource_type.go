@@ -88,8 +88,8 @@ func (t resourceType) validate(schemas map[string]schema, raw []byte, mode valid
 	}
 
 	for _, extension := range t.SchemaExtensions {
-		extensionField, ok := m[extension.Schema]
-		if !ok {
+		extensionField := m[extension.Schema]
+		if extensionField == nil {
 			if extension.Required {
 				return CoreAttributes{}, scimErrorInvalidValue
 			}
@@ -101,7 +101,7 @@ func (t resourceType) validate(schemas map[string]schema, raw []byte, mode valid
 			return CoreAttributes{}, scimErr
 		}
 
-		fmt.Println(extensionAttributes)
+		attributes[extension.Schema] = extensionAttributes
 	}
 
 	return attributes, scimErrorNil

@@ -88,14 +88,12 @@ func TestResourceTypeValidation(t *testing.T) {
 		},
 		{
 			s: `{
-				"id": "test",
 				"userName": "other"
 			}`,
 			err: scimErrorNil,
 		},
 		{
 			s: `{
-				"id": "test",
 				"userName": "other",
 				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
 					"organization": "elimity"
@@ -105,7 +103,6 @@ func TestResourceTypeValidation(t *testing.T) {
 		},
 		{
 			s: `{
-				"id": "test",
 				"userName": "other",
 				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": false
 			}`,
@@ -114,8 +111,8 @@ func TestResourceTypeValidation(t *testing.T) {
 	}
 
 	for idx, test := range cases {
-		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), read); err != test.err {
+		t.Run(fmt.Sprintf("invalid resource %d", idx), func(t *testing.T) {
+			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), write); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -129,14 +126,19 @@ func TestResourceTypeValidation(t *testing.T) {
 	}{
 		{
 			s: `{
-				"id": "test",
 				"userName": "other"
 			}`,
 			err: scimErrorInvalidValue,
 		},
 		{
 			s: `{
-				"id": "test",
+				"userName": "other",
+				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": null
+			}`,
+			err: scimErrorInvalidValue,
+		},
+		{
+			s: `{
 				"userName": "other",
 				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
 					"organization": "elimity"
@@ -147,8 +149,8 @@ func TestResourceTypeValidation(t *testing.T) {
 	}
 
 	for idx, test := range cases {
-		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), read); err != test.err {
+		t.Run(fmt.Sprintf("invalid resource %d", idx), func(t *testing.T) {
+			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), write); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
