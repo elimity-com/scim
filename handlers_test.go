@@ -17,11 +17,15 @@ func newTestServer() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	userResourceType, err := NewResourceTypeFromFile("testdata/simple_user_resource_type.json", newTestResourceHandler())
+	userSchemaExtension, err := NewSchemaFromFile("testdata/simple_user_extension_schema.json")
 	if err != nil {
 		return nil, err
 	}
-	server, err := NewServer(config, []Schema{userSchema}, []ResourceType{userResourceType})
+	userResourceType, err := NewResourceTypeFromFile("testdata/simple_user_resource_type_with_extension.json", newTestResourceHandler())
+	if err != nil {
+		return nil, err
+	}
+	server, err := NewServer(config, []Schema{userSchema, userSchemaExtension}, []ResourceType{userResourceType})
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +67,11 @@ func TestServerSchemasHandler(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if response.TotalResults != 1 {
-		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	if response.TotalResults != 2 {
+		t.Errorf("handler returned unexpected body: got %v want 2 total result", rr.Body.String())
 	}
 
-	if len(response.Resources) != 1 {
+	if len(response.Resources) != 2 {
 		t.Errorf("resources contains more than one schema")
 		return
 	}
@@ -77,8 +81,9 @@ func TestServerSchemasHandler(t *testing.T) {
 		t.Errorf("schema is not an object")
 	}
 
-	if schema["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" {
-		t.Errorf("schema does not contain the correct id: %v", schema["ID"])
+	if schema["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" &&
+		schema["id"].(string) != "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User" {
+		t.Errorf("schema does not contain the correct id: %v", schema["id"])
 	}
 }
 

@@ -1,6 +1,7 @@
 package scim
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -72,28 +73,62 @@ type resourceType struct {
 	handler ResourceHandler
 }
 
-func (r resourceType) MarshalJSON() ([]byte, error) {
+func (t resourceType) validate(schemas map[string]schema, raw []byte, mode validationMode) (Attributes, scimError) {
+	var m map[string]interface{}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	err := d.Decode(&m)
+	if err != nil {
+		return Attributes{}, scimErrorInvalidSyntax
+	}
+
+	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, mode)
+	if scimErr != scimErrorNil {
+		return Attributes{}, scimErr
+	}
+
+	for _, extension := range t.SchemaExtensions {
+		extensionField := m[extension.Schema]
+		if extensionField == nil {
+			if extension.Required {
+				return Attributes{}, scimErrorInvalidValue
+			}
+			continue
+		}
+
+		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, mode)
+		if scimErr != scimErrorNil {
+			return Attributes{}, scimErr
+		}
+
+		attributes[extension.Schema] = extensionAttributes
+	}
+
+	return attributes, scimErrorNil
+}
+
+func (t resourceType) MarshalJSON() ([]byte, error) {
 	resourceType := map[string]interface{}{
 		"schemas":  []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"name":     r.Name,
-		"endpoint": r.Endpoint,
-		"schema":   r.Schema,
+		"name":     t.Name,
+		"endpoint": t.Endpoint,
+		"schema":   t.Schema,
 		"meta": meta{
 			ResourceType: "ResourceType",
-			Location:     "/v2/ResourceTypes/" + r.Name,
+			Location:     "/v2/ResourceTypes/" + t.Name,
 		},
 	}
 
-	if r.ID != nil {
-		resourceType["id"] = r.ID
+	if t.ID != nil {
+		resourceType["id"] = t.ID
 	}
 
-	if r.Description != nil {
-		resourceType["description"] = r.Description
+	if t.Description != nil {
+		resourceType["description"] = t.Description
 	}
 
-	if len(r.SchemaExtensions) != 0 {
-		resourceType["schemaExtensions"] = r.SchemaExtensions
+	if len(t.SchemaExtensions) != 0 {
+		resourceType["schemaExtensions"] = t.SchemaExtensions
 	}
 
 	return json.Marshal(resourceType)

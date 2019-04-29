@@ -124,7 +124,7 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := s.schemas[resourceType.Schema].validate(data, write)
+	attributes, scimErr := resourceType.validate(s.schemas, data, write)
 	if scimErr != scimErrorNil {
 		errorHandler(w, r, scimErr)
 		return
@@ -180,8 +180,8 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	var resources []interface{}
-	for _, v := range res {
-		resources = append(resources, v)
+	for _, resource := range res {
+		resources = append(resources, resource.response(resourceType, r.Host+r.RequestURI+"/"+resource.ID))
 	}
 
 	raw, err := json.Marshal(newListResponse(resources))
@@ -203,7 +203,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := s.schemas[resourceType.Schema].validate(data, replace)
+	attributes, scimErr := resourceType.validate(s.schemas, data, replace)
 	if scimErr != scimErrorNil {
 		errorHandler(w, r, scimErr)
 		return
