@@ -61,14 +61,14 @@ type schema struct {
 }
 
 // validate validates given bytes based on the schema and validation mode.
-func (s schema) validate(raw []byte, mode validationMode) (Attributes, scimError) {
+func (s schema) validate(raw []byte, mode validationMode) (CoreAttributes, scimError) {
 	var m interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	err := d.Decode(&m)
 	if err != nil {
-		return Attributes{}, scimErrorInvalidSyntax
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 	return s.Attributes.validate(m, mode)
 }
@@ -113,51 +113,51 @@ type attribute struct {
 	ReferenceTypes []string `json:"referenceTypes,omitempty"`
 }
 
-func (a attribute) validate(i interface{}, mode validationMode) (Attributes, scimError) {
+func (a attribute) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	// validate required
 	if i == nil {
 		if a.Required {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
-		return Attributes{}, scimErrorNil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	if a.MultiValued {
 		arr, ok := i.([]interface{})
 		if !ok {
-			return Attributes{}, scimErrorInvalidSyntax
+			return CoreAttributes{}, scimErrorInvalidSyntax
 		}
 
 		// empty array = omitted/nil
 		if len(arr) == 0 && a.Required {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 
-		coreAttributes := make([]Attributes, 0)
+		coreAttributes := make([]CoreAttributes, 0)
 		for _, sub := range arr {
 			attributes, err := a.validateSingular(sub, mode)
 			if err != scimErrorNil {
-				return Attributes{}, err
+				return CoreAttributes{}, err
 			}
 			coreAttributes = append(coreAttributes, attributes)
 		}
 
 		if mode != read {
-			return Attributes{a.Name: coreAttributes}, scimErrorNil
+			return CoreAttributes{a.Name: coreAttributes}, scimErrorNil
 		}
-		return Attributes{}, scimErrorNil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	return a.validateSingular(i, mode)
 }
 
-func (a attribute) validateSingular(i interface{}, mode validationMode) (Attributes, scimError) {
+func (a attribute) validateSingular(i interface{}, mode validationMode) (CoreAttributes, scimError) {
 	if mode == replace {
 		switch a.Mutability {
 		case attributeMutabilityImmutable:
-			return Attributes{}, scimErrorMutability
+			return CoreAttributes{}, scimErrorMutability
 		case attributeMutabilityReadOnly:
-			return Attributes{}, scimErrorNil
+			return CoreAttributes{}, scimErrorNil
 		}
 	}
 
@@ -165,44 +165,44 @@ func (a attribute) validateSingular(i interface{}, mode validationMode) (Attribu
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeComplex:
 		if _, err := a.SubAttributes.validate(i, mode); err != scimErrorNil {
-			return Attributes{}, err
+			return CoreAttributes{}, err
 		}
 	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeInteger:
 		n, ok := i.(json.Number)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 		if strings.Contains(n.String(), ".") || strings.Contains(n.String(), "e") {
-			return Attributes{}, scimErrorInvalidValue
+			return CoreAttributes{}, scimErrorInvalidValue
 		}
 	default:
 		log.Fatalf("attribute type not implemented: %s", a.Type)
-		return Attributes{}, scimErrorNil
+		return CoreAttributes{}, scimErrorNil
 	}
 
 	if mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
-		return Attributes{a.Name: i}, scimErrorNil
+		return CoreAttributes{a.Name: i}, scimErrorNil
 	}
-	return Attributes{}, scimErrorNil
+	return CoreAttributes{}, scimErrorNil
 }
 
 type attributes []attribute
 
-func (as attributes) validate(i interface{}, mode validationMode) (Attributes, scimError) {
-	coreAttributes := make(Attributes)
+func (as attributes) validate(i interface{}, mode validationMode) (CoreAttributes, scimError) {
+	coreAttributes := make(CoreAttributes)
 
 	c, ok := i.(map[string]interface{})
 	if !ok {
-		return Attributes{}, scimErrorInvalidSyntax
+		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 
 	for _, attribute := range as {
@@ -212,7 +212,7 @@ func (as attributes) validate(i interface{}, mode validationMode) (Attributes, s
 		for k, v := range c {
 			if strings.EqualFold(attribute.Name, k) {
 				if found {
-					return Attributes{}, scimErrorUniqueness
+					return CoreAttributes{}, scimErrorUniqueness
 				}
 				found = true
 				hit = v
@@ -221,7 +221,7 @@ func (as attributes) validate(i interface{}, mode validationMode) (Attributes, s
 
 		attribute, err := attribute.validate(hit, mode)
 		if err != scimErrorNil {
-			return Attributes{}, err
+			return CoreAttributes{}, err
 		}
 
 		if mode != read {

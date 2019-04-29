@@ -1,7 +1,6 @@
 package scim
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -73,49 +72,15 @@ type resourceType struct {
 	handler ResourceHandler
 }
 
-func (t resourceType) validate(schemas map[string]schema, raw []byte, mode validationMode) (Attributes, scimError) {
-	var m map[string]interface{}
-	d := json.NewDecoder(bytes.NewReader(raw))
-	d.UseNumber()
-	err := d.Decode(&m)
-	if err != nil {
-		return Attributes{}, scimErrorInvalidSyntax
-	}
-
-	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, mode)
-	if scimErr != scimErrorNil {
-		return Attributes{}, scimErr
-	}
-
-	for _, extension := range t.SchemaExtensions {
-		extensionField := m[extension.Schema]
-		if extensionField == nil {
-			if extension.Required {
-				return Attributes{}, scimErrorInvalidValue
-			}
-			continue
-		}
-
-		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, mode)
-		if scimErr != scimErrorNil {
-			return Attributes{}, scimErr
-		}
-
-		attributes[extension.Schema] = extensionAttributes
-	}
-
-	return attributes, scimErrorNil
-}
-
-func (t resourceType) MarshalJSON() ([]byte, error) {
+func (r resourceType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"id":               t.ID,
-		"name":             t.Name,
-		"description":      t.Description,
-		"endpoint":         t.Endpoint,
-		"schema":           t.Schema,
-		"schemaExtensions": t.SchemaExtensions,
+		"id":               r.ID,
+		"name":             r.Name,
+		"description":      r.Description,
+		"endpoint":         r.Endpoint,
+		"schema":           r.Schema,
+		"schemaExtensions": r.SchemaExtensions,
 	})
 }
 

@@ -1,17 +1,17 @@
 package scim
 
-// Attributes represents a list of attributes given to the callback method to create or replace a resource based
+// CoreAttributes represents a list of attributes given to the callback method to create or replace a resource based
 // on given attributes.
-type Attributes map[string]interface{}
+type CoreAttributes map[string]interface{}
 
 // Resource represents a resource returned by a callback method.
 type Resource struct {
-	ID         string
-	Attributes Attributes
+	ID             string
+	CoreAttributes CoreAttributes
 }
 
-func (r Resource) response(resourceType resourceType, location string) Attributes {
-	response := r.Attributes
+func (r Resource) response(resourceType resourceType, location string) CoreAttributes {
+	response := r.CoreAttributes
 	response["id"] = r.ID
 	schemas := []string{resourceType.Schema}
 	for _, schema := range resourceType.SchemaExtensions {
@@ -28,9 +28,9 @@ func (r Resource) response(resourceType resourceType, location string) Attribute
 
 // ResourceHandler represents a set off callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
-	Create(attributes Attributes) (Resource, PostError)
+	Create(attributes CoreAttributes) (Resource, PostError)
 	Get(id string) (Resource, GetError)
 	GetAll() ([]Resource, GetError)
-	Replace(id string, attributes Attributes) (Resource, PutError)
+	Replace(id string, attributes CoreAttributes) (Resource, PutError)
 	Delete(id string) DeleteError
 }
