@@ -27,7 +27,7 @@ func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error)
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
 	_, scimErr := serviceProviderConfigSchema.validate(raw, read)
 	if scimErr != scimErrorNil {
-		return ServiceProviderConfig{}, fmt.Errorf(scimErr.Detail)
+		return ServiceProviderConfig{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var serviceProviderConfig serviceProviderConfig

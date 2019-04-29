@@ -27,7 +27,7 @@ func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType,
 func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
 	_, scimErr := resourceTypeSchema.validate(raw, read)
 	if scimErr != scimErrorNil {
-		return ResourceType{}, fmt.Errorf(scimErr.Detail)
+		return ResourceType{}, fmt.Errorf(scimErr.detail)
 	}
 
 	var resourceType resourceType
@@ -54,12 +54,12 @@ type ResourceType struct {
 type resourceType struct {
 	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
 	// OPTIONAL.
-	ID string
+	ID *string
 	// Name is the resource type name. This name is referenced by the "meta.resourceType" attribute in all resources.
 	Name string
 	// Description is the resource type's human-readable description.
 	// OPTIONAL.
-	Description string
+	Description *string
 	// Endpoint is the resource type's HTTP-addressable endpoint relative to the Base URL of the service provider,
 	// e.g., "/Users".
 	Endpoint string
@@ -108,15 +108,30 @@ func (t resourceType) validate(schemas map[string]schema, raw []byte, mode valid
 }
 
 func (t resourceType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"id":               t.ID,
-		"name":             t.Name,
-		"description":      t.Description,
-		"endpoint":         t.Endpoint,
-		"schema":           t.Schema,
-		"schemaExtensions": t.SchemaExtensions,
-	})
+	resourceType := map[string]interface{}{
+		"schemas":  []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+		"name":     t.Name,
+		"endpoint": t.Endpoint,
+		"schema":   t.Schema,
+		"meta": meta{
+			ResourceType: "ResourceType",
+			Location:     "/v2/ResourceTypes/" + t.Name,
+		},
+	}
+
+	if t.ID != nil {
+		resourceType["id"] = t.ID
+	}
+
+	if t.Description != nil {
+		resourceType["description"] = t.Description
+	}
+
+	if len(t.SchemaExtensions) != 0 {
+		resourceType["schemaExtensions"] = t.SchemaExtensions
+	}
+
+	return json.Marshal(resourceType)
 }
 
 // schemaExtension is an URI of one of the resource type's schema extensions.
