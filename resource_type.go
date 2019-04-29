@@ -73,7 +73,7 @@ type resourceType struct {
 	handler ResourceHandler
 }
 
-func (t resourceType) validate(server Server, raw []byte, mode validationMode) (CoreAttributes, scimError) {
+func (t resourceType) validate(schemas map[string]schema, raw []byte, mode validationMode) (CoreAttributes, scimError) {
 	var m map[string]interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
@@ -82,7 +82,7 @@ func (t resourceType) validate(server Server, raw []byte, mode validationMode) (
 		return CoreAttributes{}, scimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := server.schemas[t.Schema].Attributes.validate(m, mode)
+	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, mode)
 	if scimErr != scimErrorNil {
 		return CoreAttributes{}, scimErr
 	}
@@ -96,7 +96,7 @@ func (t resourceType) validate(server Server, raw []byte, mode validationMode) (
 			continue
 		}
 
-		extensionAttributes, scimErr := server.schemas[extension.Schema].Attributes.validate(extensionField, mode)
+		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, mode)
 		if scimErr != scimErrorNil {
 			return CoreAttributes{}, scimErr
 		}
