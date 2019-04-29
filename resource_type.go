@@ -53,12 +53,12 @@ type ResourceType struct {
 type resourceType struct {
 	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
 	// OPTIONAL.
-	ID string
+	ID *string
 	// Name is the resource type name. This name is referenced by the "meta.resourceType" attribute in all resources.
 	Name string
 	// Description is the resource type's human-readable description.
 	// OPTIONAL.
-	Description string
+	Description *string
 	// Endpoint is the resource type's HTTP-addressable endpoint relative to the Base URL of the service provider,
 	// e.g., "/Users".
 	Endpoint string
@@ -73,15 +73,30 @@ type resourceType struct {
 }
 
 func (r resourceType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"id":               r.ID,
-		"name":             r.Name,
-		"description":      r.Description,
-		"endpoint":         r.Endpoint,
-		"schema":           r.Schema,
-		"schemaExtensions": r.SchemaExtensions,
-	})
+	resourceType := map[string]interface{}{
+		"schemas":  []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+		"name":     r.Name,
+		"endpoint": r.Endpoint,
+		"schema":   r.Schema,
+		"meta": meta{
+			ResourceType: "ResourceType",
+			Location:     "/v2/ResourceTypes/" + r.Name,
+		},
+	}
+
+	if r.ID != nil {
+		resourceType["id"] = r.ID
+	}
+
+	if r.Description != nil {
+		resourceType["description"] = r.Description
+	}
+
+	if len(r.SchemaExtensions) != 0 {
+		resourceType["schemaExtensions"] = r.SchemaExtensions
+	}
+
+	return json.Marshal(resourceType)
 }
 
 // schemaExtension is an URI of one of the resource type's schema extensions.

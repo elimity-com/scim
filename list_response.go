@@ -1,6 +1,8 @@
 package scim
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func newListResponse(resources []interface{}) listResponse {
 	return listResponse{

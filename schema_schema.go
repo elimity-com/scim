@@ -1,6 +1,6 @@
 package scim
 
-const rawMetaSchema = `{
+const rawSchemaSchema = `{
   "id": "urn:ietf:params:scim:schemas:core:2.0:Schema",
   "name": "Schema",
   "description": "Specifies the schema that describes a SCIM schema",
