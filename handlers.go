@@ -187,7 +187,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	respResources := make([]CoreAttributes, 0)
+	respResources := make([]Attributes, 0)
 	for _, resource := range resources {
 		respResources = append(respResources, resource.response(resourceType, r.Host+r.RequestURI+"/"+resource.ID))
 	}
