@@ -3,6 +3,7 @@ package scim
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -79,7 +80,7 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
-	path := r.URL.Path
+	path := strings.TrimPrefix(r.URL.Path, "/v2")
 	switch {
 	case path == "/Schemas" && r.Method == http.MethodGet:
 		s.schemasHandler(w, r)
@@ -111,15 +112,20 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if strings.HasPrefix(path, resourceType.Endpoint+"/") {
+			id, err := parseIdentifier(path, resourceType.Endpoint)
+			if err != nil {
+				break
+			}
+
 			switch r.Method {
 			case http.MethodGet:
-				s.resourceGetHandler(w, r, strings.TrimPrefix(path, resourceType.Endpoint+"/"), resourceType)
+				s.resourceGetHandler(w, r, id, resourceType)
 				return
 			case http.MethodPut:
-				s.resourcePutHandler(w, r, strings.TrimPrefix(path, resourceType.Endpoint+"/"), resourceType)
+				s.resourcePutHandler(w, r, id, resourceType)
 				return
 			case http.MethodDelete:
-				s.resourceDeleteHandler(w, r, strings.TrimPrefix(path, resourceType.Endpoint+"/"), resourceType)
+				s.resourceDeleteHandler(w, r, id, resourceType)
 				return
 			}
 		}
@@ -129,4 +135,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		detail: "Specified endpoint does not exist.",
 		status: http.StatusNotFound,
 	})
+}
+
+func parseIdentifier(path, endpoint string) (string, error) {
+	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
 }

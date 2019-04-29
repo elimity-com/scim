@@ -67,7 +67,7 @@ func (s schema) MarshalJSON() ([]byte, error) {
 		"attributes": s.Attributes,
 		"meta": meta{
 			ResourceType: "Schema",
-			Location:     "/v2/Schemas/" + s.ID,
+			Location:     "Schemas/" + s.ID,
 		},
 	}
 
