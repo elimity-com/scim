@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"regexp"
 	"strings"
 )
 
@@ -35,6 +36,13 @@ func NewSchemaFromBytes(raw []byte) (Schema, error) {
 	err := json.Unmarshal(raw, &schema)
 	if err != nil {
 		log.Fatalf("failed parsing schema: %v", err)
+	}
+
+	r := regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9_-]*$")
+	for _, attribute := range schema.Attributes {
+		if !r.MatchString(attribute.Name) {
+			return Schema{}, fmt.Errorf("invalid attribute name: %s", attribute.Name)
+		}
 	}
 
 	return Schema{schema}, nil
@@ -237,9 +245,9 @@ func (as attributes) validate(i interface{}, mode validationMode) (Attributes, s
 			}
 		}
 
-		attribute, err := attribute.validate(hit, mode)
-		if err != scimErrorNil {
-			return Attributes{}, err
+		attribute, scimErr := attribute.validate(hit, mode)
+		if scimErr != scimErrorNil {
+			return Attributes{}, scimErr
 		}
 
 		if mode != read {

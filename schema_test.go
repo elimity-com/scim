@@ -414,3 +414,48 @@ func TestValidationModeReplace(t *testing.T) {
 		t.Errorf("no attributes exprected")
 	}
 }
+
+func TestSchemaAttributeNames(t *testing.T) {
+	cases := []string{
+		`{
+			"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+			"name": "User",
+			"attributes": [
+				{
+					"name": "-id",
+					"type": "string",
+					"multiValued": false,
+					"required": true,
+					"caseExact": false,
+					"mutability": "readWrite",
+					"returned": "default",
+					"uniqueness": "server"
+				}
+			]
+		}`,
+		`{
+			"id": "urn:ietf:params:scim:schemas:core:2.0:User",
+			"name": "User",
+			"attributes": [
+				{
+					"name": "id.",
+					"type": "string",
+					"multiValued": false,
+					"required": true,
+					"caseExact": false,
+					"mutability": "readWrite",
+					"returned": "default",
+					"uniqueness": "server"
+				}
+			]
+		}`,
+	}
+
+	for idx, test := range cases {
+		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
+			if _, err := NewSchemaFromString(test); err == nil {
+				t.Errorf("error expected")
+			}
+		})
+	}
+}
