@@ -222,7 +222,6 @@ const rawSchemaSchema = `{
               "canonicalValues": [
                 "binary",
                 "string",
-                "complex",
                 "boolean",
                 "decimal",
                 "integer",

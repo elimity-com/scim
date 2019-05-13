@@ -112,7 +112,7 @@ func TestResourceTypeValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid resource %d", idx), func(t *testing.T) {
-			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), write); err != test.err {
+			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), validationConfig{mode: write}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -150,7 +150,7 @@ func TestResourceTypeValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid resource %d", idx), func(t *testing.T) {
-			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), write); err != test.err {
+			if _, err := server.resourceTypes["User"].validate(server.schemas, []byte(test.s), validationConfig{mode: write}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})

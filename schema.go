@@ -27,7 +27,7 @@ func NewSchemaFromString(s string) (Schema, error) {
 
 // NewSchemaFromBytes returns a validated schema if no errors take place.
 func NewSchemaFromBytes(raw []byte) (Schema, error) {
-	_, scimErr := metaSchema.validate(raw, read)
+	_, scimErr := metaSchema.validate(raw, validationConfig{mode: read, strict: true})
 	if scimErr != scimErrorNil {
 		return Schema{}, fmt.Errorf(scimErr.detail)
 	}
@@ -87,7 +87,7 @@ func (s schema) MarshalJSON() ([]byte, error) {
 }
 
 // validate validates given bytes based on the schema and validation mode.
-func (s schema) validate(raw []byte, mode validationMode) (Attributes, scimError) {
+func (s schema) validate(raw []byte, config validationConfig) (Attributes, scimError) {
 	var m interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
@@ -96,7 +96,7 @@ func (s schema) validate(raw []byte, mode validationMode) (Attributes, scimError
 	if err != nil {
 		return Attributes{}, scimErrorInvalidSyntax
 	}
-	return s.Attributes.validate(m, mode)
+	return s.Attributes.validate(m, config)
 }
 
 // attribute is a complex type that defines service provider attributes and their qualities via the following set of
@@ -139,7 +139,7 @@ type attribute struct {
 	ReferenceTypes []string `json:"referenceTypes,omitempty"`
 }
 
-func (a attribute) validate(i interface{}, mode validationMode) (Attributes, scimError) {
+func (a attribute) validate(i interface{}, config validationConfig) (Attributes, scimError) {
 	// validate required
 	if i == nil {
 		if a.Required {
@@ -161,24 +161,24 @@ func (a attribute) validate(i interface{}, mode validationMode) (Attributes, sci
 
 		coreAttributes := make([]Attributes, 0)
 		for _, sub := range arr {
-			attributes, err := a.validateSingular(sub, mode)
+			attributes, err := a.validateSingular(sub, config)
 			if err != scimErrorNil {
 				return Attributes{}, err
 			}
 			coreAttributes = append(coreAttributes, attributes)
 		}
 
-		if mode != read {
+		if config.mode != read {
 			return Attributes{a.Name: coreAttributes}, scimErrorNil
 		}
 		return Attributes{}, scimErrorNil
 	}
 
-	return a.validateSingular(i, mode)
+	return a.validateSingular(i, config)
 }
 
-func (a attribute) validateSingular(i interface{}, mode validationMode) (Attributes, scimError) {
-	if mode == replace {
+func (a attribute) validateSingular(i interface{}, config validationConfig) (Attributes, scimError) {
+	if config.mode == replace {
 		switch a.Mutability {
 		case attributeMutabilityImmutable:
 			return Attributes{}, scimErrorMutability
@@ -194,13 +194,27 @@ func (a attribute) validateSingular(i interface{}, mode validationMode) (Attribu
 			return Attributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeComplex:
-		if _, err := a.SubAttributes.validate(i, mode); err != scimErrorNil {
+		if _, err := a.SubAttributes.validate(i, config); err != scimErrorNil {
 			return Attributes{}, err
 		}
 	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
 			return Attributes{}, scimErrorInvalidValue
+		}
+
+		if config.strict {
+			var hit bool
+			value := i.(string)
+			for _, v := range a.CanonicalValues {
+				if v == value {
+					hit = true
+				}
+			}
+
+			if len(a.CanonicalValues) > 0 && !hit {
+				return Attributes{}, scimErrorInvalidSyntax
+			}
 		}
 	case attributeTypeInteger:
 		n, ok := i.(json.Number)
@@ -215,7 +229,7 @@ func (a attribute) validateSingular(i interface{}, mode validationMode) (Attribu
 		return Attributes{}, scimErrorNil
 	}
 
-	if mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
+	if config.mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
 		return Attributes{a.Name: i}, scimErrorNil
 	}
 	return Attributes{}, scimErrorNil
@@ -223,7 +237,7 @@ func (a attribute) validateSingular(i interface{}, mode validationMode) (Attribu
 
 type attributes []attribute
 
-func (as attributes) validate(i interface{}, mode validationMode) (Attributes, scimError) {
+func (as attributes) validate(i interface{}, config validationConfig) (Attributes, scimError) {
 	coreAttributes := make(Attributes)
 
 	c, ok := i.(map[string]interface{})
@@ -245,12 +259,12 @@ func (as attributes) validate(i interface{}, mode validationMode) (Attributes, s
 			}
 		}
 
-		attribute, scimErr := attribute.validate(hit, mode)
+		attribute, scimErr := attribute.validate(hit, config)
 		if scimErr != scimErrorNil {
 			return Attributes{}, scimErr
 		}
 
-		if mode != read {
+		if config.mode != read {
 			for k, v := range attribute {
 				coreAttributes[k] = v
 			}
@@ -301,6 +315,11 @@ type attributeUniqueness string
 // attributeUniquenessNone   attributeUniqueness = "none"
 // attributeUniquenessServer attributeUniqueness = "server"
 // )
+
+type validationConfig struct {
+	mode   validationMode
+	strict bool
+}
 
 type validationMode int
 

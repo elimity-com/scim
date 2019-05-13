@@ -33,9 +33,15 @@ func (r Resource) response(resourceType resourceType) Attributes {
 
 // ResourceHandler represents a set off callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
+	// Create stores given attributes. Returns a resource with the attributes that are stored and a (new) unique identifier.
 	Create(attributes Attributes) (Resource, PostError)
+	// Get returns the resource corresponding with the given identifier.
 	Get(id string) (Resource, GetError)
+	// GetAll returns all the resources.
 	GetAll() ([]Resource, GetError)
+	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
+	// are to be deleted. Returns a resource with the attributes that are stored.
 	Replace(id string, attributes Attributes) (Resource, PutError)
+	// Delete removes the resource with corresponding id.
 	Delete(id string) DeleteError
 }

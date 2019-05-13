@@ -65,7 +65,7 @@ func TestNewSchemaFromFile(t *testing.T) {
 
 func TestSchemaValidation(t *testing.T) {
 	// validate raw meta schema with meta schema
-	if _, err := metaSchema.validate([]byte(rawSchemaSchema), read); err != scimErrorNil {
+	if _, err := metaSchema.validate([]byte(rawSchemaSchema), validationConfig{mode: read}); err != scimErrorNil {
 		t.Error(err)
 	}
 
@@ -75,7 +75,7 @@ func TestSchemaValidation(t *testing.T) {
 	}
 
 	// validate simple user schema with meta schema
-	if _, err := metaSchema.validate(raw, read); err != scimErrorNil {
+	if _, err := metaSchema.validate(raw, validationConfig{mode: read}); err != scimErrorNil {
 		t.Error(err)
 	}
 
@@ -96,7 +96,7 @@ func TestSchemaValidation(t *testing.T) {
 			"familyName": "family name",
 			"givenName": "given name"
 		}
-	}`), read); err != scimErrorNil {
+	}`), validationConfig{mode: read}); err != scimErrorNil {
 		t.Error(err)
 	}
 
@@ -135,7 +135,7 @@ func TestSchemaValidation(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid user %d", idx), func(t *testing.T) {
-			if _, err := schema.schema.validate([]byte(test.s), read); err != test.err {
+			if _, err := schema.schema.validate([]byte(test.s), validationConfig{mode: read}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -143,7 +143,7 @@ func TestSchemaValidation(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	if _, err := metaSchema.validate([]byte(``), read); err != scimErrorInvalidSyntax {
+	if _, err := metaSchema.validate([]byte(``), validationConfig{mode: read}); err != scimErrorInvalidSyntax {
 		t.Errorf("invalid error: %v", err)
 	}
 }
@@ -179,7 +179,7 @@ func TestDuplicate(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("duplicate %d", idx), func(t *testing.T) {
-			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), validationConfig{mode: read}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -207,7 +207,7 @@ func TestDuplicate(t *testing.T) {
 
 	for idx, test := range valid {
 		t.Run(fmt.Sprintf("valid %d", idx), func(t *testing.T) {
-			if _, err := metaSchema.validate([]byte(test.s), read); err != scimErrorNil {
+			if _, err := metaSchema.validate([]byte(test.s), validationConfig{mode: read}); err != scimErrorNil {
 				t.Errorf("no error expected / got: %v", err)
 			}
 		})
@@ -246,7 +246,7 @@ func TestRequired(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("required %d", idx), func(t *testing.T) {
-			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), validationConfig{mode: read}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -335,7 +335,7 @@ func TestConverting(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("converting %d", idx), func(t *testing.T) {
-			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), validationConfig{mode: read}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -360,7 +360,7 @@ func TestNil(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if _, err := metaSchema.validate([]byte(test.s), read); err != test.err {
+			if _, err := metaSchema.validate([]byte(test.s), validationConfig{mode: read}); err != test.err {
 				t.Errorf("expected: %v / got: %v", test.err, err)
 			}
 		})
@@ -373,7 +373,7 @@ func TestValidationModeRead(t *testing.T) {
 		t.Error(err)
 	}
 
-	attributes, scimErr := metaSchema.validate(raw, read)
+	attributes, scimErr := metaSchema.validate(raw, validationConfig{mode: read})
 	if scimErr != scimErrorNil {
 		t.Error(scimErr)
 	}
@@ -389,7 +389,7 @@ func TestValidationModeWrite(t *testing.T) {
 		t.Error(err)
 	}
 
-	attributes, scimErr := metaSchema.validate(raw, write)
+	attributes, scimErr := metaSchema.validate(raw, validationConfig{mode: write})
 	if scimErr != scimErrorNil {
 		t.Error(scimErr)
 	}
@@ -405,7 +405,7 @@ func TestValidationModeReplace(t *testing.T) {
 		t.Error(err)
 	}
 
-	attributes, scimErr := metaSchema.validate(raw, replace)
+	attributes, scimErr := metaSchema.validate(raw, validationConfig{mode: replace})
 	if scimErr != scimErrorNil {
 		t.Error(scimErr)
 	}
@@ -457,5 +457,84 @@ func TestSchemaAttributeNames(t *testing.T) {
 				t.Errorf("error expected")
 			}
 		})
+	}
+}
+
+func TestSchemaDepth(t *testing.T) {
+	depth4 := `{
+		"id": "urn:ietf:params:scim:schemas:core:2.0:Depth",
+		"name": "depth1",
+		"description": "Depth",
+		"attributes": [
+			{
+				"name": "depth2",
+				"type": "complex",
+				"multiValued": false,
+				"required": false,
+				"subAttributes": [
+					{
+					"name": "depth3",
+					"type": "complex",
+					"multiValued": false,
+					"required": false,
+					"subAttributes": [
+						{
+						"name": "value",
+						"type": "string",
+						"multiValued": false,
+						"required": false,
+						"mutability": "readWrite",
+						"returned": "default",
+						"uniqueness": "none"
+						}
+					],
+					"mutability": "readWrite",
+					"returned": "default",
+					"uniqueness": "none"
+					}
+				],
+				"mutability": "readWrite",
+				"returned": "default",
+				"uniqueness": "none"
+			}
+		]
+	}`
+
+	_, err := NewSchemaFromString(depth4)
+	if err == nil {
+		t.Error("error expected")
+	}
+
+	canonical := `{
+		"id": "urn:ietf:params:scim:schemas:core:2.0:Depth",
+		"name": "depth1",
+		"description": "Depth",
+		"attributes": [
+			{
+				"name": "depth2",
+				"type": "complex",
+				"multiValued": false,
+				"required": false,
+				"subAttributes": [
+					{
+					"name": "depth3",
+					"type": "unknown",
+					"multiValued": false,
+					"required": false,
+					"mutability": "readWrite",
+					"returned": "default",
+					"uniqueness": "none"
+					}
+				],
+				"mutability": "readWrite",
+				"returned": "default",
+				"uniqueness": "none"
+			}
+		]
+	}`
+
+	_, err = NewSchemaFromString(canonical)
+	if err == nil {
+		t.Error("error expected")
 	}
 }
