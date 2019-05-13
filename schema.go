@@ -64,7 +64,7 @@ type schema struct {
 	Name string
 	// Description is the schema's human-readable description.  OPTIONAL.
 	Description *string
-	// Attributes is a collection of a complex type that defines service provider attributes and their qualities.
+	// ResourceAttributes is a collection of a complex type that defines service provider attributes and their qualities.
 	Attributes attributes
 }
 
@@ -87,14 +87,14 @@ func (s schema) MarshalJSON() ([]byte, error) {
 }
 
 // validate validates given bytes based on the schema and validation mode.
-func (s schema) validate(raw []byte, config validationConfig) (Attributes, scimError) {
+func (s schema) validate(raw []byte, config validationConfig) (ResourceAttributes, scimError) {
 	var m interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	err := d.Decode(&m)
 	if err != nil {
-		return Attributes{}, scimErrorInvalidSyntax
+		return ResourceAttributes{}, scimErrorInvalidSyntax
 	}
 	return s.Attributes.validate(m, config)
 }
@@ -139,51 +139,51 @@ type attribute struct {
 	ReferenceTypes []string `json:"referenceTypes,omitempty"`
 }
 
-func (a attribute) validate(i interface{}, config validationConfig) (Attributes, scimError) {
+func (a attribute) validate(i interface{}, config validationConfig) (ResourceAttributes, scimError) {
 	// validate required
 	if i == nil {
 		if a.Required {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
-		return Attributes{}, scimErrorNil
+		return ResourceAttributes{}, scimErrorNil
 	}
 
 	if a.MultiValued {
 		arr, ok := i.([]interface{})
 		if !ok {
-			return Attributes{}, scimErrorInvalidSyntax
+			return ResourceAttributes{}, scimErrorInvalidSyntax
 		}
 
 		// empty array = omitted/nil
 		if len(arr) == 0 && a.Required {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
 
-		coreAttributes := make([]Attributes, 0)
+		coreAttributes := make([]ResourceAttributes, 0)
 		for _, sub := range arr {
 			attributes, err := a.validateSingular(sub, config)
 			if err != scimErrorNil {
-				return Attributes{}, err
+				return ResourceAttributes{}, err
 			}
 			coreAttributes = append(coreAttributes, attributes)
 		}
 
 		if config.mode != read {
-			return Attributes{a.Name: coreAttributes}, scimErrorNil
+			return ResourceAttributes{a.Name: coreAttributes}, scimErrorNil
 		}
-		return Attributes{}, scimErrorNil
+		return ResourceAttributes{}, scimErrorNil
 	}
 
 	return a.validateSingular(i, config)
 }
 
-func (a attribute) validateSingular(i interface{}, config validationConfig) (Attributes, scimError) {
+func (a attribute) validateSingular(i interface{}, config validationConfig) (ResourceAttributes, scimError) {
 	if config.mode == replace {
 		switch a.Mutability {
 		case attributeMutabilityImmutable:
-			return Attributes{}, scimErrorMutability
+			return ResourceAttributes{}, scimErrorMutability
 		case attributeMutabilityReadOnly:
-			return Attributes{}, scimErrorNil
+			return ResourceAttributes{}, scimErrorNil
 		}
 	}
 
@@ -191,16 +191,16 @@ func (a attribute) validateSingular(i interface{}, config validationConfig) (Att
 	case attributeTypeBoolean:
 		_, ok := i.(bool)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
 	case attributeTypeComplex:
 		if _, err := a.SubAttributes.validate(i, config); err != scimErrorNil {
-			return Attributes{}, err
+			return ResourceAttributes{}, err
 		}
 	case attributeTypeString, attributeTypeReference:
 		_, ok := i.(string)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
 
 		if config.strict {
@@ -213,36 +213,36 @@ func (a attribute) validateSingular(i interface{}, config validationConfig) (Att
 			}
 
 			if len(a.CanonicalValues) > 0 && !hit {
-				return Attributes{}, scimErrorInvalidSyntax
+				return ResourceAttributes{}, scimErrorInvalidSyntax
 			}
 		}
 	case attributeTypeInteger:
 		n, ok := i.(json.Number)
 		if !ok {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
 		if strings.Contains(n.String(), ".") || strings.Contains(n.String(), "e") {
-			return Attributes{}, scimErrorInvalidValue
+			return ResourceAttributes{}, scimErrorInvalidValue
 		}
 	default:
 		log.Fatalf("attribute type not implemented: %s", a.Type)
-		return Attributes{}, scimErrorNil
+		return ResourceAttributes{}, scimErrorNil
 	}
 
 	if config.mode != read && (a.Returned == attributeReturnedAlways || a.Returned == attributeReturnedDefault) {
-		return Attributes{a.Name: i}, scimErrorNil
+		return ResourceAttributes{a.Name: i}, scimErrorNil
 	}
-	return Attributes{}, scimErrorNil
+	return ResourceAttributes{}, scimErrorNil
 }
 
 type attributes []attribute
 
-func (as attributes) validate(i interface{}, config validationConfig) (Attributes, scimError) {
-	coreAttributes := make(Attributes)
+func (as attributes) validate(i interface{}, config validationConfig) (ResourceAttributes, scimError) {
+	coreAttributes := make(ResourceAttributes)
 
 	c, ok := i.(map[string]interface{})
 	if !ok {
-		return Attributes{}, scimErrorInvalidSyntax
+		return ResourceAttributes{}, scimErrorInvalidSyntax
 	}
 
 	for _, attribute := range as {
@@ -252,7 +252,7 @@ func (as attributes) validate(i interface{}, config validationConfig) (Attribute
 		for k, v := range c {
 			if strings.EqualFold(attribute.Name, k) {
 				if found {
-					return Attributes{}, scimErrorUniqueness
+					return ResourceAttributes{}, scimErrorUniqueness
 				}
 				found = true
 				hit = v
@@ -261,7 +261,7 @@ func (as attributes) validate(i interface{}, config validationConfig) (Attribute
 
 		attribute, scimErr := attribute.validate(hit, config)
 		if scimErr != scimErrorNil {
-			return Attributes{}, scimErr
+			return ResourceAttributes{}, scimErr
 		}
 
 		if config.mode != read {

@@ -73,32 +73,32 @@ type resourceType struct {
 	handler ResourceHandler
 }
 
-func (t resourceType) validate(schemas map[string]schema, raw []byte, config validationConfig) (Attributes, scimError) {
+func (t resourceType) validate(schemas map[string]schema, raw []byte, config validationConfig) (ResourceAttributes, scimError) {
 	var m map[string]interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 	err := d.Decode(&m)
 	if err != nil {
-		return Attributes{}, scimErrorInvalidSyntax
+		return ResourceAttributes{}, scimErrorInvalidSyntax
 	}
 
 	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, config)
 	if scimErr != scimErrorNil {
-		return Attributes{}, scimErr
+		return ResourceAttributes{}, scimErr
 	}
 
 	for _, extension := range t.SchemaExtensions {
 		extensionField := m[extension.Schema]
 		if extensionField == nil {
 			if extension.Required {
-				return Attributes{}, scimErrorInvalidValue
+				return ResourceAttributes{}, scimErrorInvalidValue
 			}
 			continue
 		}
 
 		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, config)
 		if scimErr != scimErrorNil {
-			return Attributes{}, scimErr
+			return ResourceAttributes{}, scimErr
 		}
 
 		attributes[extension.Schema] = extensionAttributes

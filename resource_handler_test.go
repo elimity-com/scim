@@ -7,8 +7,8 @@ import (
 )
 
 func newTestResourceHandler() testResourceHandler {
-	data := make(map[string]Attributes)
-	data["0001"] = Attributes{
+	data := make(map[string]ResourceAttributes)
+	data["0001"] = ResourceAttributes{
 		"userName": "test",
 	}
 
@@ -18,10 +18,10 @@ func newTestResourceHandler() testResourceHandler {
 }
 
 type testResourceHandler struct {
-	data map[string]Attributes
+	data map[string]ResourceAttributes
 }
 
-func (h testResourceHandler) Create(attributes Attributes) (Resource, PostError) {
+func (h testResourceHandler) Create(attributes ResourceAttributes) (Resource, PostError) {
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
 	h.data[id] = attributes
@@ -53,7 +53,7 @@ func (h testResourceHandler) GetAll() ([]Resource, GetError) {
 	return all, GetErrorNil
 }
 
-func (h testResourceHandler) Replace(id string, attributes Attributes) (Resource, PutError) {
+func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, PutError) {
 	_, ok := h.data[id]
 	if !ok {
 		return Resource{}, NewResourceNotFoundPutError(id)
