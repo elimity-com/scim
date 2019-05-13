@@ -124,7 +124,7 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(s.schemas, data, write)
+	attributes, scimErr := resourceType.validate(s.schemas, data, validationConfig{mode: write})
 	if scimErr != scimErrorNil {
 		errorHandler(w, r, scimErr)
 		return
@@ -203,7 +203,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(s.schemas, data, replace)
+	attributes, scimErr := resourceType.validate(s.schemas, data, validationConfig{mode: replace})
 	if scimErr != scimErrorNil {
 		errorHandler(w, r, scimErr)
 		return

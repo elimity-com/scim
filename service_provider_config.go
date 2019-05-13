@@ -25,7 +25,7 @@ func NewServiceProviderConfigFromString(s string) (ServiceProviderConfig, error)
 
 // NewServiceProviderConfigFromBytes returns a validated service provider config if no errors take place.
 func NewServiceProviderConfigFromBytes(raw []byte) (ServiceProviderConfig, error) {
-	_, scimErr := serviceProviderConfigSchema.validate(raw, read)
+	_, scimErr := serviceProviderConfigSchema.validate(raw, validationConfig{mode: read, strict: true})
 	if scimErr != scimErrorNil {
 		return ServiceProviderConfig{}, fmt.Errorf(scimErr.detail)
 	}

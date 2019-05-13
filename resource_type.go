@@ -25,7 +25,7 @@ func NewResourceTypeFromString(s string, handler ResourceHandler) (ResourceType,
 
 // NewResourceTypeFromBytes returns a validated resource type if no errors take place.
 func NewResourceTypeFromBytes(raw []byte, handler ResourceHandler) (ResourceType, error) {
-	_, scimErr := resourceTypeSchema.validate(raw, read)
+	_, scimErr := resourceTypeSchema.validate(raw, validationConfig{mode: read, strict: true})
 	if scimErr != scimErrorNil {
 		return ResourceType{}, fmt.Errorf(scimErr.detail)
 	}
@@ -73,7 +73,7 @@ type resourceType struct {
 	handler ResourceHandler
 }
 
-func (t resourceType) validate(schemas map[string]schema, raw []byte, mode validationMode) (Attributes, scimError) {
+func (t resourceType) validate(schemas map[string]schema, raw []byte, config validationConfig) (Attributes, scimError) {
 	var m map[string]interface{}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
@@ -82,7 +82,7 @@ func (t resourceType) validate(schemas map[string]schema, raw []byte, mode valid
 		return Attributes{}, scimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, mode)
+	attributes, scimErr := schemas[t.Schema].Attributes.validate(m, config)
 	if scimErr != scimErrorNil {
 		return Attributes{}, scimErr
 	}
@@ -96,7 +96,7 @@ func (t resourceType) validate(schemas map[string]schema, raw []byte, mode valid
 			continue
 		}
 
-		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, mode)
+		extensionAttributes, scimErr := schemas[extension.Schema].Attributes.validate(extensionField, config)
 		if scimErr != scimErrorNil {
 			return Attributes{}, scimErr
 		}
