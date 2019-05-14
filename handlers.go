@@ -132,7 +132,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 
 	resource, postErr := resourceType.handler.Create(attributes)
 	if postErr != PostErrorNil {
-		errorHandler(w, r, postErr.err)
+		errorHandler(w, r, postErr.postErr)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	resource, getErr := resourceType.handler.Get(id)
 	if getErr != GetErrorNil {
-		errorHandler(w, r, getErr.err)
+		errorHandler(w, r, getErr.getErr)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
 	res, getErr := resourceType.handler.GetAll()
 	if getErr != GetErrorNil {
-		errorHandler(w, r, getErr.err)
+		errorHandler(w, r, getErr.getErr)
 		return
 	}
 
@@ -211,7 +211,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 
 	resource, putError := resourceType.handler.Replace(id, attributes)
 	if putError != PutErrorNil {
-		errorHandler(w, r, putError.err)
+		errorHandler(w, r, putError.putErr)
 		return
 	}
 
@@ -232,7 +232,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	deleteErr := resourceType.handler.Delete(id)
 	if deleteErr != DeleteErrorNil {
-		errorHandler(w, r, deleteErr.err)
+		errorHandler(w, r, deleteErr.delErr)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
