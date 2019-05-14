@@ -39,54 +39,20 @@ extension, _ := NewSchemaFromFile("/path/to/extension")
 #### 3.1 Callback (implementation of `ResourceHandler`)
 [Simple In Memory Example](resource_handler_test.go)
 ```
-func newResourceHandler() exampleResourceHandler {
-	return exampleResourceHandler{
-		data: make(map[string]scim.ResourceAttributes),
-	}
-}
-
-type exampleResourceHandler struct {
-	data map[string]scim.ResourceAttributes
-}
-
-func (h exampleResourceHandler) Create(attributes scim.ResourceAttributes) (scim.Resource, scim.PostError) {
-	// 1. create id
-	// 2. store attributes (w/ id)
-	// 3. create and return resource (+ errors)
-}
-
-func (h exampleResourceHandler) Get(id string) (scim.Resource, scim.GetError) {
-	// 1. get resource w/ given id
-	// 2. create and return resource (+ errors)
-}
-
-func (h exampleResourceHandler) GetAll() ([]scim.Resource, scim.GetError) {
-	// 1. get all resources
-	// 2. create and return slice of all resources (+ errors)
-}
-
-func (h exampleResourceHandler) Replace(id string, attributes scim.ResourceAttributes) (scim.Resource, scim.PutError) {
-	// 1. get resource w/ given id
-	// 2. overwrite all retrieved attributes with new attributes
-	// 3. create and resource new (replaced) resource (+ errors)
-}
-
-func (h exampleResourceHandler) Delete(id string) scim.DeleteError {
-	// 1. delete resource w/ given id
-	// (+ errors)
-}
+var resourceHandler ResourceHandler
+// initialize w/ own implementation
 ```
 **!** each resource type should have its own resource handler.
 
 #### 3.2 Resource Type
 ```
-resourceType, _ := NewResourceTypeFromFile("/path/to/resourceType", newResourceHandler())
+resourceType, _ := NewResourceTypeFromFile("/path/to/resourceType", resourceHandler)
 ```
 **!** make sure all schemas that are referenced are created in the previous step.
 
 ### 4. Create Server
 ```
-server, _ := scim.NewServer(config, []scim.Schema{schema, extension, ...}, []scim.ResourceType{resourceType, ...})
+server, _ := scim.NewServer(config, []scim.Schema{schema, extension}, []scim.ResourceType{resourceType})
 ```
 
 ### 5. Listen and Serve
