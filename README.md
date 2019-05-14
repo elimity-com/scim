@@ -20,7 +20,7 @@ go get github.com/elimity-com/scim
 [RFC Config](https://tools.ietf.org/html/rfc7643#section-5) |
 [Example Config](https://tools.ietf.org/html/rfc7643#section-8.5)
 ```
-config, _ := NewServiceProviderConfigFromFile("/path/to/config")
+config, _ := scim.NewServiceProviderConfigFromFile("/path/to/config")
 ```
 **!** no additional features/operations are supported in this version.
 
@@ -30,8 +30,8 @@ config, _ := NewServiceProviderConfigFromFile("/path/to/config")
 [Group Schema](https://tools.ietf.org/html/rfc7643#section-4.2) |
 [Extension Schema](https://tools.ietf.org/html/rfc7643#section-4.3)
 ```
-schema, _ := NewSchemaFromFile("/path/to/schema")
-extension, _ := NewSchemaFromFile("/path/to/extension")
+schema, _ := scim.NewSchemaFromFile("/path/to/schema")
+extension, _ := scim.NewSchemaFromFile("/path/to/extension")
 ```
 
 ### 3. Create all resource types and their callbacks.
@@ -41,14 +41,14 @@ extension, _ := NewSchemaFromFile("/path/to/extension")
 #### 3.1 Callback (implementation of `ResourceHandler`)
 [Simple In Memory Example](resource_handler_test.go)
 ```
-var resourceHandler ResourceHandler
+var resourceHandler scim.ResourceHandler
 // initialize w/ own implementation
 ```
 **!** each resource type should have its own resource handler.
 
 #### 3.2 Resource Type
 ```
-resourceType, _ := NewResourceTypeFromFile("/path/to/resourceType", resourceHandler)
+resourceType, _ := scim.NewResourceTypeFromFile("/path/to/resourceType", resourceHandler)
 ```
 **!** make sure all schemas that are referenced are created in the previous step.
 
