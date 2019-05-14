@@ -1,12 +1,20 @@
-# Go SCIM 2
-The System for Cross-domain Identity Management (SCIM) specification is designed to make managing user identities in 
-cloud-based applications and services easier. The specification suite seeks to build upon experience with existing 
-schemas and deployments, placing specific emphasis on simplicity of development and integration, while applying 
-existing authentication, authorization, and privacy models. Its intent is to reduce the cost and complexity of user 
-management operations by providing a common user schema and extension model, as well as binding documents to provide 
-patterns for exchanging this schema using standard protocols. ([more...](http://www.simplecloud.info/))
+![scim-logo](LOGO.png)
 
 [![GoDoc](https://godoc.org/github.com/elimity.com/scim?status.svg)](https://godoc.org/github.com/elimity.com/scim)
+
+This is an open source implementation of the [SCIM v2.0](http://www.simplecloud.info/#Specification) specification for use in Golang.
+SCIM defines a flexible schema mechanism and REST API for managing identity data.
+The goal is to reduce the complexity of user management operations by providing patterns for exchanging schemas using HTTP.
+
+In this implementation it is easy to add *custom* schemas and extensions whom are validated at the initialization of the server.
+Corresponding with their resource type, incoming resources will be *validated* by the supported schemas before being 
+passed on to their callbacks.
+
+The following features are supported:
+- GET for `/Schemas`, `/ServiceProviderConfig` and `/ResourceTypes`
+- CRUD (POST/GET/PUT and DELETE) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
+
+Other optional features such as patch, pagination, sorting, etc... are **not** supported in this version.
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
@@ -68,6 +76,7 @@ but please first discuss the change you wish to make via issue, email,
 or any other method with the owners of this repository before making a change.
 
 If you’d like to propose a change please ensure the following:
+- all checks of CircleCI are passing ([golangci-lint](https://github.com/golangci/golangci-lint): `goimports` and `golint`)
 - all already existing tests are passing
 - you have written tests that cover the code you are making
 - there is documentation for at least all public functions you have added
