@@ -109,7 +109,7 @@ func (e *scimError) UnmarshalJSON(data []byte) error {
 
 // GetError represents an error that is returned by a GET HTTP request.
 type GetError struct {
-	err scimError
+	getErr scimError
 }
 
 // GetErrorNil indicates that no error occurred during handling a GET HTTP request.
@@ -118,7 +118,7 @@ var GetErrorNil GetError
 var (
 	// GetErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	GetErrorInvalidValue = GetError{err: scimErrorInvalidValue}
+	GetErrorInvalidValue = GetError{getErr: scimErrorInvalidValue}
 )
 
 // NewResourceNotFoundGetError returns an error with status code 404 and a human readable message containing the identifier
@@ -129,7 +129,7 @@ func NewResourceNotFoundGetError(id string) GetError {
 
 // PostError represents an error that is returned by a POST HTTP request.
 type PostError struct {
-	err scimError
+	postErr scimError
 }
 
 // PostErrorNil indicates that no error occurred during handling a POST HTTP request.
@@ -137,18 +137,18 @@ var PostErrorNil PostError
 
 var (
 	// PostErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
-	PostErrorUniqueness = PostError{err: scimErrorUniqueness}
+	PostErrorUniqueness = PostError{postErr: scimErrorUniqueness}
 	// PostErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	PostErrorInvalidSyntax = PostError{err: scimErrorInvalidSyntax}
+	PostErrorInvalidSyntax = PostError{postErr: scimErrorInvalidSyntax}
 	// PostErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	PostErrorInvalidValue = PostError{err: scimErrorInvalidValue}
+	PostErrorInvalidValue = PostError{postErr: scimErrorInvalidValue}
 )
 
 // PutError represents an error that is returned by a PUT HTTP request.
 type PutError struct {
-	err scimError
+	putErr scimError
 }
 
 // PutErrorNil indicates that no error occurred during handling a PUT HTTP request.
@@ -156,16 +156,16 @@ var PutErrorNil PutError
 
 var (
 	// PutErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
-	PutErrorUniqueness = PutError{err: scimErrorUniqueness}
+	PutErrorUniqueness = PutError{putErr: scimErrorUniqueness}
 	// PutErrorMutability shall be returned when the attempted modification is not compatible with the target
 	// attribute's mutability or current state.
-	PutErrorMutability = PutError{err: scimErrorMutability}
+	PutErrorMutability = PutError{putErr: scimErrorMutability}
 	// PutErrorInvalidSyntax shall be returned when the request body message structure was invalid or did not conform
 	// to the request schema.
-	PutErrorInvalidSyntax = PutError{err: scimErrorInvalidSyntax}
+	PutErrorInvalidSyntax = PutError{putErr: scimErrorInvalidSyntax}
 	// PutErrorInvalidValue shall be returned when a required field is missing or a value is not compatible with the
 	// attribute type.
-	PutErrorInvalidValue = PutError{err: scimErrorInvalidValue}
+	PutErrorInvalidValue = PutError{putErr: scimErrorInvalidValue}
 )
 
 // NewResourceNotFoundPutError returns an error with status code 404 and a human readable message containing the identifier
@@ -176,7 +176,7 @@ func NewResourceNotFoundPutError(id string) PutError {
 
 // DeleteError represents an error that is returned by a DELETE HTTP request.
 type DeleteError struct {
-	err scimError
+	delErr scimError
 }
 
 // DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
