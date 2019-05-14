@@ -6,6 +6,8 @@ existing authentication, authorization, and privacy models. Its intent is to red
 management operations by providing a common user schema and extension model, as well as binding documents to provide 
 patterns for exchanging this schema using standard protocols. ([more...](http://www.simplecloud.info/))
 
+[![GoDoc](https://godoc.org/github.com/elimity.com/scim?status.svg)](https://godoc.org/github.com/elimity.com/scim)
+
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
 ```
