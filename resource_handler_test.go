@@ -2,13 +2,18 @@ package scim
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
 	"time"
 
 	"github.com/elimity-com/scim/errors"
 )
+
+func ExampleResourceHandler() {
+	var r interface{} = testResourceHandler{}
+	_, ok := r.(ResourceHandler)
+	fmt.Println(ok)
+	// Output: true
+}
 
 // simple in-memory resource database
 type testResourceHandler struct {
@@ -86,53 +91,4 @@ func (h testResourceHandler) Delete(id string) errors.DeleteError {
 	delete(h.data, id)
 
 	return errors.DeleteErrorNil
-}
-
-func ExampleResourceHandler() {
-	config, _ := NewServiceProviderConfig([]byte(`{
-		"patch": {"supported": true},
-		"bulk": {
-			"supported": true,
-			"maxOperations": 1000,
-			"maxPayloadSize": 1048576
-		},
-		"filter": {
-			"supported": true,
-			"maxResults": 200
-		},
-		"changePassword": {"supported": true},
-		"sort": {"supported": true},
-		"etag": {"supported": true},
-		"authenticationSchemes": []
-	}`))
-
-	userSchema, _ := NewSchema([]byte(`{
-		"id": "urn:ietf:params:scim:schemas:core:2.0:User",
-		"name": "User",
-		"description": "User Account",
-		"attributes": [
-			{
-				"name": "userName",
-				"type": "string",
-				"multiValued": false,
-				"required": true,
-				"caseExact": false,
-				"mutability": "readWrite",
-				"returned": "default",
-				"uniqueness": "server"
-			}
-		]
-	}`))
-
-	resourceType, _ := NewResourceType([]byte(`{
-		"id": "User",
-		"name": "User",
-		"endpoint": "/Users",
-		"description": "User Account",
-		"schema": "urn:ietf:params:scim:schemas:core:2.0:User",
-		"schemaExtensions": []
-	}`), new(testResourceHandler))
-
-	server, _ := NewServer(config, []Schema{userSchema}, []ResourceType{resourceType})
-	log.Fatal(http.ListenAndServe(":8080", server))
 }
