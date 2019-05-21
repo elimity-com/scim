@@ -9,6 +9,25 @@ import (
 
 // ResourceAttributes represents a list of attributes given to the callback method to create or replace a resource based
 // on the given attributes.
+//
+//	ResourceAttributes{
+//		// simple attribute
+//		"userName": "di-wu",
+//		// complex attribute
+//		"name": map[string]interface{}{
+//			"givenName":  "Quint",
+//			"familyName": "Daenen",
+//		},
+//		// multivalued complex attribute(s)
+//		"emails": []map[string]interface{}{
+//			{
+//				"value":   "quint@elimity.com",
+//				"type":    "work",
+//				"primary": true,
+//			},
+//		},
+//		// etc.
+//	}
 type ResourceAttributes map[string]interface{}
 
 // Resource represents a resource returned by a callback method.
