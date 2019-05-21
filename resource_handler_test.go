@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/elimity-com/scim/errors"
 )
 
 func newTestResourceHandler() testResourceHandler {
@@ -21,28 +23,28 @@ type testResourceHandler struct {
 	data map[string]ResourceAttributes
 }
 
-func (h testResourceHandler) Create(attributes ResourceAttributes) (Resource, PostError) {
+func (h testResourceHandler) Create(attributes ResourceAttributes) (Resource, errors.PostError) {
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
 	h.data[id] = attributes
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
-	}, PostErrorNil
+	}, errors.PostErrorNil
 }
 
-func (h testResourceHandler) Get(id string) (Resource, GetError) {
+func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
 	data, ok := h.data[id]
 	if !ok {
-		return Resource{}, NewResourceNotFoundGetError(id)
+		return Resource{}, errors.GetErrorResourceNotFound
 	}
 	return Resource{
 		ID:         id,
 		Attributes: data,
-	}, GetErrorNil
+	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) GetAll() ([]Resource, GetError) {
+func (h testResourceHandler) GetAll() ([]Resource, errors.GetAllError) {
 	all := make([]Resource, 0)
 	for k, v := range h.data {
 		all = append(all, Resource{
@@ -50,26 +52,26 @@ func (h testResourceHandler) GetAll() ([]Resource, GetError) {
 			Attributes: v,
 		})
 	}
-	return all, GetErrorNil
+	return all, errors.GetAllErrorNil
 }
 
-func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, PutError) {
+func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {
 	_, ok := h.data[id]
 	if !ok {
-		return Resource{}, NewResourceNotFoundPutError(id)
+		return Resource{}, errors.PutErrorResourceNotFound
 	}
 	h.data[id] = attributes
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
-	}, PutErrorNil
+	}, errors.PutErrorNil
 }
 
-func (h testResourceHandler) Delete(id string) DeleteError {
+func (h testResourceHandler) Delete(id string) errors.DeleteError {
 	_, ok := h.data[id]
 	if !ok {
-		return NewResourceNotFoundDeleteError(id)
+		return errors.DeleteErrorResourceNotFound
 	}
 	delete(h.data, id)
-	return DeleteErrorNil
+	return errors.DeleteErrorNil
 }
