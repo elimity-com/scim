@@ -8,25 +8,20 @@ import (
 	"github.com/elimity-com/scim/errors"
 )
 
-func newTestResourceHandler() testResourceHandler {
-	data := make(map[string]ResourceAttributes)
-	data["0001"] = ResourceAttributes{
-		"userName": "test",
-	}
-
-	return testResourceHandler{
-		data: data,
-	}
-}
-
+// simple in-memory resource database
 type testResourceHandler struct {
 	data map[string]ResourceAttributes
 }
 
 func (h testResourceHandler) Create(attributes ResourceAttributes) (Resource, errors.PostError) {
+	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
+
+	// store resource
 	h.data[id] = attributes
+
+	// return stored resource
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
@@ -34,10 +29,13 @@ func (h testResourceHandler) Create(attributes ResourceAttributes) (Resource, er
 }
 
 func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
+	// check if resource exists
 	data, ok := h.data[id]
 	if !ok {
 		return Resource{}, errors.GetErrorResourceNotFound
 	}
+
+	// return resource with given identifier
 	return Resource{
 		ID:         id,
 		Attributes: data,
@@ -45,6 +43,7 @@ func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
 }
 
 func (h testResourceHandler) GetAll() ([]Resource, errors.GetAllError) {
+	// get all existing resources
 	all := make([]Resource, 0)
 	for k, v := range h.data {
 		all = append(all, Resource{
@@ -52,15 +51,22 @@ func (h testResourceHandler) GetAll() ([]Resource, errors.GetAllError) {
 			Attributes: v,
 		})
 	}
+
+	// return all resources
 	return all, errors.GetAllErrorNil
 }
 
 func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {
+	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
 		return Resource{}, errors.PutErrorResourceNotFound
 	}
+
+	// replace (all) attributes
 	h.data[id] = attributes
+
+	// return resource with replaced attributes
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
@@ -68,10 +74,16 @@ func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (
 }
 
 func (h testResourceHandler) Delete(id string) errors.DeleteError {
+	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
 		return errors.DeleteErrorResourceNotFound
 	}
+
+	// delete resource
 	delete(h.data, id)
+
 	return errors.DeleteErrorNil
 }
+
+func Example_resourceHandler() {}

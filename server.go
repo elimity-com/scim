@@ -78,6 +78,7 @@ func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []R
 	}, nil
 }
 
+// ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 	path := strings.TrimPrefix(r.URL.Path, "/v2")

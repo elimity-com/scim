@@ -53,6 +53,17 @@ func newTestServer() (*Server, error) {
 	return &server, err
 }
 
+func newTestResourceHandler() testResourceHandler {
+	data := make(map[string]ResourceAttributes)
+	data["0001"] = ResourceAttributes{
+		"userName": "test",
+	}
+
+	return testResourceHandler{
+		data: data,
+	}
+}
+
 func TestErr(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Invalid", nil)
 	rr := httptest.NewRecorder()

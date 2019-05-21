@@ -32,3 +32,27 @@ func ExampleNewServer_basePath() {
 	http.Handle("/scim/", http.StripPrefix("/scim", server))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
+// ResourceAttributes contains a resource's core attributes, which are those attributes that sit at the top level of
+// the JSON object together with the common attributes.
+func ExampleResourceAttributes() {
+	var resourceAttributes = ResourceAttributes{
+		// simple attribute
+		"userName": "di-wu",
+		// complex attribute
+		"name": map[string]interface{}{
+			"givenName":  "Quint",
+			"familyName": "Daenen",
+		},
+		// multivalued complex attribute(s)
+		"emails": []map[string]interface{}{
+			{
+				"value":   "quint@elimity.com",
+				"type":    "work",
+				"primary": true,
+			},
+		},
+		// etc.
+	}
+	_ = resourceAttributes
+}
