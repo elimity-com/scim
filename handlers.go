@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/elimity-com/scim/errors"
 )
 
 func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
@@ -131,8 +133,8 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	resource, postErr := resourceType.handler.Create(attributes)
-	if postErr != PostErrorNil {
-		errorHandler(w, r, postErr.postErr)
+	if postErr != errors.PostErrorNil {
+		errorHandler(w, r, scimPostError(postErr))
 		return
 	}
 
@@ -153,8 +155,8 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.4
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	resource, getErr := resourceType.handler.Get(id)
-	if getErr != GetErrorNil {
-		errorHandler(w, r, getErr.getErr)
+	if getErr != errors.GetErrorNil {
+		errorHandler(w, r, scimGetError(getErr, id))
 		return
 	}
 
@@ -173,14 +175,8 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	res, getErr := resourceType.handler.GetAll()
-	if getErr != GetErrorNil {
-		errorHandler(w, r, getErr.getErr)
-		return
-	}
-
 	var resources []interface{}
-	for _, resource := range res {
+	for _, resource := range resourceType.handler.GetAll() {
 		resources = append(resources, resource.response(resourceType))
 	}
 
@@ -210,8 +206,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	resource, putError := resourceType.handler.Replace(id, attributes)
-	if putError != PutErrorNil {
-		errorHandler(w, r, putError.putErr)
+	if putError != errors.PutErrorNil {
+		errorHandler(w, r, scimPutError(putError, id))
 		return
 	}
 
@@ -231,8 +227,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 // RFC: https://tools.ietf.org/html/rfc7644#section-3.6
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
 	deleteErr := resourceType.handler.Delete(id)
-	if deleteErr != DeleteErrorNil {
-		errorHandler(w, r, deleteErr.delErr)
+	if deleteErr != errors.DeleteErrorNil {
+		errorHandler(w, r, scimDeleteError(deleteErr, id))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

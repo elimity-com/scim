@@ -2,6 +2,7 @@ package scim
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,19 +10,38 @@ import (
 )
 
 func newTestServer() (*Server, error) {
-	config, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	rawConfig, err := ioutil.ReadFile("testdata/simple_service_provider_config.json")
 	if err != nil {
 		return nil, err
 	}
-	userSchema, err := NewSchemaFromFile("testdata/simple_user_schema.json")
+	config, err := NewServiceProviderConfig(rawConfig)
 	if err != nil {
 		return nil, err
 	}
-	userSchemaExtension, err := NewSchemaFromFile("testdata/simple_user_extension_schema.json")
+
+	rawSchema, err := ioutil.ReadFile("testdata/simple_user_schema.json")
 	if err != nil {
 		return nil, err
 	}
-	userResourceType, err := NewResourceTypeFromFile("testdata/simple_user_resource_type_with_extension.json", newTestResourceHandler())
+	userSchema, err := NewSchema(rawSchema)
+	if err != nil {
+		return nil, err
+	}
+
+	rawExtension, err := ioutil.ReadFile("testdata/simple_user_extension_schema.json")
+	if err != nil {
+		return nil, err
+	}
+	userSchemaExtension, err := NewSchema(rawExtension)
+	if err != nil {
+		return nil, err
+	}
+
+	rawResourceType, err := ioutil.ReadFile("testdata/simple_user_resource_type_with_extension.json")
+	if err != nil {
+		return nil, err
+	}
+	userResourceType, err := NewResourceType(rawResourceType, newTestResourceHandler())
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +51,17 @@ func newTestServer() (*Server, error) {
 	}
 
 	return &server, err
+}
+
+func newTestResourceHandler() testResourceHandler {
+	data := make(map[string]ResourceAttributes)
+	data["0001"] = ResourceAttributes{
+		"userName": "test",
+	}
+
+	return testResourceHandler{
+		data: data,
+	}
 }
 
 func TestErr(t *testing.T) {

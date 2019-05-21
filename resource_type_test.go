@@ -2,10 +2,11 @@ package scim
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
-func TestNewResourceTypeFromString(t *testing.T) {
+func TestNewResourceType(t *testing.T) {
 	cases := []struct {
 		s   string
 		err string
@@ -45,22 +46,24 @@ func TestNewResourceTypeFromString(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
-			if _, err := NewResourceTypeFromString(test.s, nil); err == nil || err.Error() != test.err {
+			if _, err := NewResourceType([]byte(test.s), nil); err == nil || err.Error() != test.err {
 				if err != nil || test.err != "" {
 					t.Errorf("expected: %s / got: %v", test.err, err)
 				}
 			}
 		})
 	}
-}
 
-func TestNewResourceTypeFromFile(t *testing.T) {
-	_, err := NewResourceTypeFromFile("testdata/simple_user_resource_type.json", nil)
+	rawResourceType, err := ioutil.ReadFile("testdata/simple_user_resource_type.json")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = NewResourceType(rawResourceType, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = NewResourceTypeFromFile("", nil)
+	_, err = NewResourceType([]byte(""), nil)
 	if err == nil {
 		t.Error("expected: no such file or directory")
 	}

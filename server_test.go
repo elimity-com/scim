@@ -2,11 +2,13 @@ package scim
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
 func TestNewServer(t *testing.T) {
-	config, _ := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	rawConfig, _ := ioutil.ReadFile("testdata/simple_service_provider_config.json")
+	config, _ := NewServiceProviderConfig(rawConfig)
 	cases := []struct {
 		s   []Schema
 		t   []ResourceType

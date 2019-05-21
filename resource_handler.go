@@ -3,10 +3,31 @@ package scim
 import (
 	"fmt"
 	"net/url"
+
+	"github.com/elimity-com/scim/errors"
 )
 
 // ResourceAttributes represents a list of attributes given to the callback method to create or replace a resource based
 // on the given attributes.
+//
+//	ResourceAttributes{
+//		// simple attribute
+//		"userName": "di-wu",
+//		// complex attribute
+//		"name": map[string]interface{}{
+//			"givenName":  "Quint",
+//			"familyName": "Daenen",
+//		},
+//		// multivalued complex attribute(s)
+//		"emails": []map[string]interface{}{
+//			{
+//				"value":   "quint@elimity.com",
+//				"type":    "work",
+//				"primary": true,
+//			},
+//		},
+//		// etc.
+//	}
 type ResourceAttributes map[string]interface{}
 
 // Resource represents a resource returned by a callback method.
@@ -36,14 +57,14 @@ func (r Resource) response(resourceType resourceType) ResourceAttributes {
 // ResourceHandler represents a set off callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
 	// Create stores given attributes. Returns a resource with the attributes that are stored and a (new) unique identifier.
-	Create(attributes ResourceAttributes) (Resource, PostError)
+	Create(attributes ResourceAttributes) (Resource, errors.PostError)
 	// Get returns the resource corresponding with the given identifier.
-	Get(id string) (Resource, GetError)
+	Get(id string) (Resource, errors.GetError)
 	// GetAll returns all the resources.
-	GetAll() ([]Resource, GetError)
+	GetAll() []Resource
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
-	Replace(id string, attributes ResourceAttributes) (Resource, PutError)
+	Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError)
 	// Delete removes the resource with corresponding ID.
-	Delete(id string) DeleteError
+	Delete(id string) errors.DeleteError
 }
