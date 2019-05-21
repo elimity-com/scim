@@ -42,7 +42,7 @@ type ResourceHandler interface {
 	// Get returns the resource corresponding with the given identifier.
 	Get(id string) (Resource, errors.GetError)
 	// GetAll returns all the resources.
-	GetAll() ([]Resource, errors.GetAllError)
+	GetAll() []Resource
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
 	Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError)

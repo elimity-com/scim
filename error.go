@@ -111,19 +111,8 @@ func (e *scimError) UnmarshalJSON(data []byte) error {
 
 func scimGetError(getError errors.GetError, id string) scimError {
 	switch getError {
-	case errors.GetErrorInvalidValue:
-		return scimErrorInvalidValue
 	case errors.GetErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
-	default:
-		return scimErrorInternalServer
-	}
-}
-
-func scimGetAllError(getError errors.GetAllError) scimError {
-	switch getError {
-	case errors.GetAllErrorInvalidValue:
-		return scimErrorInvalidValue
 	default:
 		return scimErrorInternalServer
 	}
@@ -133,10 +122,6 @@ func scimPostError(postError errors.PostError) scimError {
 	switch postError {
 	case errors.PostErrorUniqueness:
 		return scimErrorUniqueness
-	case errors.PostErrorInvalidSyntax:
-		return scimErrorInvalidSyntax
-	case errors.PostErrorInvalidValue:
-		return scimErrorInvalidValue
 	default:
 		return scimErrorInternalServer
 	}
@@ -148,10 +133,6 @@ func scimPutError(putError errors.PutError, id string) scimError {
 		return scimErrorUniqueness
 	case errors.PutErrorMutability:
 		return scimErrorMutability
-	case errors.PutErrorInvalidSyntax:
-		return scimErrorInvalidSyntax
-	case errors.PutErrorInvalidValue:
-		return scimErrorInvalidValue
 	case errors.PutErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
 	default:

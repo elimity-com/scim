@@ -42,7 +42,7 @@ func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
 	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) GetAll() ([]Resource, errors.GetAllError) {
+func (h testResourceHandler) GetAll() []Resource {
 	// get all existing resources
 	all := make([]Resource, 0)
 	for k, v := range h.data {
@@ -53,7 +53,7 @@ func (h testResourceHandler) GetAll() ([]Resource, errors.GetAllError) {
 	}
 
 	// return all resources
-	return all, errors.GetAllErrorNil
+	return all
 }
 
 func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {

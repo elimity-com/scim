@@ -175,14 +175,8 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
-	res, getErr := resourceType.handler.GetAll()
-	if getErr != errors.GetAllErrorNil {
-		errorHandler(w, r, scimGetAllError(getErr))
-		return
-	}
-
 	var resources []interface{}
-	for _, resource := range res {
+	for _, resource := range resourceType.handler.GetAll() {
 		resources = append(resources, resource.response(resourceType))
 	}
 
