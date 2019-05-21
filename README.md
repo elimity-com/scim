@@ -28,7 +28,8 @@ go get github.com/elimity-com/scim
 [RFC Config](https://tools.ietf.org/html/rfc7643#section-5) |
 [Example Config](https://tools.ietf.org/html/rfc7643#section-8.5)
 ```
-config, _ := scim.NewServiceProviderConfigFromFile("/path/to/config")
+// i.e. rawConfig, _ := ioutil.ReadFile("/path/to/config")
+config, _ := scim.NewServiceProviderConfig(rawConfig)
 ```
 **!** no additional features/operations are supported in this version.
 
@@ -38,8 +39,8 @@ config, _ := scim.NewServiceProviderConfigFromFile("/path/to/config")
 [Group Schema](https://tools.ietf.org/html/rfc7643#section-4.2) |
 [Extension Schema](https://tools.ietf.org/html/rfc7643#section-4.3)
 ```
-schema, _ := scim.NewSchemaFromFile("/path/to/schema")
-extension, _ := scim.NewSchemaFromFile("/path/to/extension")
+schema, _ := scim.NewSchema(rawSchema)
+extension, _ := scim.NewSchema(rawExtension)
 ```
 
 ### 3. Create all resource types and their callbacks.
@@ -56,7 +57,7 @@ var resourceHandler scim.ResourceHandler
 
 #### 3.2 Resource Type
 ```
-resourceType, _ := scim.NewResourceTypeFromFile("/path/to/resourceType", resourceHandler)
+resourceType, _ := scim.NewResourceType(rawResourceType, resourceHandler)
 ```
 **!** make sure all schemas that are referenced are created in the previous step.
 
