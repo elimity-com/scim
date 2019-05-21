@@ -4,29 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"regexp"
 	"strings"
 )
 
-// NewSchemaFromFile reads the file from given filepath and returns a validated schema if no errors take place.
-func NewSchemaFromFile(filepath string) (Schema, error) {
-	raw, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return Schema{}, err
-	}
-
-	return NewSchemaFromBytes(raw)
-}
-
-// NewSchemaFromString returns a validated schema if no errors take place.
-func NewSchemaFromString(s string) (Schema, error) {
-	return NewSchemaFromBytes([]byte(s))
-}
-
-// NewSchemaFromBytes returns a validated schema if no errors take place.
-func NewSchemaFromBytes(raw []byte) (Schema, error) {
+// NewSchema returns a validated schema if no errors take place.
+func NewSchema(raw []byte) (Schema, error) {
 	_, scimErr := metaSchema.validate(raw, validationConfig{mode: read, strict: true})
 	if scimErr != scimErrorNil {
 		return Schema{}, fmt.Errorf(scimErr.detail)

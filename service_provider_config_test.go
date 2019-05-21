@@ -2,6 +2,7 @@ package scim
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
@@ -76,7 +77,7 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
-			if _, err := NewServiceProviderConfigFromString(test.s); err == nil || err.Error() != test.err {
+			if _, err := NewServiceProviderConfig([]byte(test.s)); err == nil || err.Error() != test.err {
 				if err != nil || test.err != "" {
 					t.Errorf("expected: %s / got: %v", test.err, err)
 				}
@@ -86,12 +87,16 @@ func TestNewServiceProviderConfigFromString(t *testing.T) {
 }
 
 func TestNewServiceProviderConfigFromFile(t *testing.T) {
-	_, err := NewServiceProviderConfigFromFile("testdata/simple_service_provider_config.json")
+	rawConfig, err := ioutil.ReadFile("testdata/simple_service_provider_config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = NewServiceProviderConfig(rawConfig)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = NewServiceProviderConfigFromFile("")
+	_, err = NewServiceProviderConfig([]byte(""))
 	if err == nil {
 		t.Error("expected: no such file or directory")
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestNewSchemaFromString(t *testing.T) {
+func TestNewSchema(t *testing.T) {
 	cases := []struct {
 		s   string
 		err string
@@ -41,7 +41,7 @@ func TestNewSchemaFromString(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("invalid schema %d", idx), func(t *testing.T) {
-			_, err := NewSchemaFromString(test.s)
+			_, err := NewSchema([]byte(test.s))
 			if err != nil && err.Error() != test.err {
 				t.Errorf("expected: %s / got: %v", test.err, err)
 			} else if err == nil && test.err != "" {
@@ -49,15 +49,17 @@ func TestNewSchemaFromString(t *testing.T) {
 			}
 		})
 	}
-}
 
-func TestNewSchemaFromFile(t *testing.T) {
-	_, err := NewSchemaFromFile("testdata/simple_user_schema.json")
+	rawSchema, err := ioutil.ReadFile("testdata/simple_user_schema.json")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = NewSchema(rawSchema)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = NewSchemaFromFile("")
+	_, err = NewSchema([]byte(""))
 	if err == nil {
 		t.Error("error expected")
 	}
@@ -79,7 +81,7 @@ func TestSchemaValidation(t *testing.T) {
 		t.Error(err)
 	}
 
-	schema, err := NewSchemaFromBytes(raw)
+	schema, err := NewSchema(raw)
 	if err != nil {
 		t.Error(err)
 	}
@@ -453,7 +455,7 @@ func TestSchemaAttributeNames(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("canonical %d", idx), func(t *testing.T) {
-			if _, err := NewSchemaFromString(test); err == nil {
+			if _, err := NewSchema([]byte(test)); err == nil {
 				t.Errorf("error expected")
 			}
 		})
@@ -500,7 +502,7 @@ func TestSchemaDepth(t *testing.T) {
 		]
 	}`
 
-	_, err := NewSchemaFromString(depth4)
+	_, err := NewSchema([]byte(depth4))
 	if err == nil {
 		t.Error("error expected")
 	}
@@ -533,7 +535,7 @@ func TestSchemaDepth(t *testing.T) {
 		]
 	}`
 
-	_, err = NewSchemaFromString(canonical)
+	_, err = NewSchema([]byte(canonical))
 	if err == nil {
 		t.Error("error expected")
 	}
