@@ -17,6 +17,113 @@ type SimpleParams struct {
 	uniqueness      attributeUniqueness
 }
 
+// SimpleBinaryParams converts given binary parameters to their corresponding simple parameters.
+func SimpleBinaryParams(params BinaryParams) SimpleParams {
+	return SimpleParams{
+		caseExact:   true,
+		description: params.Description,
+		multiValued: params.MultiValued,
+		mutability:  params.Mutability.m,
+		name:        params.Name,
+		required:    params.Required,
+		returned:    params.Returned.r,
+		typ:         attributeDataTypeBinary,
+		uniqueness:  attributeUniquenessNone,
+	}
+}
+
+// BinaryParams are the parameters used to create a simple attribute with a data type of "binary".
+// The attribute value MUST be base64 encoded. In JSON representation, the encoded values are represented as a JSON string.
+// A binary is case exact and has no uniqueness.
+type BinaryParams struct {
+	Description optional.String
+	MultiValued bool
+	Mutability  AttributeMutability
+	Name        string
+	Required    bool
+	Returned    AttributeReturned
+}
+
+// SimpleBooleanParams converts given boolean parameters to their corresponding simple parameters.
+func SimpleBooleanParams(params BooleanParams) SimpleParams {
+	return SimpleParams{
+		caseExact:   false,
+		description: params.Description,
+		multiValued: params.MultiValued,
+		mutability:  params.Mutability.m,
+		name:        params.Name,
+		required:    params.Required,
+		returned:    params.Returned.r,
+		typ:         attributeDataTypeBoolean,
+		uniqueness:  attributeUniquenessNone,
+	}
+}
+
+// BooleanParams are the parameters used to create a simple attribute with a data type of "boolean".
+// The literal "true" or "false". A boolean has no case sensitivity or uniqueness.
+type BooleanParams struct {
+	Description optional.String
+	MultiValued bool
+	Mutability  AttributeMutability
+	Name        string
+	Required    bool
+	Returned    AttributeReturned
+}
+
+// SimpleDateTimeParams converts given date time parameters to their corresponding simple parameters.
+func SimpleDateTimeParams(params DateTypeParams) SimpleParams {
+	return SimpleParams{
+		caseExact:   false,
+		description: params.Description,
+		multiValued: params.MultiValued,
+		mutability:  params.Mutability.m,
+		name:        params.Name,
+		required:    params.Required,
+		returned:    params.Returned.r,
+		typ:         attributeDataTypeDateTime,
+		uniqueness:  attributeUniquenessNone,
+	}
+}
+
+// DateTypeParams are the parameters used to create a simple attribute with a data type of "dateTime".
+// A DateTime value (e.g., 2008-01-23T04:56:22Z). A date time format has no case sensitivity or uniqueness.
+type DateTypeParams struct {
+	Description optional.String
+	MultiValued bool
+	Mutability  AttributeMutability
+	Name        string
+	Required    bool
+	Returned    AttributeReturned
+}
+
+// SimpleNumberParams converts given number parameters to their corresponding simple parameters.
+func SimpleNumberParams(params NumberParams) SimpleParams {
+	return SimpleParams{
+		caseExact:   false,
+		description: params.Description,
+		multiValued: params.MultiValued,
+		mutability:  params.Mutability.m,
+		name:        params.Name,
+		required:    params.Required,
+		returned:    params.Returned.r,
+		typ:         params.Type.t,
+		uniqueness:  params.Uniqueness.u,
+	}
+}
+
+// NumberParams are the parameters used to create a simple attribute with a data type of "decimal" or "integer".
+// A number has no case sensitivity.
+type NumberParams struct {
+	Description optional.String
+	MultiValued bool
+	Mutability  AttributeMutability
+	Name        string
+	Required    bool
+	Returned    AttributeReturned
+	Type        AttributeDataType
+	Uniqueness  AttributeUniqueness
+}
+
 // SimpleReferenceParams converts given reference parameters to their corresponding simple parameters.
 func SimpleReferenceParams(params ReferenceParams) SimpleParams {
 	return SimpleParams{
@@ -75,30 +182,4 @@ type StringParams struct {
 	Required        bool
 	Returned        AttributeReturned
 	Uniqueness      AttributeUniqueness
-}
-
-// SimpleDefaultParams converts given default parameters to their corresponding simple parameters.
-func SimpleDefaultParams(params DefaultParams) SimpleParams {
-	return SimpleParams{
-		description: params.Description,
-		multiValued: params.MultiValued,
-		mutability:  params.Mutability.m,
-		name:        params.Name,
-		required:    params.Required,
-		returned:    params.Returned.r,
-		typ:         params.Type.t,
-		uniqueness:  params.Uniqueness.u,
-	}
-}
-
-// DefaultParams are the parameters used to create a simple attribute with a data type other than "string" and "reference".
-type DefaultParams struct {
-	Description optional.String
-	MultiValued bool
-	Mutability  AttributeMutability
-	Name        string
-	Required    bool
-	Returned    AttributeReturned
-	Type        AttributeDataType
-	Uniqueness  AttributeUniqueness
 }

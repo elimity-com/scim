@@ -92,33 +92,23 @@ type AttributeDataType struct {
 }
 
 var (
-	// AttributeTypeBinary indicates that the data type is arbitrary binary data. The attribute value MUST be base64 encoded.
-	// In JSON representation, the encoded values are represented as a JSON.
-	// A binary is case exact and has no uniqueness.
-	AttributeTypeBinary = AttributeDataType{t: attributeDataTypeBinary}
-	// AttributeTypeBoolean indicates that the data type is a boolean value (e.g. the literal "true" or "false").
-	// A boolean has no case sensitivity or uniqueness.
-	AttributeTypeBoolean = AttributeDataType{t: attributeDataTypeBoolean}
-	// AttributeTypeDateTime indicates that the data type is a DateTime value (e.g., 2008-01-23T04:56:22Z).
-	// A date time format has no case sensitivity or uniqueness.
-	AttributeTypeDateTime = AttributeDataType{t: attributeDataTypeDateTime}
 	// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
-	// A decimal has no case sensitivity.
+	// This is the default value.
 	AttributeTypeDecimal = AttributeDataType{t: attributeDataTypeDecimal}
 	// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
-	// An integer has no case sensitivity.
 	AttributeTypeInteger = AttributeDataType{t: attributeDataTypeInteger}
 )
 
 type attributeType int
 
 const (
-	attributeDataTypeBinary attributeType = iota
+	attributeDataTypeDecimal attributeType = iota
+	attributeDataTypeInteger
+
+	attributeDataTypeBinary
 	attributeDataTypeBoolean
 	attributeDataTypeComplex
 	attributeDataTypeDateTime
-	attributeDataTypeDecimal
-	attributeDataTypeInteger
 	attributeDataTypeReference
 	attributeDataTypeString
 )
