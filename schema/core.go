@@ -33,9 +33,7 @@ func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 	names := map[string]int{}
 	var sa []CoreAttribute
 	for i, a := range params.SubAttributes {
-		if a.name == "" {
-			panic(fmt.Errorf("empty name for sub-attribute %d", i))
-		}
+		checkAttributeName(a.name)
 
 		name := strings.ToLower(a.name)
 		if j, ok := names[name]; ok {
@@ -86,4 +84,54 @@ type CoreAttribute struct {
 	subAttributes   []CoreAttribute
 	typ             attributeType
 	uniqueness      attributeUniqueness
+}
+
+func (a CoreAttribute) validate(attribute interface{}) bool {
+	if a.required && attribute == nil {
+		return false
+	}
+
+	if a.multiValued {
+		arr, ok := attribute.([]interface{})
+		if !ok {
+			return false
+		}
+
+		if a.required && len(arr) == 0 {
+			return false
+		}
+
+		for _, ele := range arr {
+			if !a.validateSingular(ele) {
+				return false
+			}
+		}
+		return true
+	}
+
+	return a.validateSingular(attribute)
+}
+
+func (a CoreAttribute) validateSingular(attribute interface{}) bool {
+	switch a.typ {
+	case attributeDataTypeBoolean:
+		if _, ok := attribute.(bool); !ok {
+			return false
+		}
+		return true
+	case attributeDataTypeComplex:
+		for _, sub := range a.subAttributes {
+			if !a.validateSingular(sub) {
+				return false
+			}
+		}
+		return true
+	case attributeDataTypeString:
+		if _, ok := attribute.(string); !ok {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
 }

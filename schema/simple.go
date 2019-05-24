@@ -19,9 +19,8 @@ type SimpleParams struct {
 
 // SimpleReferenceParams converts given reference parameters to their corresponding simple parameters.
 func SimpleReferenceParams(params ReferenceParams) SimpleParams {
-	checkAttributeName(params.Name)
-
 	return SimpleParams{
+		caseExact:      true,
 		description:    params.Description,
 		multiValued:    params.MultiValued,
 		mutability:     params.Mutability.m,
@@ -35,6 +34,8 @@ func SimpleReferenceParams(params ReferenceParams) SimpleParams {
 }
 
 // ReferenceParams are the parameters used to create a simple attribute with a data type of "reference".
+// A reference is case exact. A reference has a "referenceTypes" attribute that indicates what types of resources may
+// be linked.
 type ReferenceParams struct {
 	Description    optional.String
 	MultiValued    bool
@@ -48,8 +49,6 @@ type ReferenceParams struct {
 
 // SimpleStringParams converts given string parameters to their corresponding simple parameters.
 func SimpleStringParams(params StringParams) SimpleParams {
-	checkAttributeName(params.Name)
-
 	return SimpleParams{
 		canonicalValues: params.CanonicalValues,
 		caseExact:       params.CaseExact,
@@ -65,6 +64,7 @@ func SimpleStringParams(params StringParams) SimpleParams {
 }
 
 // StringParams are the parameters used to create a simple attribute with a data type of "string".
+// A string is a sequence of zero or more Unicode characters encoded using UTF-8.
 type StringParams struct {
 	CanonicalValues []string
 	CaseExact       bool
@@ -79,8 +79,6 @@ type StringParams struct {
 
 // SimpleDefaultParams converts given default parameters to their corresponding simple parameters.
 func SimpleDefaultParams(params DefaultParams) SimpleParams {
-	checkAttributeName(params.Name)
-
 	return SimpleParams{
 		description: params.Description,
 		multiValued: params.MultiValued,
