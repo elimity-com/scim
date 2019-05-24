@@ -2,6 +2,7 @@ package schema
 
 import "github.com/elimity-com/scim/optional"
 
+// SimpleParams are the parameters used to create a simple attribute.
 type SimpleParams struct {
 	canonicalValues []string
 	caseExact       bool
@@ -16,6 +17,7 @@ type SimpleParams struct {
 	uniqueness      attributeUniqueness
 }
 
+// SimpleReferenceParams converts given reference parameters to their corresponding simple parameters.
 func SimpleReferenceParams(params ReferenceParams) SimpleParams {
 	checkAttributeName(params.Name)
 
@@ -27,11 +29,12 @@ func SimpleReferenceParams(params ReferenceParams) SimpleParams {
 		referenceTypes: params.ReferenceTypes,
 		required:       params.Required,
 		returned:       params.Returned.r,
-		typ:            attributeTypeReference,
+		typ:            attributeDataTypeReference,
 		uniqueness:     params.Uniqueness.u,
 	}
 }
 
+// ReferenceParams are the parameters used to create a simple attribute with a data type of "reference".
 type ReferenceParams struct {
 	Description    optional.String
 	MultiValued    bool
@@ -43,6 +46,7 @@ type ReferenceParams struct {
 	Uniqueness     AttributeUniqueness
 }
 
+// SimpleStringParams converts given string parameters to their corresponding simple parameters.
 func SimpleStringParams(params StringParams) SimpleParams {
 	checkAttributeName(params.Name)
 
@@ -55,11 +59,12 @@ func SimpleStringParams(params StringParams) SimpleParams {
 		name:            params.Name,
 		required:        params.Required,
 		returned:        params.Returned.r,
-		typ:             attributeTypeString,
+		typ:             attributeDataTypeString,
 		uniqueness:      params.Uniqueness.u,
 	}
 }
 
+// StringParams are the parameters used to create a simple attribute with a data type of "string".
 type StringParams struct {
 	CanonicalValues []string
 	CaseExact       bool
@@ -72,7 +77,8 @@ type StringParams struct {
 	Uniqueness      AttributeUniqueness
 }
 
-func SimpleDefaulParams(params DefaultParams) SimpleParams {
+// SimpleDefaultParams converts given default parameters to their corresponding simple parameters.
+func SimpleDefaultParams(params DefaultParams) SimpleParams {
 	checkAttributeName(params.Name)
 
 	return SimpleParams{
@@ -87,6 +93,7 @@ func SimpleDefaulParams(params DefaultParams) SimpleParams {
 	}
 }
 
+// DefaultParams are the parameters used to create a simple attribute with a data type other than "string" and "reference".
 type DefaultParams struct {
 	Description optional.String
 	MultiValued bool
@@ -94,6 +101,6 @@ type DefaultParams struct {
 	Name        string
 	Required    bool
 	Returned    AttributeReturned
-	Type        AttributeType
+	Type        AttributeDataType
 	Uniqueness  AttributeUniqueness
 }

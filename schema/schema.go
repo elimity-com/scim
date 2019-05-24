@@ -2,10 +2,12 @@ package schema
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/optional"
 	"strings"
+
+	"github.com/elimity-com/scim/optional"
 )
 
+// NewSchema creates a schema with given identifier, name, description and attributes.
 func NewSchema(id, name string, desc optional.String, attributes []CoreAttribute) Schema {
 	checkAttributeName(name)
 
@@ -26,6 +28,7 @@ func NewSchema(id, name string, desc optional.String, attributes []CoreAttribute
 	}
 }
 
+// Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
 	id          string
 	name        string

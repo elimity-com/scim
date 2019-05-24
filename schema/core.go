@@ -2,10 +2,12 @@ package schema
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/optional"
 	"strings"
+
+	"github.com/elimity-com/scim/optional"
 )
 
+// SimpleCoreAttribute creates a non-complex attribute based on given parameters.
 func SimpleCoreAttribute(params SimpleParams) CoreAttribute {
 	checkAttributeName(params.name)
 
@@ -24,6 +26,7 @@ func SimpleCoreAttribute(params SimpleParams) CoreAttribute {
 	}
 }
 
+// ComplexCoreAttribute creates a complex attribute based on given parameters.
 func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 	checkAttributeName(params.Name)
 
@@ -63,11 +66,13 @@ func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 		required:      params.Required,
 		returned:      params.Returned.r,
 		subAttributes: sa,
-		typ:           attributeTypeComplex,
+		typ:           attributeDataTypeComplex,
 		uniqueness:    params.Uniqueness.u,
 	}
 }
 
+// CoreAttribute represents those attributes that sit at the top level of the JSON object together with the common
+// attributes (such as the resource "id").
 type CoreAttribute struct {
 	canonicalValues []string
 	caseExact       bool

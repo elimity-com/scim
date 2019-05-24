@@ -6,6 +6,7 @@ import (
 )
 
 func checkAttributeName(name string) {
+	// starts w/ a A-Za-z followed by a A-Za-z0-9, a hyphen or an underscore
 	match, err := regexp.MatchString(`^[A-Za-z][\w-]*$`, name)
 	if err != nil {
 		panic(err)
@@ -16,14 +17,24 @@ func checkAttributeName(name string) {
 	}
 }
 
+// AttributeMutability is a single keyword indicating the circumstances under which the value of the attribute can be
+// (re)defined.
 type AttributeMutability struct {
 	m attributeMutability
 }
 
 var (
+	// AttributeMutabilityImmutable indicates that the attribute MAY be defined at resource creation (e.g., POST) or at
+	// record replacement via a request (e.g., a PUT). The attribute SHALL NOT be updated.
 	AttributeMutabilityImmutable = AttributeMutability{m: attributeMutabilityImmutable}
-	AttributeMutabilityReadOnly  = AttributeMutability{m: attributeMutabilityReadOnly}
+	// AttributeMutabilityReadOnly indicates that the attribute SHALL NOT be modified.
+	AttributeMutabilityReadOnly = AttributeMutability{m: attributeMutabilityReadOnly}
+	// AttributeMutabilityReadWrite indicates that the attribute MAY be updated and read at any time.
+	// This is the default value.
 	AttributeMutabilityReadWrite = AttributeMutability{m: attributeMutabilityReadWrite}
+	// AttributeMutabilityWriteOnly indicates that the attribute MAY be updated at any time. Attribute values SHALL NOT
+	// be returned (e.g., because the value is a stored hash).
+	// Note: An attribute with a mutability of "writeOnly" usually also has a returned setting of "never".
 	AttributeMutabilityWriteOnly = AttributeMutability{m: attributeMutabilityWriteOnly}
 )
 
@@ -36,21 +47,33 @@ const (
 	attributeMutabilityWriteOnly
 )
 
+// AttributeReferenceType is a single keyword indicating the reference type of the SCIM resource that may be referenced.
+// This attribute is only applicable for attributes that are of type "reference".
 type AttributeReferenceType string
 
 const (
+	// AttributeReferenceTypeExternal indicates that the resource is an external resource.
 	AttributeReferenceTypeExternal AttributeReferenceType = "external"
-	AttributeReferenceTypeURI      AttributeReferenceType = "uri"
+	// AttributeReferenceTypeURI indicates that the reference is to a service endpoint or an identifier.
+	AttributeReferenceTypeURI AttributeReferenceType = "uri"
 )
 
+// AttributeReturned is a single keyword indicating the circumstances under which an attribute and associated values are
+// returned in response to a GET request or in response to a PUT, POST, or PATCH request.
 type AttributeReturned struct {
 	r attributeReturned
 }
 
 var (
-	AttributeReturnedAlways  = AttributeReturned{r: attributeReturnedAlways}
+	// AttributeReturnedAlways indicates that the attribute is always returned.
+	AttributeReturnedAlways = AttributeReturned{r: attributeReturnedAlways}
+	// AttributeReturnedDefault indicates that the attribute is returned by default in all SCIM operation responses
+	// where attribute values are returned.
 	AttributeReturnedDefault = AttributeReturned{r: attributeReturnedDefault}
-	AttributeReturnedNever   = AttributeReturned{r: attributeReturnedNever}
+	// AttributeReturnedNever indicates that the attribute is never returned.
+	AttributeReturnedNever = AttributeReturned{r: attributeReturnedNever}
+	// AttributeReturnedRequest indicates that the attribute is returned in response to any PUT, POST, or PATCH
+	// operations if the attribute was specified by the client (for example, the attribute was modified).
 	AttributeReturnedRequest = AttributeReturned{r: attributeReturnedRequest}
 )
 
@@ -63,38 +86,57 @@ const (
 	attributeReturnedRequest
 )
 
-type AttributeType struct {
+// AttributeDataType is a single keyword indicating the derived data type from JSON.
+type AttributeDataType struct {
 	t attributeType
 }
 
 var (
-	AttributeTypeBinary   = AttributeType{t: attributeTypeBinary}
-	AttributeTypeBoolean  = AttributeType{t: attributeTypeBoolean}
-	AttributeTypeDateTime = AttributeType{t: attributeTypeDateTime}
-	AttributeTypeDecimal  = AttributeType{t: attributeTypeDecimal}
-	AttributeTypeInteger  = AttributeType{t: attributeTypeInteger}
+	// AttributeTypeBinary indicates that the data type is arbitrary binary data. The attribute value MUST be base64 encoded.
+	// In JSON representation, the encoded values are represented as a JSON.
+	// A binary is case exact and has no uniqueness.
+	AttributeTypeBinary = AttributeDataType{t: attributeDataTypeBinary}
+	// AttributeTypeBoolean indicates that the data type is a boolean value (e.g. the literal "true" or "false").
+	// A boolean has no case sensitivity or uniqueness.
+	AttributeTypeBoolean = AttributeDataType{t: attributeDataTypeBoolean}
+	// AttributeTypeDateTime indicates that the data type is a DateTime value (e.g., 2008-01-23T04:56:22Z).
+	// A date time format has no case sensitivity or uniqueness.
+	AttributeTypeDateTime = AttributeDataType{t: attributeDataTypeDateTime}
+	// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
+	// A decimal has no case sensitivity.
+	AttributeTypeDecimal = AttributeDataType{t: attributeDataTypeDecimal}
+	// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
+	// An integer has no case sensitivity.
+	AttributeTypeInteger = AttributeDataType{t: attributeDataTypeInteger}
 )
 
 type attributeType int
 
 const (
-	attributeTypeBinary attributeType = iota
-	attributeTypeBoolean
-	attributeTypeComplex
-	attributeTypeDateTime
-	attributeTypeDecimal
-	attributeTypeInteger
-	attributeTypeReference
-	attributeTypeString
+	attributeDataTypeBinary attributeType = iota
+	attributeDataTypeBoolean
+	attributeDataTypeComplex
+	attributeDataTypeDateTime
+	attributeDataTypeDecimal
+	attributeDataTypeInteger
+	attributeDataTypeReference
+	attributeDataTypeString
 )
 
+// AttributeUniqueness is a single keyword value that specifies how the service provider enforces uniqueness of attribute values.
 type AttributeUniqueness struct {
 	u attributeUniqueness
 }
 
 var (
+	// AttributeUniquenessGlobal indicates that the value SHOULD be globally unique (e.g., an email address, a GUID, or
+	// other value). No two resources on any server SHOULD possess the same value.
 	AttributeUniquenessGlobal = AttributeUniqueness{u: attributeUniquenessGlobal}
-	AttributeUniquenessNone   = AttributeUniqueness{u: attributeUniquenessNone}
+	// AttributeUniquenessNone indicates that the values are not intended to be unique in any way.
+	// This is the default value.
+	AttributeUniquenessNone = AttributeUniqueness{u: attributeUniquenessNone}
+	// AttributeUniquenessServer indicates that the value SHOULD be unique within the context of the current SCIM
+	// endpoint (or tenancy).  No two resources on the same server SHOULD possess the same value.
 	AttributeUniquenessServer = AttributeUniqueness{u: attributeUniquenessServer}
 )
 
