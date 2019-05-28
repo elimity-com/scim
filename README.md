@@ -1,6 +1,6 @@
 ![scim-logo](LOGO.png)
 
-[![GoDoc](https://godoc.org/github.com/elimity.com/scim?status.svg)](https://godoc.org/github.com/elimity.com/scim)
+[![GoDoc](https://godoc.org/github.com/elimity-com/scim?status.svg)](https://godoc.org/github.com/elimity-com/scim)
 
 This is an open source implementation of the [SCIM v2.0](http://www.simplecloud.info/#Specification) specification for use in Golang.
 SCIM defines a flexible schema mechanism and REST API for managing identity data.
