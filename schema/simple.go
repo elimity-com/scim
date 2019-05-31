@@ -71,7 +71,7 @@ type BooleanParams struct {
 }
 
 // SimpleDateTimeParams converts given date time parameters to their corresponding simple parameters.
-func SimpleDateTimeParams(params DateTypeParams) SimpleParams {
+func SimpleDateTimeParams(params DateTimeParams) SimpleParams {
 	return SimpleParams{
 		caseExact:   false,
 		description: params.Description,
@@ -85,9 +85,9 @@ func SimpleDateTimeParams(params DateTypeParams) SimpleParams {
 	}
 }
 
-// DateTypeParams are the parameters used to create a simple attribute with a data type of "dateTime".
+// DateTimeParams are the parameters used to create a simple attribute with a data type of "dateTime".
 // A DateTime value (e.g., 2008-01-23T04:56:22Z). A date time format has no case sensitivity or uniqueness.
-type DateTypeParams struct {
+type DateTimeParams struct {
 	Description optional.String
 	MultiValued bool
 	Mutability  AttributeMutability

@@ -36,11 +36,16 @@ type Schema struct {
 	attributes  []CoreAttribute
 }
 
-func (s Schema) validate(resource map[string]interface{}) bool {
+func (s Schema) validate(resource interface{}) bool {
+	core, ok := resource.(map[string]interface{})
+	if !ok {
+		return false
+	}
+
 	for _, attribute := range s.attributes {
 		var hit interface{}
 		var found bool
-		for k, v := range resource {
+		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
 				if found {
 					return false

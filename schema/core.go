@@ -2,7 +2,9 @@ package schema
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/elimity-com/scim/optional"
 )
@@ -33,8 +35,6 @@ func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 	names := map[string]int{}
 	var sa []CoreAttribute
 	for i, a := range params.SubAttributes {
-		checkAttributeName(a.name)
-
 		name := strings.ToLower(a.name)
 		if j, ok := names[name]; ok {
 			panic(fmt.Errorf("duplicate name %q for sub-attributes %d and %d", name, i, j))
@@ -87,8 +87,8 @@ type CoreAttribute struct {
 }
 
 func (a CoreAttribute) validate(attribute interface{}) bool {
-	if a.required && attribute == nil {
-		return false
+	if attribute == nil {
+		return !a.required
 	}
 
 	if a.multiValued {
@@ -114,19 +114,70 @@ func (a CoreAttribute) validate(attribute interface{}) bool {
 
 func (a CoreAttribute) validateSingular(attribute interface{}) bool {
 	switch a.typ {
+	case attributeDataTypeBinary:
+		bin, ok := attribute.(string)
+		if !ok {
+			return false
+		}
+
+		match, err := regexp.MatchString(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`, bin)
+		if err != nil {
+			panic(err)
+		}
+
+		return match
 	case attributeDataTypeBoolean:
 		if _, ok := attribute.(bool); !ok {
 			return false
 		}
 		return true
 	case attributeDataTypeComplex:
+		complex, ok := attribute.(map[string]interface{})
+		if !ok {
+			return false
+		}
+
 		for _, sub := range a.subAttributes {
-			if !a.validateSingular(sub) {
+			var hit interface{}
+			var found bool
+			for k, v := range complex {
+				if strings.EqualFold(sub.name, k) {
+					if found {
+						return false
+					}
+					found = true
+					hit = v
+				}
+			}
+
+			if !sub.validate(hit) {
 				return false
 			}
 		}
 		return true
-	case attributeDataTypeString:
+	case attributeDataTypeDateTime:
+		date, ok := attribute.(string)
+		if !ok {
+			return false
+		}
+		_, err := time.Parse(time.RFC3339Nano, date)
+		if err != nil {
+			return false
+		}
+		return true
+	case attributeDataTypeDecimal:
+		_, ok := attribute.(float64)
+		if !ok {
+			return false
+		}
+		return true
+	case attributeDataTypeInteger:
+		_, ok := attribute.(int)
+		if !ok {
+			return false
+		}
+		return true
+	case attributeDataTypeString, attributeDataTypeReference:
 		if _, ok := attribute.(string); !ok {
 			return false
 		}

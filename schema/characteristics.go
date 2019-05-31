@@ -6,8 +6,8 @@ import (
 )
 
 func checkAttributeName(name string) {
-	// starts w/ a A-Za-z followed by a A-Za-z0-9, a hyphen or an underscore
-	match, err := regexp.MatchString(`^[A-Za-z][\w-]*$`, name)
+	// starts w/ a A-Za-z followed by a A-Za-z0-9, a dollar sign, a hyphen or an underscore
+	match, err := regexp.MatchString(`^[A-Za-z][\w$-]*$`, name)
 	if err != nil {
 		panic(err)
 	}
