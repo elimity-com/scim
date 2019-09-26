@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -188,15 +189,10 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, boo
 		}
 		return f, true
 	case attributeDataTypeInteger:
-		number, ok := attribute.(json.Number)
-		if !ok {
+		if reflect.TypeOf(attribute).Kind() != reflect.Int {
 			return nil, false
 		}
-		i, err := strconv.ParseInt(string(number), 10, 64)
-		if err != nil {
-			return nil, false
-		}
-		return i, true
+		return attribute.(int), true
 	case attributeDataTypeString, attributeDataTypeReference:
 		s, ok := attribute.(string)
 		if !ok {
