@@ -2,12 +2,13 @@ package scim
 
 import (
 	"encoding/json"
-	"github.com/elimity-com/scim/optional"
-	"github.com/elimity-com/scim/schema"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/elimity-com/scim/optional"
+	"github.com/elimity-com/scim/schema"
 )
 
 func newTestServer() Server {
@@ -408,7 +409,7 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &scimErr); err != nil {
 		t.Error(err)
 	}
-	
+
 	if scimErr != scimErrorResourceNotFound("9999") {
 		t.Errorf("wrong scim error: %v", scimErr)
 	}

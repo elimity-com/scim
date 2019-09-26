@@ -18,10 +18,10 @@ const (
 	// modification of an "immutable" attribute with an existing value).
 	scimTypeMutability = "mutability"
 	// The request body message structure was invalid or did not conform to the request schema.
-	scimTypeInvalidSyntax = "invalidSyntax"
+	// scimTypeInvalidSyntax = "invalidSyntax"
 	// A required value was missing, or the value specified was not compatible with the operation or attribute type,
 	// or resource schema.
-	scimTypeInvalidValue = "invalidValue"
+	// scimTypeInvalidValue = "invalidValue"
 )
 
 func scimErrorResourceNotFound(id string) scimError {
@@ -31,7 +31,7 @@ func scimErrorResourceNotFound(id string) scimError {
 	}
 }
 
-var scimErrorNil scimError
+// var scimErrorNil scimError
 
 var (
 	scimErrorUniqueness = scimError{
@@ -44,7 +44,7 @@ var (
 		detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
 		status:   http.StatusBadRequest,
 	}
-	scimErrorInvalidSyntax = scimError{
+	/* scimErrorInvalidSyntax = scimError{
 		scimType: scimTypeInvalidSyntax,
 		detail:   "The request body message structure was invalid or did not conform to the request schema.",
 		status:   http.StatusBadRequest,
@@ -53,7 +53,7 @@ var (
 		scimType: scimTypeInvalidValue,
 		detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
 		status:   http.StatusBadRequest,
-	}
+	} */
 	scimErrorInternalServer = scimError{
 		status: http.StatusInternalServerError,
 	}

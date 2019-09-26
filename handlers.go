@@ -122,7 +122,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 
 	attributes, ok := resourceType.validate(data)
 	if !ok {
-		errorHandler(w, r, scimError{status: http.StatusBadRequest /* TODO */ })
+		errorHandler(w, r, scimError{status: http.StatusBadRequest}) // TODO
 		return
 	}
 
@@ -191,7 +191,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 
 	attributes, ok := resourceType.validate(data)
 	if !ok {
-		errorHandler(w, r, scimError{status: http.StatusBadRequest /* TODO */ })
+		errorHandler(w, r, scimError{status: http.StatusBadRequest}) // TODO
 		return
 	}
 

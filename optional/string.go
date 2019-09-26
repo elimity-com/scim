@@ -1,9 +1,5 @@
 package optional
 
-var Empty = String{
-	present: false,
-}
-
 // New returns an optional string with given value.
 func New(value string) String {
 	return String{
