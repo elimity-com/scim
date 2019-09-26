@@ -2,40 +2,16 @@ package scim
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+
+	"github.com/elimity-com/scim/optional"
 )
-
-// NewServiceProviderConfig returns a validated service provider config if no errors take place.
-func NewServiceProviderConfig(raw []byte) (ServiceProviderConfig, error) {
-	_, scimErr := serviceProviderConfigSchema.validate(raw, validationConfig{mode: read, strict: true})
-	if scimErr != scimErrorNil {
-		return ServiceProviderConfig{}, fmt.Errorf(scimErr.detail)
-	}
-
-	var serviceProviderConfig serviceProviderConfig
-	err := json.Unmarshal(raw, &serviceProviderConfig)
-	if err != nil {
-		log.Fatalf("failed parsing service provider config: %v", err)
-	}
-
-	return ServiceProviderConfig{serviceProviderConfig}, nil
-}
 
 // ServiceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
 // well as provide additional implementation details to clients.
 type ServiceProviderConfig struct {
-	config serviceProviderConfig
-}
-
-// serviceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
-// well as provide additional implementation details to clients.
-//
-// RFC: https://tools.ietf.org/html/rfc7643#section-5
-type serviceProviderConfig struct {
 	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
 	// documentation. OPTIONAL.
-	DocumentationURI *string `json:",omitempty"`
+	DocumentationURI optional.String
 	// PatchSupported is a boolean value specifying whether or not PATCH is supported.
 	PatchSupported bool
 	// BulkSupported is a boolean value specifying whether or not bulk is supported.
@@ -55,14 +31,47 @@ type serviceProviderConfig struct {
 	// ETagSupported is a boolean value specifying whether or not ETag is supported.
 	ETagSupported bool
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
-	AuthenticationSchemes []authenticationScheme
+	AuthenticationSchemes []AuthenticationScheme
 }
 
-// RFC: https://tools.ietf.org/html/rfc7643#section-8.5
-func (config serviceProviderConfig) MarshalJSON() ([]byte, error) {
+// AuthenticationScheme specifies a supported authentication scheme property.
+type AuthenticationScheme struct {
+	// Type is the authentication scheme. This specification defines the values "oauth", "oauth2", "oauthbearertoken",
+	// "httpbasic", and "httpdigest".
+	Type AuthenticationType
+	// Name is the common authentication scheme name, e.g., HTTP Basic.
+	Name string
+	// Description of the authentication scheme.
+	Description string
+	// SpecURI is an HTTP-addressable URL pointing to the authentication scheme's specification. OPTIONAL.
+	SpecURI optional.String
+	// DocumentationURI is an HTTP-addressable URL pointing to the authentication scheme's usage documentation. OPTIONAL.
+	DocumentationURI optional.String
+	// Primary is a boolean value indicating the 'primary' or preferred authentication scheme.
+	Primary bool
+}
+
+// AuthenticationType is a single keyword indicating the authentication type of the authentication scheme.
+type AuthenticationType string
+
+const (
+	// AuthenticationTypeOauth indicates that the authentication type is OAuth.
+	AuthenticationTypeOauth AuthenticationType = "oauth"
+	// AuthenticationTypeOauth2 indicates that the authentication type is OAuth2.
+	AuthenticationTypeOauth2 AuthenticationType = "oauth2"
+	// AuthenticationTypeOauthBearerToken indicates that the authentication type is OAuth2 Bearer Token.
+	AuthenticationTypeOauthBearerToken AuthenticationType = "oauthbearertoken"
+	// AuthenticationTypeHTTPBasic indicated that the authentication type is Basic Access Authentication.
+	AuthenticationTypeHTTPBasic AuthenticationType = "httpbasic"
+	// AuthenticationTypeHTTPDigest indicated that the authentication type is Digest Access Authentication.
+	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
+)
+
+// MarshalJSON converts the service provider config struct to its corresponding json representation.
+func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
-		"documentationUri": config.DocumentationURI,
+		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
 			"supported": config.PatchSupported,
 		},
@@ -86,87 +95,4 @@ func (config serviceProviderConfig) MarshalJSON() ([]byte, error) {
 		},
 		"authenticationSchemes": config.AuthenticationSchemes,
 	})
-}
-
-func (config *serviceProviderConfig) UnmarshalJSON(data []byte) error {
-	var tmpConfig struct {
-		DocumentationURI *string
-		Patch            struct {
-			Supported bool
-		}
-		Bulk struct {
-			Supported      bool
-			MaxOperations  int
-			MaxPayloadSize int
-		}
-		Filter struct {
-			Supported bool
-		}
-		ChangePassword struct {
-			Supported bool
-		}
-		Sort struct {
-			Supported bool
-		}
-		ETag struct {
-			Supported bool
-		}
-		AuthenticationSchemes []authenticationScheme
-	}
-
-	err := json.Unmarshal(data, &tmpConfig)
-	if err != nil {
-		return err
-	}
-
-	*config = serviceProviderConfig{
-		DocumentationURI:        tmpConfig.DocumentationURI,
-		PatchSupported:          tmpConfig.Patch.Supported,
-		BulkSupported:           tmpConfig.Bulk.Supported,
-		MaxBulkOperations:       tmpConfig.Bulk.MaxOperations,
-		MaxBulkPayloadSize:      tmpConfig.Bulk.MaxPayloadSize,
-		FilterSupported:         tmpConfig.Filter.Supported,
-		ChangePasswordSupported: tmpConfig.ChangePassword.Supported,
-		SortSupported:           tmpConfig.Sort.Supported,
-		ETagSupported:           tmpConfig.ETag.Supported,
-		AuthenticationSchemes:   tmpConfig.AuthenticationSchemes,
-	}
-
-	return nil
-}
-
-// authenticationScheme specifies a supported authentication scheme property.
-type authenticationScheme struct {
-	// Type is the authentication scheme. This specification defines the values "oauth", "oauth2", "oauthbearertoken",
-	// "httpbasic", and "httpdigest".
-	Type authenticationType
-	// Name is the common authentication scheme name, e.g., HTTP Basic.
-	Name string
-	// Description of the authentication scheme.
-	Description string
-	// SpecURI is an HTTP-addressable URL pointing to the authentication scheme's specification. OPTIONAL.
-	SpecURI *string `json:",omitempty"`
-	// DocumentationURI is an HTTP-addressable URL pointing to the authentication scheme's usage documentation. OPTIONAL.
-	DocumentationURI *string `json:",omitempty"`
-	// Primary is a boolean value indicating the 'primary' or preferred authentication scheme.
-	Primary *bool `json:",omitempty"`
-}
-
-type authenticationType string
-
-// TODO: authentication types
-// const (
-// authenticationTypeOauth            authenticationType = "oauth"
-// authenticationTypeOauth2           authenticationType = "oauth2"
-// authenticationTypeOauthBearerToken authenticationType = "oauthbearertoken"
-// authenticationTypeHTTPBasic        authenticationType = "httpbasic"
-// authenticationTypeHTTPDigest       authenticationType = "httpdigest"
-// )
-
-var serviceProviderConfigSchema schema
-
-func init() {
-	if err := json.Unmarshal([]byte(rawServiceProviderConfigSchema), &serviceProviderConfigSchema); err != nil {
-		panic(err)
-	}
 }

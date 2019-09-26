@@ -23,11 +23,9 @@ func errorHandler(w http.ResponseWriter, r *http.Request, scimErr scimError) {
 
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
 // provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	var schemas []interface{}
-	for _, v := range s.schemas {
+	for _, v := range s.getSchemas() {
 		schemas = append(schemas, v)
 	}
 
@@ -43,10 +41,8 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	schema, ok := s.schemas[id]
+	schema, ok := s.getSchemas()[id]
 	if !ok {
 		errorHandler(w, r, scimErrorResourceNotFound(id))
 		return
@@ -65,11 +61,9 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 // resourceTypesHandler receives an HTTP GET to this endpoint, "/ResourceTypes", which is used to discover the types of
 // resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
 // the core schema URI that defines the resource, and any supported schema extensions.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	var resourceTypes []interface{}
-	for _, v := range s.resourceTypes {
+	for _, v := range s.ResourceTypes {
 		resourceTypes = append(resourceTypes, v)
 	}
 
@@ -85,11 +79,15 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
 // resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	resourceType, ok := s.resourceTypes[name]
-	if !ok {
+	var resourceType ResourceType
+	for _, r := range s.ResourceTypes {
+		if r.Name == name {
+			resourceType = r
+			break
+		}
+	}
+	if resourceType.Name != name {
 		errorHandler(w, r, scimErrorResourceNotFound(name))
 		return
 	}
@@ -106,10 +104,8 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 
 // serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
 // SCIM specification features available on a service provider.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-4
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := json.Marshal(s.config)
+	raw, err := json.Marshal(s.Config)
 	if err != nil {
 		log.Fatalf("failed marshaling service provider config: %v", err)
 	}
@@ -121,18 +117,16 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 
 // resourcePostHandler receives an HTTP POST request to the resource endpoint, such as "/Users" or "/Groups", as
 // defined by the associated resource type endpoint discovery to create new resources.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.3
-func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(s.schemas, data, validationConfig{mode: write})
-	if scimErr != scimErrorNil {
-		errorHandler(w, r, scimErr)
+	attributes, ok := resourceType.validate(data)
+	if !ok {
+		errorHandler(w, r, scimError{status: http.StatusBadRequest /* TODO */ })
 		return
 	}
 
-	resource, postErr := resourceType.handler.Create(attributes)
+	resource, postErr := resourceType.Handler.Create(attributes)
 	if postErr != errors.PostErrorNil {
 		errorHandler(w, r, scimPostError(postErr))
 		return
@@ -151,10 +145,8 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 
 // resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
 // where "{id}" is a resource identifier to retrieve a known resource.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.4
-func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	resource, getErr := resourceType.handler.Get(id)
+func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	resource, getErr := resourceType.Handler.Get(id)
 	if getErr != errors.GetErrorNil {
 		errorHandler(w, r, scimGetError(getErr, id))
 		return
@@ -174,9 +166,9 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
-func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType resourceType) {
+func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
 	var resources []interface{}
-	for _, resource := range resourceType.handler.GetAll() {
+	for _, resource := range resourceType.Handler.GetAll() {
 		resources = append(resources, resource.response(resourceType))
 	}
 
@@ -194,18 +186,16 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 
 // resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
 // "{id}" is a resource identifier to replace a resource's attributes.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.5.1
-func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
+func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(s.schemas, data, validationConfig{mode: replace})
-	if scimErr != scimErrorNil {
-		errorHandler(w, r, scimErr)
+	attributes, ok := resourceType.validate(data)
+	if !ok {
+		errorHandler(w, r, scimError{status: http.StatusBadRequest /* TODO */ })
 		return
 	}
 
-	resource, putError := resourceType.handler.Replace(id, attributes)
+	resource, putError := resourceType.Handler.Replace(id, attributes)
 	if putError != errors.PutErrorNil {
 		errorHandler(w, r, scimPutError(putError, id))
 		return
@@ -223,10 +213,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 
 // resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
 // where "{id}" is a resource identifier to delete a known resource.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.6
-func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType resourceType) {
-	deleteErr := resourceType.handler.Delete(id)
+func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	deleteErr := resourceType.Handler.Delete(id)
 	if deleteErr != errors.DeleteErrorNil {
 		errorHandler(w, r, scimDeleteError(deleteErr, id))
 		return

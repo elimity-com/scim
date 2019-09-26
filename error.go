@@ -59,7 +59,6 @@ var (
 	}
 )
 
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.12
 type scimError struct {
 	// scimType is a SCIM detail error keyword. OPTIONAL.
 	scimType scimType

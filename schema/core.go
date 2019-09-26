@@ -1,11 +1,13 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
-	"time"
 
+	datetime "github.com/di-wu/xsd-datetime"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -86,38 +88,44 @@ type CoreAttribute struct {
 	uniqueness      attributeUniqueness
 }
 
-func (a CoreAttribute) validate(attribute interface{}) bool {
+func (a CoreAttribute) validate(attribute interface{}) (interface{}, bool) {
+	// return false if the attribute is not present but required.
 	if attribute == nil {
-		return !a.required
+		return nil, !a.required
 	}
 
 	if a.multiValued {
+		// return false if the multivalued attribute is not a slice.
 		arr, ok := attribute.([]interface{})
 		if !ok {
-			return false
+			return nil, false
 		}
 
+		// return false if the multivalued attribute is empty.
 		if a.required && len(arr) == 0 {
-			return false
+			return nil, false
 		}
 
+		attributes := make([]interface{}, 0)
 		for _, ele := range arr {
-			if !a.validateSingular(ele) {
-				return false
+			attr, ok := a.validateSingular(ele)
+			if !ok {
+				return nil, false
 			}
+			attributes = append(attributes, attr)
 		}
-		return true
+		return attributes, true
 	}
 
 	return a.validateSingular(attribute)
 }
 
-func (a CoreAttribute) validateSingular(attribute interface{}) bool {
+func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, bool) {
 	switch a.typ {
 	case attributeDataTypeBinary:
 		bin, ok := attribute.(string)
 		if !ok {
-			return false
+			return nil, false
 		}
 
 		match, err := regexp.MatchString(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`, bin)
@@ -125,64 +133,95 @@ func (a CoreAttribute) validateSingular(attribute interface{}) bool {
 			panic(err)
 		}
 
-		return match
+		return bin, match
 	case attributeDataTypeBoolean:
-		if _, ok := attribute.(bool); !ok {
-			return false
+		b, ok := attribute.(bool)
+		if !ok {
+			return nil, false
 		}
-		return true
+		return b, true
 	case attributeDataTypeComplex:
 		complex, ok := attribute.(map[string]interface{})
 		if !ok {
-			return false
+			return nil, false
 		}
 
+		attributes := make(map[string]interface{})
 		for _, sub := range a.subAttributes {
 			var hit interface{}
 			var found bool
 			for k, v := range complex {
 				if strings.EqualFold(sub.name, k) {
 					if found {
-						return false
+						return nil, false
 					}
 					found = true
 					hit = v
 				}
 			}
 
-			if !sub.validate(hit) {
-				return false
+			attr, ok := sub.validate(hit)
+			if !ok {
+				return nil, false
 			}
+			attributes[sub.name] = attr
 		}
-		return true
+		return attributes, true
 	case attributeDataTypeDateTime:
 		date, ok := attribute.(string)
 		if !ok {
-			return false
+			return nil, false
 		}
-		_, err := time.Parse(time.RFC3339Nano, date)
+		_, err := datetime.Parse(date)
 		if err != nil {
-			return false
+			return nil, false
 		}
-		return true
+		return date, true
 	case attributeDataTypeDecimal:
-		_, ok := attribute.(float64)
+		number, ok := attribute.(json.Number)
 		if !ok {
-			return false
+			return nil, false
 		}
-		return true
+		f, err := strconv.ParseFloat(string(number), 64)
+		if err != nil {
+			return nil, false
+		}
+		return f, true
 	case attributeDataTypeInteger:
-		_, ok := attribute.(int)
+		number, ok := attribute.(json.Number)
 		if !ok {
-			return false
+			return nil, false
 		}
-		return true
+		i, err := strconv.ParseInt(string(number), 10, 64)
+		if err != nil {
+			return nil, false
+		}
+		return i, true
 	case attributeDataTypeString, attributeDataTypeReference:
-		if _, ok := attribute.(string); !ok {
-			return false
+		s, ok := attribute.(string)
+		if !ok {
+			return nil, false
 		}
-		return true
+		return s, true
 	default:
-		return false
+		return nil, false
 	}
+}
+
+// MarshalJSON converts the attribute struct to its corresponding json representation.
+func (a CoreAttribute) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"canonicalValues": a.canonicalValues,
+		"caseExact":       a.caseExact,
+		"description":     a.description.Value(),
+		"multiValued":     a.multiValued,
+		"mutability":      a.mutability,
+		"name":            a.name,
+		"referenceTypes":  a.referenceTypes,
+		"required":        a.required,
+		"returned":        a.returned,
+		"subAttributes":   a.subAttributes,
+		"type":            a.typ,
+		"uniqueness":      a.uniqueness,
+	})
 }

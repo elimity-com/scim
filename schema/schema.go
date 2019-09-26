@@ -1,63 +1,56 @@
 package schema
 
 import (
-	"fmt"
+	"encoding/json"
 	"strings"
 
 	"github.com/elimity-com/scim/optional"
 )
 
-// NewSchema creates a schema with given identifier, name, description and attributes.
-func NewSchema(id, name string, desc optional.String, attributes []CoreAttribute) Schema {
-	checkAttributeName(name)
-
-	names := map[string]int{}
-	for i, a := range attributes {
-		name := strings.ToLower(a.name)
-		if j, ok := names[name]; ok {
-			panic(fmt.Errorf("duplicate name %q for sub-attributes %d and %d", name, i, j))
-		}
-		names[name] = i
-	}
-
-	return Schema{
-		id:          id,
-		name:        name,
-		description: desc,
-		attributes:  attributes,
-	}
-}
-
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
-	id          string
-	name        string
-	description optional.String
-	attributes  []CoreAttribute
+	ID          string
+	Name        string
+	Description optional.String
+	Attributes  []CoreAttribute
 }
 
-func (s Schema) validate(resource interface{}) bool {
+// Validate validates given resource based on the schema.
+func (s Schema) Validate(resource interface{}) (map[string]interface{}, bool) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
-		return false
+		return nil, false
 	}
 
-	for _, attribute := range s.attributes {
+	attributes := make(map[string]interface{})
+	for _, attribute := range s.Attributes {
 		var hit interface{}
 		var found bool
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
 				if found {
-					return false
+					return nil, false
 				}
 				found = true
 				hit = v
 			}
 		}
 
-		if !attribute.validate(hit) {
-			return false
+		attr, ok := attribute.validate(hit)
+		if !ok {
+			return nil, false
 		}
+		attributes[attribute.name] = attr
 	}
-	return true
+	return attributes, true
+}
+
+// MarshalJSON converts the schema struct to its corresponding json representation.
+func (s Schema) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":          s.ID,
+		"name":        s.Name,
+		"description": s.Description.Value(),
+		"attributes":  s.Attributes,
+	})
 }

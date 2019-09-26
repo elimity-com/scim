@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 )
@@ -47,6 +48,19 @@ const (
 	attributeMutabilityWriteOnly
 )
 
+func (a attributeMutability) MarshalJSON() ([]byte, error) {
+	switch a {
+	case attributeMutabilityImmutable:
+		return json.Marshal("immutable")
+	case attributeMutabilityReadOnly:
+		return json.Marshal("readOnly")
+	case attributeMutabilityWriteOnly:
+		return json.Marshal("writeOnly")
+	default:
+		return json.Marshal("readWrite")
+	}
+}
+
 // AttributeReferenceType is a single keyword indicating the reference type of the SCIM resource that may be referenced.
 // This attribute is only applicable for attributes that are of type "reference".
 type AttributeReferenceType string
@@ -86,6 +100,19 @@ const (
 	attributeReturnedRequest
 )
 
+func (a attributeReturned) MarshalJSON() ([]byte, error) {
+	switch a {
+	case attributeReturnedAlways:
+		return json.Marshal("always")
+	case attributeReturnedNever:
+		return json.Marshal("never")
+	case attributeReturnedRequest:
+		return json.Marshal("request")
+	default:
+		return json.Marshal("default")
+	}
+}
+
 // AttributeDataType is a single keyword indicating the derived data type from JSON.
 type AttributeDataType struct {
 	t attributeType
@@ -113,6 +140,27 @@ const (
 	attributeDataTypeString
 )
 
+func (a attributeType) MarshalJSON() ([]byte, error) {
+	switch a {
+	case attributeDataTypeDecimal:
+		return json.Marshal("decimal")
+	case attributeDataTypeInteger:
+		return json.Marshal("integer")
+	case attributeDataTypeBinary:
+		return json.Marshal("binary")
+	case attributeDataTypeBoolean:
+		return json.Marshal("boolean")
+	case attributeDataTypeComplex:
+		return json.Marshal("complex")
+	case attributeDataTypeDateTime:
+		return json.Marshal("dateTime")
+	case attributeDataTypeReference:
+		return json.Marshal("reference")
+	default:
+		return json.Marshal("string")
+	}
+}
+
 // AttributeUniqueness is a single keyword value that specifies how the service provider enforces uniqueness of attribute values.
 type AttributeUniqueness struct {
 	u attributeUniqueness
@@ -137,3 +185,14 @@ const (
 	attributeUniquenessGlobal
 	attributeUniquenessServer
 )
+
+func (a attributeUniqueness) MarshalJSON() ([]byte, error) {
+	switch a {
+	case attributeUniquenessGlobal:
+		return json.Marshal("global")
+	case attributeUniquenessServer:
+		return json.Marshal("server")
+	default:
+		return json.Marshal("none")
+	}
+}
