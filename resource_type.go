@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -11,20 +12,17 @@ import (
 // ResourceType specifies the metadata about a resource type.
 type ResourceType struct {
 	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
-	// OPTIONAL.
 	ID optional.String
 	// Name is the resource type name. This name is referenced by the "meta.resourceType" attribute in all resources.
 	Name string
 	// Description is the resource type's human-readable description.
-	// OPTIONAL.
 	Description optional.String
 	// Endpoint is the resource type's HTTP-addressable endpoint relative to the Base URL of the service provider,
 	// e.g., "/Users".
 	Endpoint string
 	// Schema is the resource type's primary/base schema.
 	Schema schema.Schema
-	// SchemaExtensions is a list of URIs of the resource type's schema extensions.
-	// OPTIONAL.
+	// SchemaExtensions is a list of the resource type's schema extensions.
 	SchemaExtensions []SchemaExtension
 
 	// Handler is the set of callback method that connect the SCIM server with a provider of the resource type.
@@ -42,39 +40,39 @@ type SchemaExtension struct {
 	Required bool
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, bool) {
+func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.ValidationError) {
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
 
 	var m map[string]interface{}
 	err := d.Decode(&m)
 	if err != nil {
-		return ResourceAttributes{}, false
+		return ResourceAttributes{}, errors.ValidationErrorInvalidSyntax
 	}
 
-	attributes, ok := t.Schema.Validate(m)
-	if !ok {
-		return ResourceAttributes{}, false
+	attributes, scimErr := t.Schema.Validate(m)
+	if scimErr != errors.ValidationErrorNil {
+		return ResourceAttributes{}, scimErr
 	}
 
 	for _, extension := range t.SchemaExtensions {
 		extensionField := m[extension.Schema.ID]
 		if extensionField == nil {
 			if extension.Required {
-				return ResourceAttributes{}, false
+				return ResourceAttributes{}, errors.ValidationErrorInvalidValue
 			}
 			continue
 		}
 
-		extensionAttributes, ok := extension.Schema.Validate(extensionField)
-		if !ok {
-			return ResourceAttributes{}, false
+		extensionAttributes, scimErr := extension.Schema.Validate(extensionField)
+		if scimErr != errors.ValidationErrorNil {
+			return ResourceAttributes{}, scimErr
 		}
 
 		attributes[extension.Schema.ID] = extensionAttributes
 	}
 
-	return attributes, true
+	return attributes, errors.ValidationErrorNil
 }
 
 // MarshalJSON converts the resource type struct to its corresponding json representation.

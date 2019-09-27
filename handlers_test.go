@@ -20,7 +20,7 @@ func newTestServer() Server {
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name:       "userName",
 				Required:   true,
-				Uniqueness: schema.AttributeUniquenessServer,
+				Uniqueness: schema.AttributeUniquenessServer(),
 			})),
 			schema.ComplexCoreAttribute(schema.ComplexParams{
 				Name:     "Name",

@@ -10,26 +10,8 @@ import (
 // well as provide additional implementation details to clients.
 type ServiceProviderConfig struct {
 	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
-	// documentation. OPTIONAL.
+	// documentation.
 	DocumentationURI optional.String
-	// PatchSupported is a boolean value specifying whether or not PATCH is supported.
-	PatchSupported bool
-	// BulkSupported is a boolean value specifying whether or not bulk is supported.
-	BulkSupported bool
-	// MaxBulkOperations is an integer value specifying the maximum number of bulk operations.
-	MaxBulkOperations int
-	// MaxBulkPayloadSize is an integer value specifying the maximum bulk payload size in bytes.
-	MaxBulkPayloadSize int
-	// FilterSupported is a boolean value specifying whether or not FILTER is supported.
-	FilterSupported bool
-	// MaxFilterResults is an integer value specifying the maximum number of resources returned in a filter response.
-	MaxFilterResults int
-	// ChangePasswordSupported is a boolean value specifying whether or not changing a password is supported.
-	ChangePasswordSupported bool
-	// SortSupported is a boolean value specifying whether or not sorting is supported.
-	SortSupported bool
-	// ETagSupported is a boolean value specifying whether or not ETag is supported.
-	ETagSupported bool
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
 	AuthenticationSchemes []AuthenticationScheme
 }
@@ -43,9 +25,9 @@ type AuthenticationScheme struct {
 	Name string
 	// Description of the authentication scheme.
 	Description string
-	// SpecURI is an HTTP-addressable URL pointing to the authentication scheme's specification. OPTIONAL.
+	// SpecURI is an HTTP-addressable URL pointing to the authentication scheme's specification.
 	SpecURI optional.String
-	// DocumentationURI is an HTTP-addressable URL pointing to the authentication scheme's usage documentation. OPTIONAL.
+	// DocumentationURI is an HTTP-addressable URL pointing to the authentication scheme's usage documentation.
 	DocumentationURI optional.String
 	// Primary is a boolean value indicating the 'primary' or preferred authentication scheme.
 	Primary bool
@@ -73,25 +55,25 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
 		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
-			"supported": config.PatchSupported,
+			"supported": false,
 		},
 		"bulk": map[string]interface{}{
-			"supported":      config.BulkSupported,
-			"maxOperations":  config.MaxBulkOperations,
-			"maxPayloadSize": config.MaxBulkPayloadSize,
+			"supported":      false,
+			"maxOperations":  1000,
+			"maxPayloadSize": 1048576,
 		},
 		"filter": map[string]interface{}{
-			"supported":  config.FilterSupported,
-			"maxResults": config.MaxFilterResults,
+			"supported":  false,
+			"maxResults": 200,
 		},
 		"changePassword": map[string]bool{
-			"supported": config.ChangePasswordSupported,
+			"supported": false,
 		},
 		"sort": map[string]bool{
-			"supported": config.SortSupported,
+			"supported": false,
 		},
 		"etag": map[string]bool{
-			"supported": config.ETagSupported,
+			"supported": false,
 		},
 		"authenticationSchemes": config.AuthenticationSchemes,
 	})

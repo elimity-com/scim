@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -16,10 +17,10 @@ type Schema struct {
 }
 
 // Validate validates given resource based on the schema.
-func (s Schema) Validate(resource interface{}) (map[string]interface{}, bool) {
+func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.ValidationError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
-		return nil, false
+		return nil, errors.ValidationErrorInvalidSyntax
 	}
 
 	attributes := make(map[string]interface{})
@@ -29,20 +30,20 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, bool) {
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
 				if found {
-					return nil, false
+					return nil, errors.ValidationErrorInvalidSyntax
 				}
 				found = true
 				hit = v
 			}
 		}
 
-		attr, ok := attribute.validate(hit)
-		if !ok {
-			return nil, false
+		attr, scimErr := attribute.validate(hit)
+		if scimErr != errors.ValidationErrorNil {
+			return nil, scimErr
 		}
 		attributes[attribute.name] = attr
 	}
-	return attributes, true
+	return attributes, errors.ValidationErrorNil
 }
 
 // MarshalJSON converts the schema struct to its corresponding json representation.

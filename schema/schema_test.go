@@ -3,6 +3,7 @@ package schema
 import (
 	"testing"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -56,18 +57,18 @@ var testSchema = Schema{
 		})),
 		SimpleCoreAttribute(SimpleNumberParams(NumberParams{
 			Name: "integer",
-			Type: AttributeTypeInteger,
+			Type: AttributeTypeInteger(),
 		})),
 		SimpleCoreAttribute(SimpleNumberParams(NumberParams{
 			Name: "decimal",
-			Type: AttributeTypeDecimal,
+			Type: AttributeTypeDecimal(),
 		})),
 	},
 }
 
 func TestResourceInvalid(t *testing.T) {
 	var resource interface{}
-	if _, ok := testSchema.Validate(resource); ok {
+	if _, scimErr := testSchema.Validate(resource); scimErr == errors.ValidationErrorNil {
 		t.Error("invalid resource expected")
 	}
 }
@@ -171,7 +172,7 @@ func TestValidationInvalid(t *testing.T) {
 			"decimal": "1.1",
 		},
 	} {
-		if _, ok := testSchema.Validate(test); ok {
+		if _, scimErr := testSchema.Validate(test); scimErr == errors.ValidationErrorNil {
 			t.Errorf("invalid resource expected")
 		}
 	}
@@ -194,7 +195,7 @@ func TestValidValidation(t *testing.T) {
 			"integer":  11,
 		},
 	} {
-		if _, ok := testSchema.Validate(test); !ok {
+		if _, scimErr := testSchema.Validate(test); scimErr != errors.ValidationErrorNil {
 			t.Errorf("valid resource expected")
 		}
 	}

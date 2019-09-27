@@ -24,20 +24,29 @@ type AttributeMutability struct {
 	m attributeMutability
 }
 
-var (
-	// AttributeMutabilityImmutable indicates that the attribute MAY be defined at resource creation (e.g., POST) or at
-	// record replacement via a request (e.g., a PUT). The attribute SHALL NOT be updated.
-	AttributeMutabilityImmutable = AttributeMutability{m: attributeMutabilityImmutable}
-	// AttributeMutabilityReadOnly indicates that the attribute SHALL NOT be modified.
-	AttributeMutabilityReadOnly = AttributeMutability{m: attributeMutabilityReadOnly}
-	// AttributeMutabilityReadWrite indicates that the attribute MAY be updated and read at any time.
-	// This is the default value.
-	AttributeMutabilityReadWrite = AttributeMutability{m: attributeMutabilityReadWrite}
-	// AttributeMutabilityWriteOnly indicates that the attribute MAY be updated at any time. Attribute values SHALL NOT
-	// be returned (e.g., because the value is a stored hash).
-	// Note: An attribute with a mutability of "writeOnly" usually also has a returned setting of "never".
-	AttributeMutabilityWriteOnly = AttributeMutability{m: attributeMutabilityWriteOnly}
-)
+// AttributeMutabilityImmutable indicates that the attribute MAY be defined at resource creation (e.g., POST) or at
+// record replacement via a request (e.g., a PUT). The attribute SHALL NOT be updated.
+func AttributeMutabilityImmutable() AttributeMutability {
+	return AttributeMutability{m: attributeMutabilityImmutable}
+}
+
+// AttributeMutabilityReadOnly indicates that the attribute SHALL NOT be modified.
+func AttributeMutabilityReadOnly() AttributeMutability {
+	return AttributeMutability{m: attributeMutabilityReadOnly}
+}
+
+// AttributeMutabilityReadWrite indicates that the attribute MAY be updated and read at any time.
+// This is the default value.
+func AttributeMutabilityReadWrite() AttributeMutability {
+	return AttributeMutability{m: attributeMutabilityReadWrite}
+}
+
+// AttributeMutabilityWriteOnly indicates that the attribute MAY be updated at any time. Attribute values SHALL NOT
+// be returned (e.g., because the value is a stored hash).
+// Note: An attribute with a mutability of "writeOnly" usually also has a returned setting of "never".
+func AttributeMutabilityWriteOnly() AttributeMutability {
+	return AttributeMutability{m: attributeMutabilityWriteOnly}
+}
 
 type attributeMutability int
 
@@ -78,18 +87,27 @@ type AttributeReturned struct {
 	r attributeReturned
 }
 
-var (
-	// AttributeReturnedAlways indicates that the attribute is always returned.
-	AttributeReturnedAlways = AttributeReturned{r: attributeReturnedAlways}
-	// AttributeReturnedDefault indicates that the attribute is returned by default in all SCIM operation responses
-	// where attribute values are returned.
-	AttributeReturnedDefault = AttributeReturned{r: attributeReturnedDefault}
-	// AttributeReturnedNever indicates that the attribute is never returned.
-	AttributeReturnedNever = AttributeReturned{r: attributeReturnedNever}
-	// AttributeReturnedRequest indicates that the attribute is returned in response to any PUT, POST, or PATCH
-	// operations if the attribute was specified by the client (for example, the attribute was modified).
-	AttributeReturnedRequest = AttributeReturned{r: attributeReturnedRequest}
-)
+// AttributeReturnedAlways indicates that the attribute is always returned.
+func AttributeReturnedAlways() AttributeReturned {
+	return AttributeReturned{r: attributeReturnedAlways}
+}
+
+// AttributeReturnedDefault indicates that the attribute is returned by default in all SCIM operation responses
+// where attribute values are returned.
+func AttributeReturnedDefault() AttributeReturned {
+	return AttributeReturned{r: attributeReturnedDefault}
+}
+
+// AttributeReturnedNever indicates that the attribute is never returned.
+func AttributeReturnedNever() AttributeReturned {
+	return AttributeReturned{r: attributeReturnedNever}
+}
+
+// AttributeReturnedRequest indicates that the attribute is returned in response to any PUT, POST, or PATCH
+// operations if the attribute was specified by the client (for example, the attribute was modified).
+func AttributeReturnedRequest() AttributeReturned {
+	return AttributeReturned{r: attributeReturnedRequest}
+}
 
 type attributeReturned int
 
@@ -118,13 +136,16 @@ type AttributeDataType struct {
 	t attributeType
 }
 
-var (
-	// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
-	// This is the default value.
-	AttributeTypeDecimal = AttributeDataType{t: attributeDataTypeDecimal}
-	// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
-	AttributeTypeInteger = AttributeDataType{t: attributeDataTypeInteger}
-)
+// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
+// This is the default value.
+func AttributeTypeDecimal() AttributeDataType {
+	return AttributeDataType{t: attributeDataTypeDecimal}
+}
+
+// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
+func AttributeTypeInteger() AttributeDataType {
+	return AttributeDataType{t: attributeDataTypeInteger}
+}
 
 type attributeType int
 
@@ -166,17 +187,23 @@ type AttributeUniqueness struct {
 	u attributeUniqueness
 }
 
-var (
-	// AttributeUniquenessGlobal indicates that the value SHOULD be globally unique (e.g., an email address, a GUID, or
-	// other value). No two resources on any server SHOULD possess the same value.
-	AttributeUniquenessGlobal = AttributeUniqueness{u: attributeUniquenessGlobal}
-	// AttributeUniquenessNone indicates that the values are not intended to be unique in any way.
-	// This is the default value.
-	AttributeUniquenessNone = AttributeUniqueness{u: attributeUniquenessNone}
-	// AttributeUniquenessServer indicates that the value SHOULD be unique within the context of the current SCIM
-	// endpoint (or tenancy).  No two resources on the same server SHOULD possess the same value.
-	AttributeUniquenessServer = AttributeUniqueness{u: attributeUniquenessServer}
-)
+// AttributeUniquenessGlobal indicates that the value SHOULD be globally unique (e.g., an email address, a GUID, or
+// other value). No two resources on any server SHOULD possess the same value.
+func AttributeUniquenessGlobal() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessGlobal}
+}
+
+// AttributeUniquenessNone indicates that the values are not intended to be unique in any way.
+// This is the default value.
+func AttributeUniquenessNone() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessNone}
+}
+
+// AttributeUniquenessServer indicates that the value SHOULD be unique within the context of the current SCIM
+// endpoint (or tenancy).  No two resources on the same server SHOULD possess the same value.
+func AttributeUniquenessServer() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessServer}
+}
 
 type attributeUniqueness int
 

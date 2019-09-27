@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	datetime "github.com/di-wu/xsd-datetime"
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -89,44 +90,47 @@ type CoreAttribute struct {
 	uniqueness      attributeUniqueness
 }
 
-func (a CoreAttribute) validate(attribute interface{}) (interface{}, bool) {
+func (a CoreAttribute) validate(attribute interface{}) (interface{}, errors.ValidationError) {
 	// return false if the attribute is not present but required.
 	if attribute == nil {
-		return nil, !a.required
+		if !a.required {
+			return nil, errors.ValidationErrorNil
+		}
+		return nil, errors.ValidationErrorInvalidValue
 	}
 
 	if a.multiValued {
 		// return false if the multivalued attribute is not a slice.
 		arr, ok := attribute.([]interface{})
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidSyntax
 		}
 
 		// return false if the multivalued attribute is empty.
 		if a.required && len(arr) == 0 {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
 
 		attributes := make([]interface{}, 0)
 		for _, ele := range arr {
-			attr, ok := a.validateSingular(ele)
-			if !ok {
-				return nil, false
+			attr, scimErr := a.validateSingular(ele)
+			if scimErr != errors.ValidationErrorNil {
+				return nil, scimErr
 			}
 			attributes = append(attributes, attr)
 		}
-		return attributes, true
+		return attributes, errors.ValidationErrorNil
 	}
 
 	return a.validateSingular(attribute)
 }
 
-func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, bool) {
+func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, errors.ValidationError) {
 	switch a.typ {
 	case attributeDataTypeBinary:
 		bin, ok := attribute.(string)
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
 
 		match, err := regexp.MatchString(`^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`, bin)
@@ -134,17 +138,21 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, boo
 			panic(err)
 		}
 
-		return bin, match
+		if !match {
+			return nil, errors.ValidationErrorInvalidValue
+		}
+
+		return bin, errors.ValidationErrorNil
 	case attributeDataTypeBoolean:
 		b, ok := attribute.(bool)
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
-		return b, true
+		return b, errors.ValidationErrorNil
 	case attributeDataTypeComplex:
 		complex, ok := attribute.(map[string]interface{})
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
 
 		attributes := make(map[string]interface{})
@@ -154,53 +162,53 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, boo
 			for k, v := range complex {
 				if strings.EqualFold(sub.name, k) {
 					if found {
-						return nil, false
+						return nil, errors.ValidationErrorInvalidSyntax
 					}
 					found = true
 					hit = v
 				}
 			}
 
-			attr, ok := sub.validate(hit)
-			if !ok {
-				return nil, false
+			attr, scimErr := sub.validate(hit)
+			if scimErr != errors.ValidationErrorNil {
+				return nil, scimErr
 			}
 			attributes[sub.name] = attr
 		}
-		return attributes, true
+		return attributes, errors.ValidationErrorNil
 	case attributeDataTypeDateTime:
 		date, ok := attribute.(string)
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
 		_, err := datetime.Parse(date)
 		if err != nil {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
-		return date, true
+		return date, errors.ValidationErrorNil
 	case attributeDataTypeDecimal:
 		number, ok := attribute.(json.Number)
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
 		f, err := strconv.ParseFloat(string(number), 64)
 		if err != nil {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
-		return f, true
+		return f, errors.ValidationErrorNil
 	case attributeDataTypeInteger:
 		if reflect.TypeOf(attribute).Kind() != reflect.Int {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
-		return attribute.(int), true
+		return attribute.(int), errors.ValidationErrorNil
 	case attributeDataTypeString, attributeDataTypeReference:
 		s, ok := attribute.(string)
 		if !ok {
-			return nil, false
+			return nil, errors.ValidationErrorInvalidValue
 		}
-		return s, true
+		return s, errors.ValidationErrorNil
 	default:
-		return nil, false
+		return nil, errors.ValidationErrorInvalidSyntax
 	}
 }
 

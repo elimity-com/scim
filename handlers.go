@@ -120,9 +120,9 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, ok := resourceType.validate(data)
-	if !ok {
-		errorHandler(w, r, scimError{status: http.StatusBadRequest}) // TODO
+	attributes, scimErr := resourceType.validate(data)
+	if scimErr != errors.ValidationErrorNil {
+		errorHandler(w, r, scimValidationError(scimErr))
 		return
 	}
 
@@ -189,9 +189,9 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, ok := resourceType.validate(data)
-	if !ok {
-		errorHandler(w, r, scimError{status: http.StatusBadRequest}) // TODO
+	attributes, scimErr := resourceType.validate(data)
+	if scimErr != errors.ValidationErrorNil {
+		errorHandler(w, r, scimValidationError(scimErr))
 		return
 	}
 
