@@ -28,8 +28,9 @@ go get github.com/elimity-com/scim
 [RFC Config](https://tools.ietf.org/html/rfc7643#section-5) |
 [Example Config](https://tools.ietf.org/html/rfc7643#section-8.5)
 ```
-// i.e. rawConfig, _ := ioutil.ReadFile("/path/to/config")
-config, _ := scim.NewServiceProviderConfig(rawConfig)
+config := scim.ServiceProviderConfig{
+    DocumentationURI: optional.New("www.example.com/scim"),
+}
 ```
 **!** no additional features/operations are supported in this version.
 
@@ -39,8 +40,32 @@ config, _ := scim.NewServiceProviderConfig(rawConfig)
 [Group Schema](https://tools.ietf.org/html/rfc7643#section-4.2) |
 [Extension Schema](https://tools.ietf.org/html/rfc7643#section-4.3)
 ```
-schema, _ := scim.NewSchema(rawSchema)
-extension, _ := scim.NewSchema(rawExtension)
+schema := schema.Schema{
+    ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
+    Name:        "User",
+    Description: optional.New("User Account"),
+    Attributes:  []schema.CoreAttribute{
+        schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+            Name:       "userName",
+            Required:   true,
+            Uniqueness: schema.AttributeUniquenessServer(),
+        })),
+    },
+}
+
+extension := schema.Schema{
+    ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+    Name:        "EnterpriseUser",
+    Description: optional.New("Enterprise User"),
+    Attributes: []schema.CoreAttribute{
+        schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+            Name: "employeeNumber",
+        })),
+        schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+            Name: "organization",
+        })),
+    },
+}
 ```
 
 ### 3. Create all resource types and their callbacks.
@@ -50,20 +75,34 @@ extension, _ := scim.NewSchema(rawExtension)
 #### 3.1 Callback (implementation of `ResourceHandler`)
 [Simple In Memory Example](resource_handler_test.go)
 ```
-var resourceHandler scim.ResourceHandler
+var userResourceHandler scim.ResourceHandler
 // initialize w/ own implementation
 ```
 **!** each resource type should have its own resource handler.
 
 #### 3.2 Resource Type
 ```
-resourceType, _ := scim.NewResourceType(rawResourceType, resourceHandler)
+resourceTypes := []ResourceType{
+    {
+        ID:          optional.New("User"),
+        Name:        "User",
+        Endpoint:    "/Users",
+        Description: optional.New("User Account"),
+        Schema:      schema,
+        SchemaExtensions: []SchemaExtension{
+            {Schema: extension},
+        },
+        Handler:     userResourceHandler,
+    },
+},
 ```
-**!** make sure all schemas that are referenced are created in the previous step.
 
 ### 4. Create Server
 ```
-server, _ := scim.NewServer(config, []scim.Schema{schema, extension}, []scim.ResourceType{resourceType})
+server := Server{
+    Config:        config,
+    ResourceTypes: resourceTypes,
+}
 ```
 
 ### 5. Listen and Serve
