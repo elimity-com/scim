@@ -78,6 +78,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.Validatio
 // MarshalJSON converts the resource type struct to its corresponding json representation.
 func (t ResourceType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
+		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
 		"id":               t.ID.Value(),
 		"name":             t.Name,
 		"description":      t.Description.Value(),
