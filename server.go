@@ -1,81 +1,30 @@
 package scim
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/elimity-com/scim/schema"
 )
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
 // domain scenarios easier to support via a standardized service.
 type Server struct {
-	config        serviceProviderConfig
-	schemas       map[string]schema
-	resourceTypes map[string]resourceType
+	Config        ServiceProviderConfig
+	ResourceTypes []ResourceType
 }
 
-// NewServer returns a SCIM server with given config, resource types and matching schemas. Given schemas must contain
-// every schema referenced in by given resource types. The given schemas and resource types cannot contain duplicates
-// based on their identifier and no duplicate endpoints can be defined. An error is returned otherwise.
-func NewServer(config ServiceProviderConfig, schemas []Schema, resourceTypes []ResourceType) (Server, error) {
-	schemasMap := make(map[string]schema)
-	for _, s := range schemas {
-		if _, ok := schemasMap[s.schema.ID]; ok {
-			return Server{}, fmt.Errorf("duplicate schema with id: %s", s.schema.ID)
+// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will get overwritten.
+func (s Server) getSchemas() map[string]schema.Schema {
+	schemas := make(map[string]schema.Schema)
+	for _, resourceType := range s.ResourceTypes {
+		schemas[resourceType.Schema.ID] = resourceType.Schema
+		for _, extension := range resourceType.SchemaExtensions {
+			schemas[extension.Schema.ID] = extension.Schema
 		}
-		schemasMap[s.schema.ID] = s.schema
 	}
-
-	tmpEndpoints := map[string]unitType{
-		"/":                      unit,
-		"/Schemas":               unit,
-		"/ResourceTypes":         unit,
-		"/ServiceProviderConfig": unit,
-	}
-	resourceTypesMap := make(map[string]resourceType)
-	for _, t := range resourceTypes {
-		if _, ok := schemasMap[t.resourceType.Schema]; !ok {
-			return Server{}, fmt.Errorf(
-				"schemas does not contain a schema with id: %s, referenced by resource type: %s",
-				t.resourceType.Schema, t.resourceType.Name,
-			)
-		}
-		for idx, extension := range t.resourceType.SchemaExtensions {
-			if _, ok := schemasMap[extension.Schema]; !ok {
-				return Server{}, fmt.Errorf(
-					"schemas does not contain a schema with id: %s, referenced by resource type extension with index: %d",
-					extension.Schema, idx,
-				)
-			}
-		}
-
-		if _, ok := resourceTypesMap[t.resourceType.Name]; ok {
-			return Server{}, fmt.Errorf("duplicate resource type with name: %s", t.resourceType.Name)
-		}
-
-		if !strings.HasPrefix(t.resourceType.Endpoint, "/") {
-			return Server{}, fmt.Errorf(
-				"endpoint does not start with a (forward) slash: %s",
-				t.resourceType.Endpoint,
-			)
-		}
-		if _, ok := tmpEndpoints[t.resourceType.Endpoint]; ok {
-			return Server{}, fmt.Errorf(
-				"duplicate endpoints in resource types: %s",
-				t.resourceType.Endpoint,
-			)
-		}
-
-		tmpEndpoints[t.resourceType.Endpoint] = unit
-		resourceTypesMap[t.resourceType.Name] = t.resourceType
-	}
-
-	return Server{
-		config:        config.config,
-		schemas:       schemasMap,
-		resourceTypes: resourceTypesMap,
-	}, nil
+	return schemas
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
@@ -100,7 +49,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, resourceType := range s.resourceTypes {
+	for _, resourceType := range s.ResourceTypes {
 		if path == resourceType.Endpoint {
 			switch r.Method {
 			case http.MethodPost:

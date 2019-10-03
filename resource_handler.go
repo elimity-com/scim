@@ -9,28 +9,9 @@ import (
 
 // ResourceAttributes represents a list of attributes given to the callback method to create or replace a resource based
 // on the given attributes.
-//
-//	ResourceAttributes{
-//		// simple attribute
-//		"userName": "di-wu",
-//		// complex attribute
-//		"name": map[string]interface{}{
-//			"givenName":  "Quint",
-//			"familyName": "Daenen",
-//		},
-//		// multivalued complex attribute(s)
-//		"emails": []map[string]interface{}{
-//			{
-//				"value":   "quint@elimity.com",
-//				"type":    "work",
-//				"primary": true,
-//			},
-//		},
-//		// etc.
-//	}
 type ResourceAttributes map[string]interface{}
 
-// Resource represents a resource returned by a callback method.
+// Resource represents an entity returned by a callback method.
 type Resource struct {
 	// ID is the unique identifier created by the callback method "Create".
 	ID string
@@ -38,12 +19,12 @@ type Resource struct {
 	Attributes ResourceAttributes
 }
 
-func (r Resource) response(resourceType resourceType) ResourceAttributes {
+func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response := r.Attributes
 	response["id"] = r.ID
-	schemas := []string{resourceType.Schema}
+	schemas := []string{resourceType.Schema.ID}
 	for _, schema := range resourceType.SchemaExtensions {
-		schemas = append(schemas, schema.Schema)
+		schemas = append(schemas, schema.Schema.ID)
 	}
 	response["schemas"] = schemas
 	response["meta"] = meta{
@@ -54,7 +35,7 @@ func (r Resource) response(resourceType resourceType) ResourceAttributes {
 	return response
 }
 
-// ResourceHandler represents a set off callback method that connect the SCIM server with a provider of a certain resource.
+// ResourceHandler represents a set of callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
 	// Create stores given attributes. Returns a resource with the attributes that are stored and a (new) unique identifier.
 	Create(attributes ResourceAttributes) (Resource, errors.PostError)

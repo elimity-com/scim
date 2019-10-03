@@ -14,8 +14,6 @@ func newListResponse(resources []interface{}) listResponse {
 }
 
 // listResponse identifies a query response.
-//
-// RFC: https://tools.ietf.org/html/rfc7644#section-3.4.2
 type listResponse struct {
 	// TotalResults is the total number of results returned by the list or query operation.
 	// The value may be larger than the number of resources returned, such as when returning

@@ -32,8 +32,8 @@ const (
 	// PutErrorMutability shall be returned when the attempted modification is not compatible with the target
 	// attribute's mutability or current state.
 	PutErrorMutability
-	// PutErrorResourceNotFound returns an error with status code 404 and a human readable message containing the identifier
-	// of the resource that was requested to be replaced but not found.
+	// PutErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
+	// identifier of the resource that was requested to be replaced but not found.
 	PutErrorResourceNotFound
 )
 
@@ -43,7 +43,21 @@ type DeleteError int
 const (
 	// DeleteErrorNil indicates that no error occurred during handling a DELETE HTTP request.
 	DeleteErrorNil DeleteError = iota
-	// DeleteErrorResourceNotFound returns an error with status code 404 and a human readable message containing the identifier
-	// of the resource that was requested to be deleted but not found.
+	// DeleteErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
+	// identifier of the resource that was requested to be deleted but not found.
 	DeleteErrorResourceNotFound
+)
+
+// ValidationError represents an error that is returned during a resource validation.
+type ValidationError int
+
+const (
+	// ValidationErrorNil indicates that no error occurred during a resource validation.
+	ValidationErrorNil ValidationError = iota
+	// ValidationErrorInvalidSyntax indicates that the request body message structure was invalid or did not conform to
+	// the request schema.
+	ValidationErrorInvalidSyntax
+	// ValidationErrorInvalidValue indicates that a required value was missing or the value specified was not
+	// compatible with the operation, attribute type or resource schema.
+	ValidationErrorInvalidValue
 )
