@@ -193,6 +193,7 @@ func TestValidValidation(t *testing.T) {
 			"binary":   "ZXhhbXBsZQ==",
 			"dateTime": "2008-01-23T04:56:22Z",
 			"integer":  11,
+			"decimal":  -2.1e5,
 		},
 	} {
 		if _, scimErr := testSchema.Validate(test); scimErr != errors.ValidationErrorNil {

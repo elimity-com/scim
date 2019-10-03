@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 
 	datetime "github.com/di-wu/xsd-datetime"
@@ -187,15 +186,10 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		}
 		return date, errors.ValidationErrorNil
 	case attributeDataTypeDecimal:
-		number, ok := attribute.(json.Number)
-		if !ok {
+		if reflect.TypeOf(attribute).Kind() != reflect.Float64 {
 			return nil, errors.ValidationErrorInvalidValue
 		}
-		f, err := strconv.ParseFloat(string(number), 64)
-		if err != nil {
-			return nil, errors.ValidationErrorInvalidValue
-		}
-		return f, errors.ValidationErrorNil
+		return attribute.(float64), errors.ValidationErrorNil
 	case attributeDataTypeInteger:
 		if reflect.TypeOf(attribute).Kind() != reflect.Int {
 			return nil, errors.ValidationErrorInvalidValue
