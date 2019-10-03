@@ -15,7 +15,7 @@ func newTestServer() Server {
 	userSchema := schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
 		Name:        "User",
-		Description: optional.New("User Account"),
+		Description: optional.NewString("User Account"),
 		Attributes: []schema.CoreAttribute{
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name:       "userName",
@@ -64,7 +64,7 @@ func newTestServer() Server {
 	userSchemaExtension := schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 		Name:        "EnterpriseUser",
-		Description: optional.New("Enterprise User"),
+		Description: optional.NewString("Enterprise User"),
 		Attributes: []schema.CoreAttribute{
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name: "employeeNumber",
@@ -79,18 +79,18 @@ func newTestServer() Server {
 		Config: ServiceProviderConfig{},
 		ResourceTypes: []ResourceType{
 			{
-				ID:          optional.New("User"),
+				ID:          optional.NewString("User"),
 				Name:        "User",
 				Endpoint:    "/Users",
-				Description: optional.New("User Account"),
+				Description: optional.NewString("User Account"),
 				Schema:      userSchema,
 				Handler:     newTestResourceHandler(),
 			},
 			{
-				ID:          optional.New("EnterpriseUser"),
+				ID:          optional.NewString("EnterpriseUser"),
 				Name:        "EnterpriseUser",
 				Endpoint:    "/EnterpriseUser",
-				Description: optional.New("Enterprise User Account"),
+				Description: optional.NewString("Enterprise User Account"),
 				Schema:      userSchema,
 				SchemaExtensions: []SchemaExtension{
 					{Schema: userSchemaExtension},

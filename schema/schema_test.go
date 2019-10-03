@@ -17,7 +17,7 @@ func TestInvalidAttributeName(t *testing.T) {
 	_ = Schema{
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
 		Name:        "User",
-		Description: optional.New("User Account"),
+		Description: optional.NewString("User Account"),
 		Attributes: []CoreAttribute{
 			SimpleCoreAttribute(SimpleStringParams(StringParams{Name: "_Invalid"})),
 		},

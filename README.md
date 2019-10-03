@@ -29,7 +29,7 @@ go get github.com/elimity-com/scim
 [Example Config](https://tools.ietf.org/html/rfc7643#section-8.5)
 ```
 config := scim.ServiceProviderConfig{
-    DocumentationURI: optional.New("www.example.com/scim"),
+    DocumentationURI: optional.NewString("www.example.com/scim"),
 }
 ```
 **!** no additional features/operations are supported in this version.
@@ -43,7 +43,7 @@ config := scim.ServiceProviderConfig{
 schema := schema.Schema{
     ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
     Name:        "User",
-    Description: optional.New("User Account"),
+    Description: optional.NewString("User Account"),
     Attributes:  []schema.CoreAttribute{
         schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
             Name:       "userName",
@@ -56,7 +56,7 @@ schema := schema.Schema{
 extension := schema.Schema{
     ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
     Name:        "EnterpriseUser",
-    Description: optional.New("Enterprise User"),
+    Description: optional.NewString("Enterprise User"),
     Attributes: []schema.CoreAttribute{
         schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
             Name: "employeeNumber",
@@ -84,10 +84,10 @@ var userResourceHandler scim.ResourceHandler
 ```
 resourceTypes := []ResourceType{
     {
-        ID:          optional.New("User"),
+        ID:          optional.NewString("User"),
         Name:        "User",
         Endpoint:    "/Users",
-        Description: optional.New("User Account"),
+        Description: optional.NewString("User Account"),
         Schema:      schema,
         SchemaExtensions: []SchemaExtension{
             {Schema: extension},

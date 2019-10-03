@@ -1,7 +1,7 @@
 package optional
 
-// New returns an optional string with given value.
-func New(value string) String {
+// NewString returns an optional string with given value.
+func NewString(value string) String {
 	return String{
 		value:   value,
 		present: true,
