@@ -89,7 +89,7 @@ func getRawAuthSchemes(arr []AuthenticationScheme) []map[string]interface{} {
 	return rawAuthScheme
 }
 
-func (auth AuthenticationScheme) Value() (val map[string]interface{}) {
+func (auth AuthenticationScheme) Value() map[string]interface{} {
 	return map[string]interface{}{
 		"description":      auth.Description,
 		"documentationUri": auth.DocumentationURI.Value(),
