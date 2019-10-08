@@ -89,6 +89,7 @@ func getRawAuthSchemes(arr []AuthenticationScheme) []map[string]interface{} {
 	return rawAuthScheme
 }
 
+// Value builds a map based on the values in the AuthenticationScheme.
 func (auth AuthenticationScheme) Value() map[string]interface{} {
 	return map[string]interface{}{
 		"description":      auth.Description,
