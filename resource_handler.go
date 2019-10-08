@@ -7,17 +7,31 @@ import (
 	"github.com/elimity-com/scim/errors"
 )
 
-// ResourceAttributes represents a list of attributes given to the callback method to create or replace a resource based
-// on the given attributes.
-type ResourceAttributes map[string]interface{}
+type (
+	// ListRequestParams request parameters sent to the API via the "GetAll" route.
+	ListRequestParams struct {
+		// Count specifies the desired maximum number of query results per page. A negative value
+		// SHALL be interpreted as "0". A value of "0" indicates that no resource
+		// results are to be returned except for "totalResults".
+		Count int
 
-// Resource represents an entity returned by a callback method.
-type Resource struct {
-	// ID is the unique identifier created by the callback method "Create".
-	ID string
-	// Attributes is a list of attributes defining the resource.
-	Attributes ResourceAttributes
-}
+		// StartIndex The 1-based index of the first query result.
+		// A value less than 1 SHALL be interpreted as 1.
+		StartIndex int
+	}
+
+	// ResourceAttributes represents a list of attributes given to the callback method to create or replace
+	// a resource based on the given attributes.
+	ResourceAttributes map[string]interface{}
+
+	// Resource represents an entity returned by a callback method.
+	Resource struct {
+		// ID is the unique identifier created by the callback method "Create".
+		ID string
+		// Attributes is a list of attributes defining the resource.
+		Attributes ResourceAttributes
+	}
+)
 
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response := r.Attributes
@@ -41,8 +55,8 @@ type ResourceHandler interface {
 	Create(attributes ResourceAttributes) (Resource, errors.PostError)
 	// Get returns the resource corresponding with the given identifier.
 	Get(id string) (Resource, errors.GetError)
-	// GetAll returns all the resources.
-	GetAll() []Resource
+	// GetAll returns a paginated list of resources.
+	GetAll(params ListRequestParams) (ListResponse, errors.GetError)
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
 	Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError)

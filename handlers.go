@@ -166,13 +166,15 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
-func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
-	var resources []interface{}
-	for _, resource := range resourceType.Handler.GetAll() {
-		resources = append(resources, resource.response(resourceType))
+func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType, params ListRequestParams) {
+	listResponse, getError := resourceType.Handler.GetAll(params)
+
+	if getError != errors.GetErrorNil {
+		errorHandler(w, r, scimGetAllError(getError))
+		return
 	}
 
-	raw, err := json.Marshal(newListResponse(resources))
+	raw, err := json.Marshal(listResponse.toInternalListResponse(resourceType))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshalling list response: %v", err)

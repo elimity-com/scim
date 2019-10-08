@@ -1,11 +1,19 @@
 package scim
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/elimity-com/scim/schema"
+)
+
+const (
+	defaultStartIndex = 1
+	defaultCount      = 10
+	maxCount          = 200
 )
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
@@ -56,7 +64,13 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				s.resourcePostHandler(w, r, resourceType)
 				return
 			case http.MethodGet:
-				s.resourcesGetHandler(w, r, resourceType)
+				requestParams, paramsErr := parseRequestParams(r)
+
+				if paramsErr != nil {
+					errorHandler(w, r, *paramsErr)
+				}
+
+				s.resourcesGetHandler(w, r, resourceType, requestParams)
 				return
 			}
 		}
@@ -89,4 +103,49 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
+}
+
+func getPositiveIntQueryParam(r *http.Request, key string, def int) (int, error) {
+	strVal := r.URL.Query().Get(key)
+
+	if strVal == "" {
+		return def, nil
+	}
+
+	if intVal, err := strconv.Atoi(strVal); err == nil {
+		return intVal, nil
+	}
+
+	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
+}
+
+func parseRequestParams(r *http.Request) (response ListRequestParams, err *scimError) {
+	var invalidParams []string
+
+	count, ctErr := getPositiveIntQueryParam(r, "count", defaultCount)
+	startIndex, idxErr := getPositiveIntQueryParam(r, "startIndex", defaultStartIndex)
+
+	if ctErr != nil {
+		invalidParams = append(invalidParams, "count")
+	}
+
+	if idxErr != nil {
+		invalidParams = append(invalidParams, "startIndex")
+	}
+
+	if len(invalidParams) > 1 {
+		badReqErr := scimErrorBadRequest(invalidParams)
+		err = &badReqErr
+	}
+
+	if count > maxCount {
+		count = maxCount
+	}
+
+	response = ListRequestParams{
+		Count:      count,
+		StartIndex: startIndex,
+	}
+
+	return
 }
