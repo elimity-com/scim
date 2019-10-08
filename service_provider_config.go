@@ -75,6 +75,28 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		"etag": map[string]bool{
 			"supported": false,
 		},
-		"authenticationSchemes": config.AuthenticationSchemes,
+		"authenticationSchemes": getRawAuthSchemes(config.AuthenticationSchemes),
 	})
+}
+
+func getRawAuthSchemes(arr []AuthenticationScheme) []map[string]interface{} {
+	rawAuthScheme := make([]map[string]interface{}, len(arr))
+
+	for i, auth := range arr {
+		rawAuthScheme[i] = auth.Value()
+	}
+
+	return rawAuthScheme
+}
+
+// Value builds a map based on the values in the AuthenticationScheme.
+func (auth AuthenticationScheme) Value() map[string]interface{} {
+	return map[string]interface{}{
+		"description":      auth.Description,
+		"documentationUri": auth.DocumentationURI.Value(),
+		"name":             auth.Name,
+		"primary":          auth.Primary,
+		"specUri":          auth.SpecURI.Value(),
+		"type":             auth.Type,
+	}
 }
