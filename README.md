@@ -7,14 +7,14 @@ SCIM defines a flexible schema mechanism and REST API for managing identity data
 The goal is to reduce the complexity of user management operations by providing patterns for exchanging schemas using HTTP.
 
 In this implementation it is easy to add *custom* schemas and extensions whom are validated at the initialization of the server.
-Corresponding with their resource type, incoming resources will be *validated* by the supported schemas before being 
+Corresponding with their resource type, incoming resources will be *validated* by the supported schemas before being
 passed on to their callbacks.
 
 The following features are supported:
 - GET for `/Schemas`, `/ServiceProviderConfig` and `/ResourceTypes`
 - CRUD (POST/GET/PUT and DELETE) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
 
-Other optional features such as patch, pagination, sorting, etc... are **not** supported in this version.
+Other optional features such as patch, filtering, sorting, etc... are **not** supported in this version.
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
@@ -111,8 +111,8 @@ log.Fatal(http.ListenAndServe(":8080", server))
 ```
 
 ## Contributing
-We are happy to review pull requests, 
-but please first discuss the change you wish to make via issue, email, 
+We are happy to review pull requests,
+but please first discuss the change you wish to make via issue, email,
 or any other method with the owners of this repository before making a change.
 
 If you’d like to propose a change please ensure the following:
@@ -120,7 +120,7 @@ If you’d like to propose a change please ensure the following:
 - all already existing tests are passing
 - you have written tests that cover the code you are making
 - there is documentation for at least all public functions you have added
-- your changes are compliant with SCIM v2.0 (released as 
-[RFC7642](https://tools.ietf.org/html/rfc7642), 
-[RFC7643](https://tools.ietf.org/html/rfc7643) and 
+- your changes are compliant with SCIM v2.0 (released as
+[RFC7642](https://tools.ietf.org/html/rfc7642),
+[RFC7643](https://tools.ietf.org/html/rfc7643) and
 [RFC7644](https://tools.ietf.org/html/rfc7644) under [IETF](https://ietf.org/))

@@ -49,18 +49,25 @@ func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
 	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) GetAll() []Resource {
-	// get all existing resources
-	all := make([]Resource, 0)
+func (h testResourceHandler) GetAll(params ListRequestParams) (Page, errors.GetError) {
+	resources := make([]Resource, 0)
+	i := 1
+
 	for k, v := range h.data {
-		all = append(all, Resource{
-			ID:         k,
-			Attributes: v,
-		})
+		if i > (params.StartIndex + params.Count - 1) {
+			break
+		}
+
+		if i >= params.StartIndex {
+			resources = append(resources, Resource{
+				ID:         k,
+				Attributes: v,
+			})
+		}
+		i++
 	}
 
-	// return all resources
-	return all
+	return NewPage(resources, len(h.data)), errors.GetErrorNil
 }
 
 func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {

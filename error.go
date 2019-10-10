@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/elimity-com/scim/errors"
 )
@@ -28,6 +29,23 @@ func scimErrorResourceNotFound(id string) scimError {
 	return scimError{
 		detail: fmt.Sprintf("Resource %s not found.", id),
 		status: http.StatusNotFound,
+	}
+}
+
+func scimErrorBadRequest(invalidParams []string) scimError {
+	var suffix string
+
+	if len(invalidParams) > 1 {
+		suffix = "s"
+	}
+
+	return scimError{
+		detail: fmt.Sprintf(
+			"Bad Request. Invalid parameter%s provided in request: %s.",
+			suffix,
+			strings.Join(invalidParams, ", "),
+		),
+		status: http.StatusBadRequest,
 	}
 }
 
@@ -110,6 +128,13 @@ func scimGetError(getError errors.GetError, id string) scimError {
 	switch getError {
 	case errors.GetErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
+	default:
+		return scimErrorInternalServer
+	}
+}
+
+func scimGetAllError(getError errors.GetError) scimError {
+	switch getError {
 	default:
 		return scimErrorInternalServer
 	}
