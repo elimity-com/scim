@@ -13,7 +13,7 @@ The following features are supported:
 - GET for `/Schemas`, `/ServiceProviderConfig` and `/ResourceTypes`
 - CRUD (POST/GET/PUT and DELETE) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
 
-Other optional features such as patch, pagination, sorting, etc... are **not** supported in this version.
+Other optional features such as patch, filtering, sorting, etc... are **not** supported in this version.
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
@@ -110,8 +110,8 @@ log.Fatal(http.ListenAndServe(":8080", server))
 ```
 
 ## Contributing
-We are happy to review pull requests, 
-but please first discuss the change you wish to make via issue, email, 
+We are happy to review pull requests,
+but please first discuss the change you wish to make via issue, email,
 or any other method with the owners of this repository before making a change.
 
 If you would like to propose a change please ensure the following:

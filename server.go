@@ -1,11 +1,19 @@
 package scim
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
+	scim "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/schema"
+)
+
+const (
+	defaultStartIndex = 1
+	fallbackCount     = 100
 )
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
@@ -56,7 +64,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				s.resourcePostHandler(w, r, resourceType)
 				return
 			case http.MethodGet:
-				s.resourcesGetHandler(w, r, resourceType)
+				requestParams, paramsErr := s.parseRequestParams(r)
+
+				if paramsErr != nil {
+					errorHandler(w, r, *paramsErr)
+					return
+				}
+
+				s.resourcesGetHandler(w, r, resourceType, requestParams)
 				return
 			}
 		}
@@ -89,4 +104,82 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
+}
+
+func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
+	strVal := r.URL.Query().Get(key)
+
+	if strVal == "" {
+		return def, nil
+	}
+
+	if intVal, err := strconv.Atoi(strVal); err == nil {
+		return intVal, nil
+	}
+
+	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
+}
+
+func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimError) {
+	var (
+		invalidParams []string
+		err           scimError
+	)
+
+	defCount := s.Config.GetItemsPerPage()
+	count, ctErr := getIntQueryParam(r, "count", defCount)
+	startIndex, idxErr := getIntQueryParam(r, "startIndex", defaultStartIndex)
+
+	if ctErr != nil {
+		invalidParams = append(invalidParams, "count")
+	}
+
+	if idxErr != nil {
+		invalidParams = append(invalidParams, "startIndex")
+	}
+
+	if len(invalidParams) > 1 {
+		err = scimErrorBadRequest(invalidParams)
+
+		return ListRequestParams{}, &err
+	}
+
+	// Ensure the count isn't more then the allowable max and not less then 1.
+	if count > defCount || count < 1 {
+		count = defCount
+	}
+
+	if startIndex < 1 {
+		startIndex = defaultStartIndex
+	}
+
+	filter, filterErr := getFilter(r)
+
+	if filterErr != nil {
+		err = scimErrorBadRequest([]string{"filter"})
+
+		return ListRequestParams{}, &err
+	}
+
+	return ListRequestParams{
+		Count:      count,
+		Filter:     filter,
+		StartIndex: startIndex,
+	}, nil
+}
+
+func getFilter(r *http.Request) (scim.Expression, error) {
+	var (
+		exp scim.Expression
+		err error
+	)
+
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+
+	if rawFilter != "" {
+		parser := scim.NewParser(strings.NewReader(rawFilter))
+		exp, err = parser.Parse()
+	}
+
+	return exp, err
 }

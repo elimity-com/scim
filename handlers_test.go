@@ -2,6 +2,7 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -103,8 +104,12 @@ func newTestServer() Server {
 
 func newTestResourceHandler() ResourceHandler {
 	data := make(map[string]ResourceAttributes)
-	data["0001"] = ResourceAttributes{
-		"userName": "test",
+
+	// Generate enough test data to test pagination
+	for i := 1; i < 21; i++ {
+		data[fmt.Sprintf("000%d", i)] = ResourceAttributes{
+			"userName": fmt.Sprintf("test%d", i),
+		}
 	}
 
 	return testResourceHandler{
@@ -267,7 +272,7 @@ func TestServerResourcePostHandlerInvalid(t *testing.T) {
 }
 
 func TestServerResourcePostHandlerValid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other", "userName": "test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other", "userName": "test1"}`))
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
@@ -279,7 +284,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
-	if resource["userName"] != "test" {
+	if resource["userName"] != "test1" {
 		t.Error("handler did not return the resource correctly")
 	}
 }
@@ -297,7 +302,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
-	if resource["userName"] != "test" {
+	if resource["userName"] != "test1" {
 		t.Error("handler did not return the resource correctly")
 	}
 }
@@ -334,8 +339,46 @@ func TestServerResourcesGetHandler(t *testing.T) {
 		t.Error(err)
 	}
 
-	if response.TotalResults != 1 {
-		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+	if response.TotalResults != 20 {
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
+	}
+}
+
+func TestServerResourcesGetHandlerPagination(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var response listResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+		t.Error(err)
+	}
+
+	if response.TotalResults != 20 {
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
+	}
+}
+
+func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var response listResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+		t.Error(err)
+	}
+
+	if response.TotalResults != 20 {
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
 	}
 }
 
