@@ -11,6 +11,24 @@ const (
 	GetErrorResourceNotFound
 )
 
+// PatchError represents an error that is returned by a PATCH HTTP request.
+type PatchError int
+
+const (
+	// PatchErrorNil indicates that no error occurred during handling a PUT HTTP request.
+	PatchErrorNil PatchError = iota
+	// PatchErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
+	PatchErrorUniqueness
+	// PatchErrorMutability shall be returned when the attempted modification is not compatible with the target
+	// attribute's mutability or current state.
+	PatchErrorMutability
+	// PatchErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
+	// identifier of the resource that was requested to be replaced but not found.
+	PatchErrorResourceNotFound
+	// PatchErrorNotImplemented allows consumers to create a patch handler that simply returns an unsupported error.
+	PatchErrorNotImplemented
+)
+
 // PostError represents an error that is returned by a POST HTTP request.
 type PostError int
 

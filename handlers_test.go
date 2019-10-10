@@ -23,6 +23,20 @@ func newTestServer() Server {
 				Required:   true,
 				Uniqueness: schema.AttributeUniquenessServer(),
 			})),
+			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+				Name:     "active",
+				Required: false,
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:       "readonlyThing",
+				Required:   false,
+				Mutability: schema.AttributeMutabilityReadOnly(),
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:       "immutableThing",
+				Required:   false,
+				Mutability: schema.AttributeMutabilityImmutable(),
+			})),
 			schema.ComplexCoreAttribute(schema.ComplexParams{
 				Name:     "Name",
 				Required: false,
@@ -380,6 +394,145 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	if response.TotalResults != 20 {
 		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
 	}
+}
+
+// Tests valid add, replace, and remove operations
+func TestServerResourcePatchHandlerValid(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"add",
+		    "value":{
+		      "emails":[
+		        {
+			  "value":"babs@jensen.org",
+			  "type":"home"
+		        }
+		      ]
+		    }
+		  },
+		  {
+		    "op":"replace",
+		    "path":"active",
+		    "value":false
+		  },
+		  {
+		    "op":"remove",
+		    "path":"displayName"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+		t.Fatal(err)
+	}
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Logf("Error response: %v\n", resource)
+	}
+
+	if resource["displayName"] != nil {
+		t.Errorf("handler did not remove the displayName attribute")
+	}
+
+	if resource["active"] != false {
+		t.Errorf("handler did not deactivate user")
+	}
+
+	if resource["emails"] == nil || len(resource["emails"].([]interface{})) < 1 {
+		t.Errorf("handler did not add user's email address")
+	}
+}
+
+func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"active",
+		    "value":"test"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+		t.Fatal(err)
+	}
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Logf("Error response: %v\n", resource)
+	}
+}
+
+func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"add",
+		    "value":{
+		      "notActuallyAThing": "adfad"
+		    }
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+		t.Fatal(err)
+	}
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Logf("Error response: %v\n", resource)
+	}
+}
+
+func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(fmt.Sprintf(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"%s",
+		    "path":"%s",
+		    "value":"test"
+		  }
+		]
+	}`, op, path)))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+		t.Fatal(err)
+	}
+
+	if status := rr.Code; status != expectedStatus {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Logf("Error response: %v\n", resource)
+	}
+}
+
+// Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
+func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
+	runPatchImmutableTest(t, add, "immutableThing", http.StatusOK)
+	runPatchImmutableTest(t, remove, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, replace, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, add, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, remove, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, replace, "readonlyThing", http.StatusBadRequest)
 }
 
 func TestServerResourcePutHandlerInvalid(t *testing.T) {

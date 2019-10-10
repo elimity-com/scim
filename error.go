@@ -23,6 +23,8 @@ const (
 	// A required value was missing or the value specified was not compatible with the operation, attribute type
 	// or resource schema.
 	scimTypeInvalidValue = "invalidValue"
+	// Endpoint not implemented
+	scimTypeNotImplemented = "notImplemented"
 )
 
 func scimErrorResourceNotFound(id string) scimError {
@@ -32,19 +34,23 @@ func scimErrorResourceNotFound(id string) scimError {
 	}
 }
 
-func scimErrorBadRequest(invalidParams []string) scimError {
+func scimErrorBadParams(invalidParams []string) scimError {
 	var suffix string
 
 	if len(invalidParams) > 1 {
 		suffix = "s"
 	}
 
+	return scimErrorBadRequest(fmt.Sprintf(
+		"Bad Request. Invalid parameter%s provided in request: %s.",
+		suffix,
+		strings.Join(invalidParams, ", "),
+	))
+}
+
+func scimErrorBadRequest(msg string) scimError {
 	return scimError{
-		detail: fmt.Sprintf(
-			"Bad Request. Invalid parameter%s provided in request: %s.",
-			suffix,
-			strings.Join(invalidParams, ", "),
-		),
+		detail: msg,
 		status: http.StatusBadRequest,
 	}
 }
@@ -72,6 +78,11 @@ var (
 	}
 	scimErrorInternalServer = scimError{
 		status: http.StatusInternalServerError,
+	}
+	scimErrorNotImplemented = scimError{
+		scimType: scimTypeNotImplemented,
+		detail:   "This .",
+		status:   http.StatusNotImplemented,
 	}
 )
 
@@ -135,6 +146,21 @@ func scimGetError(getError errors.GetError, id string) scimError {
 
 func scimGetAllError(getError errors.GetError) scimError {
 	switch getError {
+	default:
+		return scimErrorInternalServer
+	}
+}
+
+func scimPatchError(patchError errors.PatchError, id string) scimError {
+	switch patchError {
+	case errors.PatchErrorNotImplemented:
+		return scimErrorNotImplemented
+	case errors.PatchErrorUniqueness:
+		return scimErrorUniqueness
+	case errors.PatchErrorMutability:
+		return scimErrorMutability
+	case errors.PatchErrorResourceNotFound:
+		return scimErrorResourceNotFound(id)
 	default:
 		return scimErrorInternalServer
 	}

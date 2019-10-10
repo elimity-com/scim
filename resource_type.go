@@ -3,6 +3,10 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
@@ -94,4 +98,88 @@ func (t SchemaExtension) MarshalJSON() ([]byte, error) {
 		"schema":   t.Schema.ID,
 		"required": t.Required,
 	})
+}
+
+// validatePatch parse and validate PATCH request
+func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.ValidationError) {
+	var req PatchRequest
+
+	data, _ := ioutil.ReadAll(r.Body)
+	jsonErr := json.Unmarshal(data, &req)
+
+	if jsonErr != nil {
+		return req, errors.ValidationErrorInvalidSyntax
+	}
+
+	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
+	errorCauses := []string{}
+
+	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
+	// whose value is an array of one or more PATCH operations.
+	if len(req.Operations) < 1 {
+		return req, errors.ValidationErrorInvalidValue
+	}
+
+	for _, op := range req.Operations {
+		errorCauses = append(errorCauses, t.validateOperation(op)...)
+	}
+
+	// Denotes all of the errors that have occurred parsing the request.
+	if len(errorCauses) > 0 {
+		return req, errors.ValidationErrorInvalidSyntax
+	}
+
+	return req, errors.ValidationErrorNil
+}
+
+func (t ResourceType) validateOperation(op PatchOperation) []string {
+	var errorCauses []string
+
+	// Ensure the operation is a valid one. "add", "replace", or "remove".
+	if !contains(validOps, op.Op) {
+		errorCauses = append(
+			errorCauses,
+			fmt.Sprintf(
+				"invalid operation type provided, got %s, expected %s",
+				op.Op,
+				strings.Join(validOps, ", "),
+			),
+		)
+	}
+
+	// "add" and "replace" operations must have a value
+	if (op.Op == add || op.Op == replace) && op.Value == nil {
+		errorCauses = append(
+			errorCauses,
+			"an add or replace patch operation must contain a value",
+		)
+	}
+
+	// "remove" operations require a path.
+	// The "replace" and "add" operations can have implicit paths, which is part of the value.
+	if op.Op == remove && op.Path == "" {
+		errorCauses = append(errorCauses, "path is required on a remove operation")
+	}
+
+	if err := t.validateOperationValue(op); err != errors.ValidationErrorNil {
+		return append(errorCauses, fmt.Sprintf("%s operation has an invalid value", op.Op))
+	}
+
+	return errorCauses
+}
+
+func (t ResourceType) validateOperationValue(op PatchOperation) errors.ValidationError {
+	// Not attempting to validate value or path if it is a filter based path.
+	// Perhaps we could at least validate the ComparePath
+	if op.HasPathFilter() {
+		return errors.ValidationErrorNil
+	}
+
+	mapValue, ok := op.Value.(map[string]interface{})
+
+	if !ok {
+		mapValue = map[string]interface{}{op.Path: op.Value}
+	}
+
+	return t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
 }

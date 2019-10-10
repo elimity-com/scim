@@ -99,3 +99,41 @@ func (h testResourceHandler) Delete(id string) errors.DeleteError {
 
 	return errors.DeleteErrorNil
 }
+
+func (h testResourceHandler) Patch(id string, req PatchRequest) (Resource, errors.PatchError) {
+	for _, op := range req.Operations {
+		switch op.Op {
+		case add:
+			if op.Path != "" {
+				h.data[id][op.Path] = op.Value
+			} else {
+				valueMap := op.Value.(map[string]interface{})
+				for k, v := range valueMap {
+					if arr, ok := h.data[id][k].([]interface{}); ok {
+						arr = append(arr, v)
+						h.data[id][k] = arr
+					} else {
+						h.data[id][k] = v
+					}
+				}
+			}
+		case replace:
+			if op.Path != "" {
+				h.data[id][op.Path] = op.Value
+			} else {
+				valueMap := op.Value.(map[string]interface{})
+				for k, v := range valueMap {
+					h.data[id][k] = v
+				}
+			}
+		case remove:
+			h.data[id][op.Path] = nil
+		}
+	}
+
+	// return resource with replaced attributes
+	return Resource{
+		ID:         id,
+		Attributes: h.data[id],
+	}, errors.PatchErrorNil
+}
