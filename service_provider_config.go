@@ -14,6 +14,8 @@ type ServiceProviderConfig struct {
 	DocumentationURI optional.String
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
 	AuthenticationSchemes []AuthenticationScheme
+	// ItemsPerPage denotes the maximum and default count on a list request. It defaults to 100.
+	ItemsPerPage int
 }
 
 // AuthenticationScheme specifies a supported authentication scheme property.
@@ -64,7 +66,7 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		},
 		"filter": map[string]interface{}{
 			"supported":  false,
-			"maxResults": 200,
+			"maxResults": config.ItemsPerPage,
 		},
 		"changePassword": map[string]bool{
 			"supported": false,
@@ -77,6 +79,15 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		},
 		"authenticationSchemes": getRawAuthSchemes(config.AuthenticationSchemes),
 	})
+}
+
+// GetItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.
+func (config ServiceProviderConfig) GetItemsPerPage() int {
+	if config.ItemsPerPage < 1 {
+		return fallbackCount
+	}
+
+	return config.ItemsPerPage
 }
 
 func getRawAuthSchemes(arr []AuthenticationScheme) []map[string]interface{} {

@@ -334,13 +334,13 @@ func TestServerResourcesGetHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 		t.Error(err)
 	}
 
-	if response.TotalResults != 10 {
-		t.Errorf("handler returned unexpected body: got %v want 10 total result", rr.Body.String())
+	if response.TotalResults != 20 {
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
 	}
 }
 
@@ -353,13 +353,13 @@ func TestServerResourcesGetHandlerPagination(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 		t.Error(err)
 	}
 
-	if response.TotalResults != 2 {
-		t.Errorf("handler returned unexpected body: got %v want 2 total result", rr.Body.String())
+	if response.TotalResults != 20 {
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
 	}
 }
 
@@ -372,13 +372,13 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var response ListResponse
+	var response listResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 		t.Error(err)
 	}
 
 	if response.TotalResults != 20 {
-		t.Errorf("handler returned unexpected body: got %v want 20 total result", rr.Body.String())
+		t.Errorf("handler returned unexpected body: got %v want 20 total result", response.TotalResults)
 	}
 }
 

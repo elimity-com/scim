@@ -49,7 +49,7 @@ func (h testResourceHandler) Get(id string) (Resource, errors.GetError) {
 	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) GetAll(params ListRequestParams) (ListResponse, errors.GetError) {
+func (h testResourceHandler) GetAll(params ListRequestParams) (Page, errors.GetError) {
 	resources := make([]Resource, 0)
 	i := 1
 
@@ -67,7 +67,7 @@ func (h testResourceHandler) GetAll(params ListRequestParams) (ListResponse, err
 		i++
 	}
 
-	return NewListResponse(resources, params.StartIndex, len(h.data), params.Count), errors.GetErrorNil
+	return NewPage(resources, len(h.data)), errors.GetErrorNil
 }
 
 func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
+	scim "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
 )
 
@@ -14,6 +15,11 @@ type (
 		// SHALL be interpreted as "0". A value of "0" indicates that no resource
 		// results are to be returned except for "totalResults".
 		Count int
+
+		// Filter represents the parsed and tokenized filter query parameter. It is an optional param
+		// and thus will be nil when the param is not present.
+		// https://github.com/di-wu/scim-filter-parser
+		Filter scim.Expression
 
 		// StartIndex The 1-based index of the first query result.
 		// A value less than 1 SHALL be interpreted as 1.
@@ -56,7 +62,7 @@ type ResourceHandler interface {
 	// Get returns the resource corresponding with the given identifier.
 	Get(id string) (Resource, errors.GetError)
 	// GetAll returns a paginated list of resources.
-	GetAll(params ListRequestParams) (ListResponse, errors.GetError)
+	GetAll(params ListRequestParams) (Page, errors.GetError)
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
 	Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError)
