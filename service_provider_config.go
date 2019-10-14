@@ -16,6 +16,8 @@ type ServiceProviderConfig struct {
 	AuthenticationSchemes []AuthenticationScheme
 	// ItemsPerPage denotes the maximum and default count on a list request. It defaults to 100.
 	ItemsPerPage int
+	// SupportsFiltering whether your app supports filtering.
+	SupportsFiltering bool
 }
 
 // AuthenticationScheme specifies a supported authentication scheme property.
@@ -65,7 +67,7 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 			"maxPayloadSize": 1048576,
 		},
 		"filter": map[string]interface{}{
-			"supported":  false,
+			"supported":  config.SupportsFiltering,
 			"maxResults": config.ItemsPerPage,
 		},
 		"changePassword": map[string]bool{
