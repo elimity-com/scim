@@ -46,6 +46,50 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.V
 	return attributes, errors.ValidationErrorNil
 }
 
+// ValidatePatchOperationValue validates an individual operation and its related value
+func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) errors.ValidationError {
+	for k, v := range operationValue {
+		var attr *CoreAttribute
+		scimErr := errors.ValidationErrorNil
+
+		for _, attribute := range s.Attributes {
+			if strings.EqualFold(attribute.name, k) {
+				attr = &attribute
+				break
+			}
+		}
+
+		// Attribute does not exist in the schema, thus it is an invalid request.
+		// Immutable attrs can only be added and Readonly attrs cannot be patched
+		if attr == nil || cannotBePatched(operation, *attr) {
+			return errors.ValidationErrorInvalidValue
+		}
+
+		// "remove" operations simply have to exist
+		if operation != "remove" {
+			_, scimErr = attr.validate(v)
+		}
+
+		if scimErr != errors.ValidationErrorNil {
+			return scimErr
+		}
+	}
+
+	return errors.ValidationErrorNil
+}
+
+func cannotBePatched(op string, attr CoreAttribute) bool {
+	return isImmutable(op, attr) || isReadOnly(attr)
+}
+
+func isImmutable(op string, attr CoreAttribute) bool {
+	return attr.mutability == attributeMutabilityImmutable && (op == "replace" || op == "remove")
+}
+
+func isReadOnly(attr CoreAttribute) bool {
+	return attr.mutability == attributeMutabilityReadOnly
+}
+
 // MarshalJSON converts the schema struct to its corresponding json representation.
 func (s Schema) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{

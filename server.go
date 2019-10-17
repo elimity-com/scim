@@ -89,6 +89,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case http.MethodPut:
 				s.resourcePutHandler(w, r, id, resourceType)
 				return
+			case http.MethodPatch:
+				s.resourcePatchHandler(w, r, id, resourceType)
+				return
 			case http.MethodDelete:
 				s.resourceDeleteHandler(w, r, id, resourceType)
 				return
@@ -139,7 +142,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 	}
 
 	if len(invalidParams) > 1 {
-		err = scimErrorBadRequest(invalidParams)
+		err = scimErrorBadParams(invalidParams)
 
 		return ListRequestParams{}, &err
 	}
@@ -156,7 +159,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 	filter, filterErr := getFilter(r)
 
 	if filterErr != nil {
-		err = scimErrorBadRequest([]string{"filter"})
+		err = scimErrorBadParams([]string{"filter"})
 
 		return ListRequestParams{}, &err
 	}

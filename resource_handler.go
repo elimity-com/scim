@@ -68,4 +68,7 @@ type ResourceHandler interface {
 	Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError)
 	// Delete removes the resource with corresponding ID.
 	Delete(id string) errors.DeleteError
+	// Patch update one or more attributes of a SCIM resource using a sequence of
+	// operations to "add", "remove", or "replace" values.
+	Patch(id string, request PatchRequest) (Resource, errors.PatchError)
 }

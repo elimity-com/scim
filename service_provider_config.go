@@ -16,8 +16,10 @@ type ServiceProviderConfig struct {
 	AuthenticationSchemes []AuthenticationScheme
 	// ItemsPerPage denotes the maximum and default count on a list request. It defaults to 100.
 	ItemsPerPage int
-	// SupportsFiltering whether your app supports filtering.
-	SupportsFiltering bool
+	// SupportFiltering whether you SCIM implementation will support filtering.
+	SupportFiltering bool
+	// SupportPatch whether your SCIM implementation will support patch requests.
+	SupportPatch bool
 }
 
 // AuthenticationScheme specifies a supported authentication scheme property.
@@ -59,7 +61,7 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
 		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
-			"supported": false,
+			"supported": config.SupportPatch,
 		},
 		"bulk": map[string]interface{}{
 			"supported":      false,
@@ -67,7 +69,7 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 			"maxPayloadSize": 1048576,
 		},
 		"filter": map[string]interface{}{
-			"supported":  config.SupportsFiltering,
+			"supported":  config.SupportFiltering,
 			"maxResults": config.ItemsPerPage,
 		},
 		"changePassword": map[string]bool{

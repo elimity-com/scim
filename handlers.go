@@ -115,6 +115,37 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// resourcePatchHandler receives an HTTP PATCH to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// "{id}" is a resource identifier to replace a resource's attributes.
+func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	patch, scimErr := resourceType.validatePatch(r)
+
+	if scimErr != errors.ValidationErrorNil {
+		errorHandler(w, r, scimValidationError(scimErr))
+		return
+	}
+
+	resource, patchErr := resourceType.Handler.Patch(id, patch)
+
+	if patchErr != errors.PatchErrorNil {
+		errorHandler(w, r, scimPatchError(patchErr, id))
+		return
+	}
+
+	raw, err := json.Marshal(resource.response(resourceType))
+
+	if err != nil {
+		log.Fatalf("failed marshaling resource: %v", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(raw)
+
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
+}
+
 // resourcePostHandler receives an HTTP POST request to the resource endpoint, such as "/Users" or "/Groups", as
 // defined by the associated resource type endpoint discovery to create new resources.
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
