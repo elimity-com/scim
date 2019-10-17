@@ -13,7 +13,7 @@ The following features are supported:
 - GET for `/Schemas`, `/ServiceProviderConfig` and `/ResourceTypes`
 - CRUD (POST/GET/PUT and DELETE) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
 
-Other optional features such as patch, filtering, sorting, etc... are **not** supported in this version.
+Other optional features such as patch, sorting, etc... are **not** supported in this version.
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
@@ -121,7 +121,7 @@ If you would like to propose a change please ensure the following:
 - there is documentation for at least all public functions you have added
 - new public functions and structures are kept to a minimum
 - the same practices are applied (such as the anatomy of methods, names, etc.)
-- your changes are compliant with SCIM v2.0 (released as 
-[RFC7642](https://tools.ietf.org/html/rfc7642), 
-[RFC7643](https://tools.ietf.org/html/rfc7643) and 
+- your changes are compliant with SCIM v2.0 (released as
+[RFC7642](https://tools.ietf.org/html/rfc7642),
+[RFC7643](https://tools.ietf.org/html/rfc7643) and
 [RFC7644](https://tools.ietf.org/html/rfc7644) under [IETF](https://ietf.org/))
