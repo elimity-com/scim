@@ -31,16 +31,10 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schemas := s.getSchemas()
+	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
 	var resources []interface{}
-	i := 1
-	for _, v := range schemas {
-		if params.StartIndex+params.Count <= i {
-			break
-		}
-		if params.StartIndex <= i {
-			resources = append(resources, v)
-		}
-		i++
+	for _, v := range schemas[start:end] {
+		resources = append(resources, v)
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -63,8 +57,8 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	schema, ok := s.getSchemas()[id]
-	if !ok {
+	schema := s.getSchema(id)
+	if schema.ID != id {
 		errorHandler(w, r, scimErrorResourceNotFound(id))
 		return
 	}
@@ -91,16 +85,10 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start, end := clamp(params.StartIndex-1, params.Count, len(s.ResourceTypes))
 	var resources []interface{}
-	i := 1
-	for _, v := range s.ResourceTypes {
-		if params.StartIndex+params.Count <= i {
-			break
-		}
-		if params.StartIndex <= i {
-			resources = append(resources, v.getRaw())
-		}
-		i++
+	for _, v := range s.ResourceTypes[start:end] {
+		resources = append(resources, v.getRaw())
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -256,7 +244,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	resources := make([]interface{}, 0)
+	var resources []interface{}
 	for _, v := range page.Resources {
 		resources = append(resources, v.response(resourceType))
 	}

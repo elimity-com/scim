@@ -23,16 +23,38 @@ type Server struct {
 	ResourceTypes []ResourceType
 }
 
-// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will get overwritten.
-func (s Server) getSchemas() map[string]schema.Schema {
-	schemas := make(map[string]schema.Schema)
+// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will be ignored.
+func (s Server) getSchemas() []schema.Schema {
+	ids := make([]string, 0)
+	schemas := make([]schema.Schema, 0)
 	for _, resourceType := range s.ResourceTypes {
-		schemas[resourceType.Schema.ID] = resourceType.Schema
+		if !contains(ids, resourceType.Schema.ID) {
+			schemas = append(schemas, resourceType.Schema)
+		}
+		ids = append(ids, resourceType.Schema.ID)
 		for _, extension := range resourceType.SchemaExtensions {
-			schemas[extension.Schema.ID] = extension.Schema
+			if !contains(ids, extension.Schema.ID) {
+				schemas = append(schemas, extension.Schema)
+			}
+			ids = append(ids, extension.Schema.ID)
 		}
 	}
 	return schemas
+}
+
+// getSchema extracts the schemas from the resources types defined in the server with given id.
+func (s Server) getSchema(id string) schema.Schema {
+	for _, resourceType := range s.ResourceTypes {
+		if resourceType.Schema.ID == id {
+			return resourceType.Schema
+		}
+		for _, extension := range resourceType.SchemaExtensions {
+			if extension.Schema.ID == id {
+				return extension.Schema
+			}
+		}
+	}
+	return schema.Schema{}
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
