@@ -15,7 +15,7 @@ import (
 func newTestServer() Server {
 	userSchema := schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
-		Name:        "User",
+		Name:        optional.NewString("User"),
 		Description: optional.NewString("User Account"),
 		Attributes: []schema.CoreAttribute{
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
@@ -78,7 +78,7 @@ func newTestServer() Server {
 
 	userSchemaExtension := schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-		Name:        "EnterpriseUser",
+		Name:        optional.NewString("EnterpriseUser"),
 		Description: optional.NewString("Enterprise User"),
 		Attributes: []schema.CoreAttribute{
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
@@ -527,12 +527,12 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 
 // Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
 func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
-	runPatchImmutableTest(t, add, "immutableThing", http.StatusOK)
-	runPatchImmutableTest(t, remove, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, replace, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, add, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, remove, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, replace, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationAdd, "immutableThing", http.StatusOK)
+	runPatchImmutableTest(t, PatchOperationRemove, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 }
 
 func TestServerResourcePutHandlerInvalid(t *testing.T) {

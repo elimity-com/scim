@@ -10,10 +10,10 @@ import (
 
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
-	ID          string
-	Name        string
-	Description optional.String
 	Attributes  []CoreAttribute
+	Description optional.String
+	ID          string
+	Name        optional.String
 }
 
 // Validate validates given resource based on the schema.
@@ -96,6 +96,27 @@ func (s Schema) MarshalJSON() ([]byte, error) {
 		"id":          s.ID,
 		"name":        s.Name,
 		"description": s.Description.Value(),
-		"attributes":  s.Attributes,
+		"attributes":  s.getRawAttributes(),
 	})
+}
+
+func (s Schema) getRawAttributes() []map[string]interface{} {
+	attributes := make([]map[string]interface{}, 0)
+	for _, a := range s.Attributes {
+		attributes = append(attributes, map[string]interface{}{
+			"canonicalValues": a.canonicalValues,
+			"caseExact":       a.caseExact,
+			"description":     a.description.Value(),
+			"multiValued":     a.multiValued,
+			"mutability":      a.mutability,
+			"name":            a.name,
+			"referenceTypes":  a.referenceTypes,
+			"required":        a.required,
+			"returned":        a.returned,
+			"subAttributes":   a.subAttributes,
+			"type":            a.typ,
+			"uniqueness":      a.uniqueness,
+		})
+	}
+	return attributes
 }

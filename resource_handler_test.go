@@ -67,7 +67,10 @@ func (h testResourceHandler) GetAll(params ListRequestParams) (Page, errors.GetE
 		i++
 	}
 
-	return NewPage(resources, len(h.data)), errors.GetErrorNil
+	return Page{
+		TotalResults: len(h.data),
+		Resources:    resources,
+	}, errors.GetErrorNil
 }
 
 func (h testResourceHandler) Replace(id string, attributes ResourceAttributes) (Resource, errors.PutError) {
@@ -103,7 +106,7 @@ func (h testResourceHandler) Delete(id string) errors.DeleteError {
 func (h testResourceHandler) Patch(id string, req PatchRequest) (Resource, errors.PatchError) {
 	for _, op := range req.Operations {
 		switch op.Op {
-		case add:
+		case PatchOperationAdd:
 			if op.Path != "" {
 				h.data[id][op.Path] = op.Value
 			} else {
@@ -117,7 +120,7 @@ func (h testResourceHandler) Patch(id string, req PatchRequest) (Resource, error
 					}
 				}
 			}
-		case replace:
+		case PatchOperationReplace:
 			if op.Path != "" {
 				h.data[id][op.Path] = op.Value
 			} else {
@@ -126,7 +129,7 @@ func (h testResourceHandler) Patch(id string, req PatchRequest) (Resource, error
 					h.data[id][k] = v
 				}
 			}
-		case remove:
+		case PatchOperationRemove:
 			h.data[id][op.Path] = nil
 		}
 	}

@@ -23,16 +23,38 @@ type Server struct {
 	ResourceTypes []ResourceType
 }
 
-// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will get overwritten.
-func (s Server) getSchemas() map[string]schema.Schema {
-	schemas := make(map[string]schema.Schema)
+// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will be ignored.
+func (s Server) getSchemas() []schema.Schema {
+	ids := make([]string, 0)
+	schemas := make([]schema.Schema, 0)
 	for _, resourceType := range s.ResourceTypes {
-		schemas[resourceType.Schema.ID] = resourceType.Schema
+		if !contains(ids, resourceType.Schema.ID) {
+			schemas = append(schemas, resourceType.Schema)
+		}
+		ids = append(ids, resourceType.Schema.ID)
 		for _, extension := range resourceType.SchemaExtensions {
-			schemas[extension.Schema.ID] = extension.Schema
+			if !contains(ids, extension.Schema.ID) {
+				schemas = append(schemas, extension.Schema)
+			}
+			ids = append(ids, extension.Schema.ID)
 		}
 	}
 	return schemas
+}
+
+// getSchema extracts the schemas from the resources types defined in the server with given id.
+func (s Server) getSchema(id string) schema.Schema {
+	for _, resourceType := range s.ResourceTypes {
+		if resourceType.Schema.ID == id {
+			return resourceType.Schema
+		}
+		for _, extension := range resourceType.SchemaExtensions {
+			if extension.Schema.ID == id {
+				return extension.Schema
+			}
+		}
+	}
+	return schema.Schema{}
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
@@ -64,14 +86,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				s.resourcePostHandler(w, r, resourceType)
 				return
 			case http.MethodGet:
-				requestParams, paramsErr := s.parseRequestParams(r)
-
-				if paramsErr != nil {
-					errorHandler(w, r, *paramsErr)
-					return
-				}
-
-				s.resourcesGetHandler(w, r, resourceType, requestParams)
+				s.resourcesGetHandler(w, r, resourceType)
 				return
 			}
 		}
@@ -124,32 +139,26 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 }
 
 func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimError) {
-	var (
-		invalidParams []string
-		err           scimError
-	)
+	invalidParams := make([]string, 0)
 
-	defCount := s.Config.GetItemsPerPage()
-	count, ctErr := getIntQueryParam(r, "count", defCount)
-	startIndex, idxErr := getIntQueryParam(r, "startIndex", defaultStartIndex)
-
-	if ctErr != nil {
+	defaultCount := s.Config.getItemsPerPage()
+	count, countErr := getIntQueryParam(r, "count", defaultCount)
+	if countErr != nil {
 		invalidParams = append(invalidParams, "count")
 	}
-
-	if idxErr != nil {
+	startIndex, indexErr := getIntQueryParam(r, "startIndex", defaultStartIndex)
+	if indexErr != nil {
 		invalidParams = append(invalidParams, "startIndex")
 	}
 
 	if len(invalidParams) > 1 {
-		err = scimErrorBadParams(invalidParams)
-
+		err := scimErrorBadParams(invalidParams)
 		return ListRequestParams{}, &err
 	}
 
 	// Ensure the count isn't more then the allowable max and not less then 1.
-	if count > defCount || count < 1 {
-		count = defCount
+	if count > defaultCount || count < 1 {
+		count = defaultCount
 	}
 
 	if startIndex < 1 {
@@ -157,10 +166,8 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 	}
 
 	filter, filterErr := getFilter(r)
-
 	if filterErr != nil {
-		err = scimErrorBadParams([]string{"filter"})
-
+		err := scimErrorBadParams([]string{"filter"})
 		return ListRequestParams{}, &err
 	}
 
@@ -172,17 +179,10 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 }
 
 func getFilter(r *http.Request) (scim.Expression, error) {
-	var (
-		exp scim.Expression
-		err error
-	)
-
 	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-
 	if rawFilter != "" {
 		parser := scim.NewParser(strings.NewReader(rawFilter))
-		exp, err = parser.Parse()
+		return parser.Parse()
 	}
-
-	return exp, err
+	return nil, nil
 }

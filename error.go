@@ -81,7 +81,6 @@ var (
 	}
 	scimErrorNotImplemented = scimError{
 		scimType: scimTypeNotImplemented,
-		detail:   "This .",
 		status:   http.StatusNotImplemented,
 	}
 )
@@ -137,6 +136,8 @@ func (e *scimError) UnmarshalJSON(data []byte) error {
 
 func scimGetError(getError errors.GetError, id string) scimError {
 	switch getError {
+	case errors.GetErrorNotImplemented:
+		return scimErrorNotImplemented
 	case errors.GetErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
 	default:
@@ -146,6 +147,8 @@ func scimGetError(getError errors.GetError, id string) scimError {
 
 func scimGetAllError(getError errors.GetError) scimError {
 	switch getError {
+	case errors.GetErrorNotImplemented:
+		return scimErrorNotImplemented
 	default:
 		return scimErrorInternalServer
 	}
@@ -168,6 +171,8 @@ func scimPatchError(patchError errors.PatchError, id string) scimError {
 
 func scimPostError(postError errors.PostError) scimError {
 	switch postError {
+	case errors.PostErrorNotImplemented:
+		return scimErrorNotImplemented
 	case errors.PostErrorUniqueness:
 		return scimErrorUniqueness
 	default:
@@ -177,6 +182,8 @@ func scimPostError(postError errors.PostError) scimError {
 
 func scimPutError(putError errors.PutError, id string) scimError {
 	switch putError {
+	case errors.PutErrorNotImplemented:
+		return scimErrorNotImplemented
 	case errors.PutErrorUniqueness:
 		return scimErrorUniqueness
 	case errors.PutErrorMutability:
@@ -190,6 +197,8 @@ func scimPutError(putError errors.PutError, id string) scimError {
 
 func scimDeleteError(deleteError errors.DeleteError, id string) scimError {
 	switch deleteError {
+	case errors.DeleteErrorNotImplemented:
+		return scimErrorNotImplemented
 	case errors.DeleteErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
 	default:
