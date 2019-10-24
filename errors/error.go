@@ -9,6 +9,8 @@ const (
 	// GetErrorResourceNotFound returns an error with status code 404 and a human readable message containing the identifier
 	// of the resource that was requested but not found.
 	GetErrorResourceNotFound
+	// GetErrorNotImplemented allows consumers to create a get handler that simply returns an unsupported error.
+	GetErrorNotImplemented
 )
 
 // PatchError represents an error that is returned by a PATCH HTTP request.
@@ -37,6 +39,8 @@ const (
 	PostErrorNil PostError = iota
 	// PostErrorUniqueness shall be returned when one or more of the attribute values are already in use or are reserved.
 	PostErrorUniqueness
+	// PostErrorNotImplemented allows consumers to create a get handler that simply returns an unsupported error.
+	PostErrorNotImplemented
 )
 
 // PutError represents an error that is returned by a PUT HTTP request.
@@ -53,6 +57,8 @@ const (
 	// PutErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
 	// identifier of the resource that was requested to be replaced but not found.
 	PutErrorResourceNotFound
+	// PutErrorNotImplemented allows consumers to create a get handler that simply returns an unsupported error.
+	PutErrorNotImplemented
 )
 
 // DeleteError represents an error that is returned by a DELETE HTTP request.
@@ -64,6 +70,8 @@ const (
 	// DeleteErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
 	// identifier of the resource that was requested to be deleted but not found.
 	DeleteErrorResourceNotFound
+	// DeleteErrorNotImplemented allows consumers to create a get handler that simply returns an unsupported error.
+	DeleteErrorNotImplemented
 )
 
 // ValidationError represents an error that is returned during a resource validation.

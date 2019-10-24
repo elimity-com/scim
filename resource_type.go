@@ -79,25 +79,27 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.Validatio
 	return attributes, errors.ValidationErrorNil
 }
 
-// MarshalJSON converts the resource type struct to its corresponding json representation.
-func (t ResourceType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+func (t ResourceType) getRaw() map[string]interface{} {
+	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
 		"id":               t.ID.Value(),
 		"name":             t.Name,
 		"description":      t.Description.Value(),
 		"endpoint":         t.Endpoint,
 		"schema":           t.Schema.ID,
-		"schemaExtensions": t.SchemaExtensions,
-	})
+		"schemaExtensions": t.getRawSchemaExtensions(),
+	}
 }
 
-// MarshalJSON converts the schema extensions struct to its corresponding json representation.
-func (t SchemaExtension) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"schema":   t.Schema.ID,
-		"required": t.Required,
-	})
+func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
+	schemas := make([]map[string]interface{}, 0)
+	for _, e := range t.SchemaExtensions {
+		schemas = append(schemas, map[string]interface{}{
+			"schema":   e.Schema.ID,
+			"required": e.Required,
+		})
+	}
+	return schemas
 }
 
 // validatePatch parse and validate PATCH request
@@ -112,7 +114,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.Valid
 	}
 
 	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
-	errorCauses := []string{}
+	errorCauses := make([]string, 0)
 
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
@@ -133,7 +135,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.Valid
 }
 
 func (t ResourceType) validateOperation(op PatchOperation) []string {
-	var errorCauses []string
+	errorCauses := make([]string, 0)
 
 	// Ensure the operation is a valid one. "add", "replace", or "remove".
 	if !contains(validOps, op.Op) {
@@ -148,7 +150,7 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 	}
 
 	// "add" and "replace" operations must have a value
-	if (op.Op == add || op.Op == replace) && op.Value == nil {
+	if (op.Op == PatchOperationAdd || op.Op == PatchOperationReplace) && op.Value == nil {
 		errorCauses = append(
 			errorCauses,
 			"an add or replace patch operation must contain a value",
@@ -157,7 +159,7 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 
 	// "remove" operations require a path.
 	// The "replace" and "add" operations can have implicit paths, which is part of the value.
-	if op.Op == remove && op.Path == "" {
+	if op.Op == PatchOperationReplace && op.Path == "" {
 		errorCauses = append(errorCauses, "path is required on a remove operation")
 	}
 
@@ -171,12 +173,11 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 func (t ResourceType) validateOperationValue(op PatchOperation) errors.ValidationError {
 	// Not attempting to validate value or path if it is a filter based path.
 	// Perhaps we could at least validate the ComparePath
-	if op.HasPathFilter() {
+	if op.GetPathFilter() != nil {
 		return errors.ValidationErrorNil
 	}
 
 	mapValue, ok := op.Value.(map[string]interface{})
-
 	if !ok {
 		mapValue = map[string]interface{}{op.Path: op.Value}
 	}

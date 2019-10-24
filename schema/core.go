@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -204,22 +203,4 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 	default:
 		return nil, errors.ValidationErrorInvalidSyntax
 	}
-}
-
-// MarshalJSON converts the attribute struct to its corresponding json representation.
-func (a CoreAttribute) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"canonicalValues": a.canonicalValues,
-		"caseExact":       a.caseExact,
-		"description":     a.description.Value(),
-		"multiValued":     a.multiValued,
-		"mutability":      a.mutability,
-		"name":            a.name,
-		"referenceTypes":  a.referenceTypes,
-		"required":        a.required,
-		"returned":        a.returned,
-		"subAttributes":   a.subAttributes,
-		"type":            a.typ,
-		"uniqueness":      a.uniqueness,
-	})
 }

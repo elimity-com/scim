@@ -1,8 +1,6 @@
 package scim
 
 import (
-	"encoding/json"
-
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -14,8 +12,8 @@ type ServiceProviderConfig struct {
 	DocumentationURI optional.String
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
 	AuthenticationSchemes []AuthenticationScheme
-	// ItemsPerPage denotes the maximum and default count on a list request. It defaults to 100.
-	ItemsPerPage int
+	// MaxResults denotes the the integer value specifying the maximum number of resources returned in a response. It defaults to 100.
+	MaxResults int
 	// SupportFiltering whether you SCIM implementation will support filtering.
 	SupportFiltering bool
 	// SupportPatch whether your SCIM implementation will support patch requests.
@@ -55,9 +53,8 @@ const (
 	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
 )
 
-// MarshalJSON converts the service provider config struct to its corresponding json representation.
-func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+func (config ServiceProviderConfig) getRaw() map[string]interface{} {
+	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
 		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
@@ -70,7 +67,7 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		},
 		"filter": map[string]interface{}{
 			"supported":  config.SupportFiltering,
-			"maxResults": config.ItemsPerPage,
+			"maxResults": config.MaxResults,
 		},
 		"changePassword": map[string]bool{
 			"supported": false,
@@ -81,37 +78,29 @@ func (config ServiceProviderConfig) MarshalJSON() ([]byte, error) {
 		"etag": map[string]bool{
 			"supported": false,
 		},
-		"authenticationSchemes": getRawAuthSchemes(config.AuthenticationSchemes),
-	})
+		"authenticationSchemes": config.getRawAuthenticationSchemes(),
+	}
 }
 
-// GetItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.
-func (config ServiceProviderConfig) GetItemsPerPage() int {
-	if config.ItemsPerPage < 1 {
+// getItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.
+func (config ServiceProviderConfig) getItemsPerPage() int {
+	if config.MaxResults < 1 {
 		return fallbackCount
 	}
-
-	return config.ItemsPerPage
+	return config.MaxResults
 }
 
-func getRawAuthSchemes(arr []AuthenticationScheme) []map[string]interface{} {
-	rawAuthScheme := make([]map[string]interface{}, len(arr))
-
-	for i, auth := range arr {
-		rawAuthScheme[i] = auth.Value()
+func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]interface{} {
+	rawAuthScheme := make([]map[string]interface{}, 0)
+	for _, auth := range config.AuthenticationSchemes {
+		rawAuthScheme = append(rawAuthScheme, map[string]interface{}{
+			"description":      auth.Description,
+			"documentationUri": auth.DocumentationURI.Value(),
+			"name":             auth.Name,
+			"primary":          auth.Primary,
+			"specUri":          auth.SpecURI.Value(),
+			"type":             auth.Type,
+		})
 	}
-
 	return rawAuthScheme
-}
-
-// Value builds a map based on the values in the AuthenticationScheme.
-func (auth AuthenticationScheme) Value() map[string]interface{} {
-	return map[string]interface{}{
-		"description":      auth.Description,
-		"documentationUri": auth.DocumentationURI.Value(),
-		"name":             auth.Name,
-		"primary":          auth.Primary,
-		"specUri":          auth.SpecURI.Value(),
-		"type":             auth.Type,
-	}
 }
