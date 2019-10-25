@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"testing"
 
 	"github.com/elimity-com/scim/errors"
@@ -200,4 +202,46 @@ func TestValidValidation(t *testing.T) {
 			t.Errorf("valid resource expected")
 		}
 	}
+}
+
+func TestJSONMarshalling(t *testing.T) {
+	expectedJSON, err := ioutil.ReadFile("./fixtures/schema_test.json")
+
+	if err != nil {
+		t.Errorf("Failed to required test fixture")
+		return
+	}
+
+	actualJSON, err := testSchema.MarshalJSON()
+
+	if err != nil {
+		t.Errorf("Failed to marshal schema into JSON")
+		return
+	}
+
+	normalizedActual, err := normalizeJSON(actualJSON)
+	normalizedExpected, expectedErr := normalizeJSON(expectedJSON)
+
+	if err != nil || expectedErr != nil {
+		t.Errorf("Failed to normalize test JSON")
+		return
+	}
+
+	if normalizedActual != normalizedExpected {
+		t.Errorf("Schema output by MarshalJSON did not match the expected output. Want %s, Got %s", normalizedExpected, normalizedActual)
+	}
+}
+
+func normalizeJSON(rawJSON []byte) (string, error) {
+	dataMap := map[string]interface{}{}
+
+	// Ignoring errors since we know it is valid
+	err := json.Unmarshal(rawJSON, &dataMap)
+	if err != nil {
+		return "", err
+	}
+
+	ret, err := json.Marshal(dataMap)
+
+	return string(ret), err
 }

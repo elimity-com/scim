@@ -204,3 +204,26 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		return nil, errors.ValidationErrorInvalidSyntax
 	}
 }
+
+func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
+	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
+
+	for i, subAttr := range a.subAttributes {
+		rawSubAttributes[i] = subAttr.getRawAttributes()
+	}
+
+	return map[string]interface{}{
+		"canonicalValues": a.canonicalValues,
+		"caseExact":       a.caseExact,
+		"description":     a.description.Value(),
+		"multiValued":     a.multiValued,
+		"mutability":      a.mutability,
+		"name":            a.name,
+		"referenceTypes":  a.referenceTypes,
+		"required":        a.required,
+		"returned":        a.returned,
+		"subAttributes":   rawSubAttributes,
+		"type":            a.typ,
+		"uniqueness":      a.uniqueness,
+	}
+}

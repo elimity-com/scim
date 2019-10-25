@@ -101,22 +101,11 @@ func (s Schema) MarshalJSON() ([]byte, error) {
 }
 
 func (s Schema) getRawAttributes() []map[string]interface{} {
-	attributes := make([]map[string]interface{}, 0)
-	for _, a := range s.Attributes {
-		attributes = append(attributes, map[string]interface{}{
-			"canonicalValues": a.canonicalValues,
-			"caseExact":       a.caseExact,
-			"description":     a.description.Value(),
-			"multiValued":     a.multiValued,
-			"mutability":      a.mutability,
-			"name":            a.name,
-			"referenceTypes":  a.referenceTypes,
-			"required":        a.required,
-			"returned":        a.returned,
-			"subAttributes":   a.subAttributes,
-			"type":            a.typ,
-			"uniqueness":      a.uniqueness,
-		})
+	attributes := make([]map[string]interface{}, len(s.Attributes))
+
+	for i, a := range s.Attributes {
+		attributes[i] = a.getRawAttributes()
 	}
+
 	return attributes
 }
