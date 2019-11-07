@@ -159,7 +159,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	resource, patchErr := resourceType.Handler.Patch(id, patch)
+	resource, patchErr := resourceType.Handler.Patch(r, id, patch)
 	if patchErr != errors.PatchErrorNil {
 		errorHandler(w, r, scimPatchError(patchErr, id))
 		return
@@ -189,7 +189,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	resource, postErr := resourceType.Handler.Create(attributes)
+	resource, postErr := resourceType.Handler.Create(r, attributes)
 	if postErr != errors.PostErrorNil {
 		errorHandler(w, r, scimPostError(postErr))
 		return
@@ -211,7 +211,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 // resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
 // where "{id}" is a resource identifier to retrieve a known resource.
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	resource, getErr := resourceType.Handler.Get(id)
+	resource, getErr := resourceType.Handler.Get(r, id)
 	if getErr != errors.GetErrorNil {
 		errorHandler(w, r, scimGetError(getErr, id))
 		return
@@ -238,7 +238,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	page, getError := resourceType.Handler.GetAll(params)
+	page, getError := resourceType.Handler.GetAll(r, params)
 	if getError != errors.GetErrorNil {
 		errorHandler(w, r, scimGetAllError(getError))
 		return
@@ -277,7 +277,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	resource, putError := resourceType.Handler.Replace(id, attributes)
+	resource, putError := resourceType.Handler.Replace(r, id, attributes)
 	if putError != errors.PutErrorNil {
 		errorHandler(w, r, scimPutError(putError, id))
 		return
@@ -298,7 +298,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 // resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
 // where "{id}" is a resource identifier to delete a known resource.
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	deleteErr := resourceType.Handler.Delete(id)
+	deleteErr := resourceType.Handler.Delete(r, id)
 	if deleteErr != errors.DeleteErrorNil {
 		errorHandler(w, r, scimDeleteError(deleteErr, id))
 		return
