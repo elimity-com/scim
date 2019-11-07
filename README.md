@@ -11,9 +11,9 @@ Incoming resources will be *validated* by their corresponding schemas before bei
 
 The following features are supported:
 - GET for `/Schemas`, `/ServiceProviderConfig` and `/ResourceTypes`
-- CRUD (POST/GET/PUT and DELETE) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
+- CRUD (POST/GET/PUT/DELETE and PATCH) for your own resource types (i.e. `/Users`, `/Groups`, `/Employees`, ...)
 
-Other optional features such as patch, sorting, etc... are **not** supported in this version.
+Other optional features such as sorting, bulk, etc. are **not** supported in this version.
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
@@ -41,7 +41,7 @@ config := scim.ServiceProviderConfig{
 ```
 schema := schema.Schema{
     ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
-    Name:        "User",
+    Name:        optional.NewString("User"),
     Description: optional.NewString("User Account"),
     Attributes:  []schema.CoreAttribute{
         schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
@@ -54,7 +54,7 @@ schema := schema.Schema{
 
 extension := schema.Schema{
     ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-    Name:        "EnterpriseUser",
+    Name:        optional.NewString("EnterpriseUser"),
     Description: optional.NewString("Enterprise User"),
     Attributes: []schema.CoreAttribute{
         schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
