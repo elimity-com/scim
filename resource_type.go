@@ -159,7 +159,7 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 
 	// "remove" operations require a path.
 	// The "replace" and "add" operations can have implicit paths, which is part of the value.
-	if op.Op == PatchOperationReplace && op.Path == "" {
+	if op.Op == PatchOperationRemove && op.Path == "" {
 		errorCauses = append(errorCauses, "path is required on a remove operation")
 	}
 
