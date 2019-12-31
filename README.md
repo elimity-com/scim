@@ -17,8 +17,8 @@ Other optional features such as sorting, bulk, etc. are **not** supported in thi
 
 ## Installation
 Assuming you already have a (recent) version of Go installed, you can get the code with go get:
-```
-go get github.com/elimity-com/scim
+```bash
+$ go get github.com/elimity-com/scim
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ go get github.com/elimity-com/scim
 ### 1. Create a service provider configuration.
 [RFC Config](https://tools.ietf.org/html/rfc7643#section-5) |
 [Example Config](https://tools.ietf.org/html/rfc7643#section-8.5)
-```
+```go
 config := scim.ServiceProviderConfig{
     DocumentationURI: optional.NewString("www.example.com/scim"),
 }
@@ -38,7 +38,7 @@ config := scim.ServiceProviderConfig{
 [User Schema](https://tools.ietf.org/html/rfc7643#section-4.1) |
 [Group Schema](https://tools.ietf.org/html/rfc7643#section-4.2) |
 [Extension Schema](https://tools.ietf.org/html/rfc7643#section-4.3)
-```
+```go
 schema := schema.Schema{
     ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
     Name:        optional.NewString("User"),
@@ -73,14 +73,14 @@ extension := schema.Schema{
 
 #### 3.1 Callback (implementation of `ResourceHandler`)
 [Simple In Memory Example](resource_handler_test.go)
-```
+```go
 var userResourceHandler scim.ResourceHandler
 // initialize w/ own implementation
 ```
 **!** each resource type should have its own resource handler.
 
 #### 3.2 Resource Type
-```
+```go
 resourceTypes := []ResourceType{
     {
         ID:          optional.NewString("User"),
@@ -97,7 +97,7 @@ resourceTypes := []ResourceType{
 ```
 
 ### 4. Create Server
-```
+```go
 server := Server{
     Config:        config,
     ResourceTypes: resourceTypes,
@@ -105,7 +105,7 @@ server := Server{
 ```
 
 ### 5. Listen and Serve
-```
+```go
 log.Fatal(http.ListenAndServe(":8080", server))
 ```
 
