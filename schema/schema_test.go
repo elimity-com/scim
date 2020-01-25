@@ -62,7 +62,15 @@ var testSchema = Schema{
 			Type: AttributeTypeInteger(),
 		})),
 		SimpleCoreAttribute(SimpleNumberParams(NumberParams{
+			Name: "integerNumber",
+			Type: AttributeTypeInteger(),
+		})),
+		SimpleCoreAttribute(SimpleNumberParams(NumberParams{
 			Name: "decimal",
+			Type: AttributeTypeDecimal(),
+		})),
+		SimpleCoreAttribute(SimpleNumberParams(NumberParams{
+			Name: "decimalNumber",
 			Type: AttributeTypeDecimal(),
 		})),
 	},
@@ -173,6 +181,20 @@ func TestValidationInvalid(t *testing.T) {
 			},
 			"decimal": "1.1",
 		},
+		{ // invalid type integer (json.Number)
+			"required": "present",
+			"booleans": []interface{}{
+				true,
+			},
+			"integerNumber": json.Number("1.1"),
+		},
+		{ // invalid type decimal (json.Number)
+			"required": "present",
+			"booleans": []interface{}{
+				true,
+			},
+			"decimalNumber": json.Number("fail"),
+		},
 	} {
 		if _, scimErr := testSchema.Validate(test); scimErr == errors.ValidationErrorNil {
 			t.Errorf("invalid resource expected")
@@ -192,10 +214,12 @@ func TestValidValidation(t *testing.T) {
 					"sub": "present",
 				},
 			},
-			"binary":   "ZXhhbXBsZQ==",
-			"dateTime": "2008-01-23T04:56:22Z",
-			"integer":  11,
-			"decimal":  -2.1e5,
+			"binary":        "ZXhhbXBsZQ==",
+			"dateTime":      "2008-01-23T04:56:22Z",
+			"integer":       11,
+			"decimal":       -2.1e5,
+			"integerNumber": json.Number("11"),
+			"decimalNumber": json.Number("11.12"),
 		},
 	} {
 		if _, scimErr := testSchema.Validate(test); scimErr != errors.ValidationErrorNil {
