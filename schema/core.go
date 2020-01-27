@@ -1,8 +1,8 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -185,15 +185,31 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		}
 		return date, errors.ValidationErrorNil
 	case attributeDataTypeDecimal:
-		if reflect.TypeOf(attribute).Kind() != reflect.Float64 {
+		switch n := attribute.(type) {
+		case json.Number:
+			f, err := n.Float64()
+			if err != nil {
+				return nil, errors.ValidationErrorInvalidValue
+			}
+			return f, errors.ValidationErrorNil
+		case float64:
+			return n, errors.ValidationErrorNil
+		default:
 			return nil, errors.ValidationErrorInvalidValue
 		}
-		return attribute.(float64), errors.ValidationErrorNil
 	case attributeDataTypeInteger:
-		if reflect.TypeOf(attribute).Kind() != reflect.Int {
+		switch n := attribute.(type) {
+		case json.Number:
+			i, err := n.Int64()
+			if err != nil {
+				return nil, errors.ValidationErrorInvalidValue
+			}
+			return i, errors.ValidationErrorNil
+		case int, int8, int16, int32, int64:
+			return n, errors.ValidationErrorNil
+		default:
 			return nil, errors.ValidationErrorInvalidValue
 		}
-		return attribute.(int), errors.ValidationErrorNil
 	case attributeDataTypeString, attributeDataTypeReference:
 		s, ok := attribute.(string)
 		if !ok {
