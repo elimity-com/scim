@@ -25,6 +25,8 @@ const (
 	scimTypeInvalidValue = "invalidValue"
 	// Endpoint not implemented
 	scimTypeNotImplemented = "notImplemented"
+	// When a path does not return a valid target.
+	scimTypeNoTarget = "noTarget"
 )
 
 func scimErrorResourceNotFound(id string) scimError {
@@ -82,6 +84,11 @@ var (
 	scimErrorNotImplemented = scimError{
 		scimType: scimTypeNotImplemented,
 		status:   http.StatusNotImplemented,
+	}
+	scimErrorNoTarget = scimError{
+		scimType: scimTypeNoTarget,
+		detail:   "The specified path did not yield an attribute or attribute value that could be operated on.",
+		status:   http.StatusBadRequest,
 	}
 )
 
@@ -164,6 +171,8 @@ func scimPatchError(patchError errors.PatchError, id string) scimError {
 		return scimErrorMutability
 	case errors.PatchErrorResourceNotFound:
 		return scimErrorResourceNotFound(id)
+	case errors.PatchErrorNoTarget:
+		return scimErrorNoTarget
 	default:
 		return scimErrorInternalServer
 	}
