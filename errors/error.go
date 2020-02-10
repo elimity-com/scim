@@ -27,6 +27,11 @@ const (
 	// PatchErrorResourceNotFound returns an error with status code 404 and a human readable message containing the
 	// identifier of the resource that was requested to be replaced but not found.
 	PatchErrorResourceNotFound
+	// PatchErrorNoTarget shall be returned when a specified "path" does not
+	// yield an attribute or attribute value that can be operated on. This
+	// occurs when the specified "path" value contains a filter that yields no
+	// match.
+	PatchErrorNoTarget
 	// PatchErrorNotImplemented allows consumers to create a patch handler that simply returns an unsupported error.
 	PatchErrorNotImplemented
 )
