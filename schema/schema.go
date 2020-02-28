@@ -8,6 +8,14 @@ import (
 	"github.com/elimity-com/scim/optional"
 )
 
+const (
+	// UserSchema is the URI for the User resource.
+	UserSchema = "urn:ietf:params:scim:schemas:core:2.0:User"
+
+	// GroupSchema is the URI for the Group resource.
+	GroupSchema = "urn:ietf:params:scim:schemas:core:2.0:Group"
+)
+
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
 	Attributes  []CoreAttribute
@@ -46,14 +54,25 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.V
 	return attributes, errors.ValidationErrorNil
 }
 
+// IsExtension return if the schema is an extension schema.
+func (s Schema) IsExtension() bool {
+	return s.ID != UserSchema && s.ID != GroupSchema
+}
+
 // ValidatePatchOperationValue validates an individual operation and its related value
 func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) errors.ValidationError {
+	isExtension := s.IsExtension()
+
 	for k, v := range operationValue {
 		var attr *CoreAttribute
 		scimErr := errors.ValidationErrorNil
 
 		for _, attribute := range s.Attributes {
 			if strings.EqualFold(attribute.name, k) {
+				attr = &attribute
+				break
+			}
+			if isExtension && strings.EqualFold(s.ID+":"+attribute.name, k) {
 				attr = &attribute
 				break
 			}
