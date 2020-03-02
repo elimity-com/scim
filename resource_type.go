@@ -122,8 +122,9 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.Valid
 		return req, errors.ValidationErrorInvalidValue
 	}
 
-	for _, op := range req.Operations {
-		errorCauses = append(errorCauses, t.validateOperation(op)...)
+	for i := range req.Operations {
+		req.Operations[i].Op = strings.ToLower(req.Operations[i].Op)
+		errorCauses = append(errorCauses, t.validateOperation(req.Operations[i])...)
 	}
 
 	// Denotes all of the errors that have occurred parsing the request.
