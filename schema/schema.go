@@ -94,7 +94,7 @@ func isReadOnly(attr CoreAttribute) bool {
 func (s Schema) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"id":          s.ID,
-		"name":        s.Name,
+		"name":        s.Name.Value(),
 		"description": s.Description.Value(),
 		"attributes":  s.getRawAttributes(),
 	})

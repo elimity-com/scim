@@ -1,134 +1,126 @@
 {
   "attributes": [
     {
-      "canonicalValues": null,
       "caseExact": false,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "required",
-      "referenceTypes": null,
       "required": true,
       "returned": "default",
-      "subAttributes": [],
       "type": "string",
       "uniqueness": "none"
     },
     {
-      "canonicalValues": null,
-      "caseExact": false,
       "description": "",
       "multiValued": true,
       "mutability": "readWrite",
       "name": "booleans",
-      "referenceTypes": null,
       "required": true,
       "returned": "default",
-      "subAttributes": [],
-      "type": "boolean",
-      "uniqueness": "none"
+      "type": "boolean"
     },
     {
-      "canonicalValues": null,
-      "caseExact": false,
       "description": "",
       "multiValued": true,
       "mutability": "readWrite",
       "name": "complex",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
       "subAttributes": [
         {
-          "canonicalValues": null,
           "caseExact": false,
           "description": "",
           "multiValued": false,
           "mutability": "readWrite",
           "name": "sub",
-          "referenceTypes": null,
           "required": false,
           "returned": "default",
-          "subAttributes": [],
           "type": "string",
           "uniqueness": "none"
         }
       ],
-      "type": "complex",
-      "uniqueness": "none"
+      "type": "complex"
     },
     {
-      "canonicalValues": null,
       "caseExact": true,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "binary",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
-      "subAttributes": [],
       "type": "binary",
       "uniqueness": "none"
     },
     {
-      "canonicalValues": null,
       "caseExact": false,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "dateTime",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
-      "subAttributes": [],
       "type": "dateTime",
       "uniqueness": "none"
     },
     {
-      "canonicalValues": null,
       "caseExact": true,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "reference",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
-      "subAttributes": [],
       "type": "reference",
       "uniqueness": "none"
     },
     {
-      "canonicalValues": null,
       "caseExact": false,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "integer",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
-      "subAttributes": [],
       "type": "integer",
       "uniqueness": "none"
     },
     {
-      "canonicalValues": null,
+      "caseExact": false,
+      "description": "",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "integerNumber",
+      "required": false,
+      "returned": "default",
+      "type": "integer",
+      "uniqueness": "none"
+    },
+    {
       "caseExact": false,
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
       "name": "decimal",
-      "referenceTypes": null,
       "required": false,
       "returned": "default",
-      "subAttributes": [],
+      "type": "decimal",
+      "uniqueness": "none"
+    },
+    {
+      "caseExact": false,
+      "description": "",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "decimalNumber",
+      "required": false,
+      "returned": "default",
       "type": "decimal",
       "uniqueness": "none"
     }
   ],
   "description": "",
   "id": "empty",
-  "name": {}
+  "name": "test"
 }
