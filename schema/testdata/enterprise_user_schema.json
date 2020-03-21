@@ -1,0 +1,109 @@
+{
+  "attributes": [
+    {
+      "caseExact": false,
+      "description": "Numeric or alphanumeric identifier assigned to a person, typically based on order of hire or association with an organization.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "employeeNumber",
+      "required": false,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
+      "caseExact": false,
+      "description": "Identifies the name of a cost center.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "costCenter",
+      "required": false,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
+      "caseExact": false,
+      "description": "Identifies the name of an organization.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "organization",
+      "required": false,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
+      "caseExact": false,
+      "description": "Identifies the name of a division.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "division",
+      "required": false,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
+      "caseExact": false,
+      "description": "Identifies the name of a department.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "department",
+      "required": false,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
+      "description": "The User's manager. A complex type that optionally allows service providers to represent organizational hierarchy by referencing the 'id' attribute of another User.",
+      "multiValued": false,
+      "mutability": "readWrite",
+      "name": "manager",
+      "required": false,
+      "returned": "default",
+      "subAttributes": [
+        {
+          "caseExact": false,
+          "description": "The id of the SCIM resource representing the User's manager. REQUIRED.",
+          "multiValued": false,
+          "mutability": "readWrite",
+          "name": "value",
+          "required": false,
+          "returned": "default",
+          "type": "string",
+          "uniqueness": "none"
+        },
+        {
+          "caseExact": true,
+          "description": "The URI of the SCIM resource representing the User's manager. REQUIRED.",
+          "multiValued": false,
+          "mutability": "readWrite",
+          "name": "$ref",
+          "referenceTypes": [
+            "User"
+          ],
+          "required": false,
+          "returned": "default",
+          "type": "reference",
+          "uniqueness": "none"
+        },
+        {
+          "caseExact": false,
+          "description": "The displayName of the User's manager. OPTIONAL and READ-ONLY.",
+          "multiValued": false,
+          "mutability": "readOnly",
+          "name": "displayName",
+          "required": false,
+          "returned": "default",
+          "type": "string",
+          "uniqueness": "none"
+        }
+      ],
+      "type": "complex"
+    }
+  ],
+  "description": "Enterprise User",
+  "id": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+  "name": "Enterprise User"
+}

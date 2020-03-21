@@ -229,15 +229,13 @@ func TestValidValidation(t *testing.T) {
 }
 
 func TestJSONMarshalling(t *testing.T) {
-	expectedJSON, err := ioutil.ReadFile("./fixtures/schema_test.json")
-
+	expectedJSON, err := ioutil.ReadFile("./testdata/schema_test.json")
 	if err != nil {
-		t.Errorf("Failed to required test fixture")
+		t.Errorf("Failed to acquire test data")
 		return
 	}
 
 	actualJSON, err := testSchema.MarshalJSON()
-
 	if err != nil {
 		t.Errorf("Failed to marshal schema into JSON")
 		return
@@ -245,7 +243,6 @@ func TestJSONMarshalling(t *testing.T) {
 
 	normalizedActual, err := normalizeJSON(actualJSON)
 	normalizedExpected, expectedErr := normalizeJSON(expectedJSON)
-
 	if err != nil || expectedErr != nil {
 		t.Errorf("Failed to normalize test JSON")
 		return
