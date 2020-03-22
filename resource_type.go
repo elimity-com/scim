@@ -188,15 +188,17 @@ func (t ResourceType) validateOperationValue(op PatchOperation) errors.Validatio
 		mapValue = map[string]interface{}{op.Path: op.Value}
 	}
 
-	err := t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
-	if err != errors.ValidationErrorNil {
-		// Attempt with extensions
-		for _, ext := range t.SchemaExtensions {
-			extErr := ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
-			if extErr == errors.ValidationErrorNil {
-				return errors.ValidationErrorNil
+	// Check if it's a patch on a extension.
+	if op.Path != "" {
+		if i := strings.LastIndex(op.Path, ":"); i != -1 {
+			id := op.Path[:i]
+			for _, ext := range t.SchemaExtensions {
+				if strings.EqualFold(id, ext.Schema.ID) {
+					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
+				}
 			}
 		}
 	}
-	return err
+
+	return t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
 }
