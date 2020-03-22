@@ -54,15 +54,8 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.V
 	return attributes, errors.ValidationErrorNil
 }
 
-// IsExtension return if the schema is an extension schema.
-func (s Schema) IsExtension() bool {
-	return s.ID != UserSchema && s.ID != GroupSchema
-}
-
-// ValidatePatchOperationValue validates an individual operation and its related value
-func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) errors.ValidationError {
-	isExtension := s.IsExtension()
-
+// ValidatePatchOperation validates an individual operation and its related value.
+func (s Schema) ValidatePatchOperation(operation string, operationValue map[string]interface{}, isExtension bool) errors.ValidationError {
 	for k, v := range operationValue {
 		var attr *CoreAttribute
 		scimErr := errors.ValidationErrorNil
@@ -95,6 +88,11 @@ func (s Schema) ValidatePatchOperationValue(operation string, operationValue map
 	}
 
 	return errors.ValidationErrorNil
+}
+
+// ValidatePatchOperationValue validates an individual operation and its related value
+func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) errors.ValidationError {
+	return s.ValidatePatchOperation(operation, operationValue, false)
 }
 
 func cannotBePatched(op string, attr CoreAttribute) bool {

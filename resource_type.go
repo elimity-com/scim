@@ -191,7 +191,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) errors.Validatio
 	if err != errors.ValidationErrorNil {
 		// Attempt with extensions
 		for _, ext := range t.SchemaExtensions {
-			extErr := ext.Schema.ValidatePatchOperationValue(op.Op, mapValue)
+			extErr := ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
 			if extErr == errors.ValidationErrorNil {
 				return errors.ValidationErrorNil
 			}
