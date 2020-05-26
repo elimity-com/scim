@@ -44,13 +44,16 @@ type SchemaExtension struct {
 	Required bool
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.ValidationError) {
-	d := json.NewDecoder(bytes.NewReader(raw))
+// unmarshal unifies the unmarshal of the requests.
+func unmarshal(data []byte, v interface{}) error {
+	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
+	return d.Decode(v)
+}
 
+func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.ValidationError) {
 	var m map[string]interface{}
-	err := d.Decode(&m)
-	if err != nil {
+	if err := unmarshal(raw, &m); err != nil {
 		return ResourceAttributes{}, errors.ValidationErrorInvalidSyntax
 	}
 
@@ -106,10 +109,12 @@ func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
 func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.ValidationError) {
 	var req PatchRequest
 
-	data, _ := ioutil.ReadAll(r.Body)
-	jsonErr := json.Unmarshal(data, &req)
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return req, errors.ValidationErrorInvalidSyntax
+	}
 
-	if jsonErr != nil {
+	if err := unmarshal(data, &req); err != nil {
 		return req, errors.ValidationErrorInvalidSyntax
 	}
 
@@ -181,6 +186,18 @@ func (t ResourceType) validateOperationValue(op PatchOperation) errors.Validatio
 	mapValue, ok := op.Value.(map[string]interface{})
 	if !ok {
 		mapValue = map[string]interface{}{op.Path: op.Value}
+	}
+
+	// Check if it's a patch on a extension.
+	if op.Path != "" {
+		if i := strings.LastIndex(op.Path, ":"); i != -1 {
+			id := op.Path[:i]
+			for _, ext := range t.SchemaExtensions {
+				if strings.EqualFold(id, ext.Schema.ID) {
+					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
+				}
+			}
+		}
 	}
 
 	return t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
