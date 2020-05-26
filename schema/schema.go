@@ -25,10 +25,10 @@ type Schema struct {
 }
 
 // Validate validates given resource based on the schema.
-func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.ValidationError) {
+func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.ScimError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
-		return nil, errors.ValidationErrorInvalidSyntax
+		return nil, errors.ScimErrorInvalidSyntax
 	}
 
 	attributes := make(map[string]interface{})
@@ -38,7 +38,7 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.V
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
 				if found {
-					return nil, errors.ValidationErrorInvalidSyntax
+					return nil, errors.ScimErrorInvalidSyntax
 				}
 				found = true
 				hit = v
@@ -46,19 +46,19 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, errors.V
 		}
 
 		attr, scimErr := attribute.validate(hit)
-		if scimErr != errors.ValidationErrorNil {
+		if scimErr != nil {
 			return nil, scimErr
 		}
 		attributes[attribute.name] = attr
 	}
-	return attributes, errors.ValidationErrorNil
+	return attributes, nil
 }
 
 // ValidatePatchOperation validates an individual operation and its related value.
-func (s Schema) ValidatePatchOperation(operation string, operationValue map[string]interface{}, isExtension bool) errors.ValidationError {
+func (s Schema) ValidatePatchOperation(operation string, operationValue map[string]interface{}, isExtension bool) *errors.ScimError {
 	for k, v := range operationValue {
 		var attr *CoreAttribute
-		scimErr := errors.ValidationErrorNil
+		var scimErr *errors.ScimError
 
 		for _, attribute := range s.Attributes {
 			if strings.EqualFold(attribute.name, k) {
@@ -74,7 +74,7 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 		// Attribute does not exist in the schema, thus it is an invalid request.
 		// Immutable attrs can only be added and Readonly attrs cannot be patched
 		if attr == nil || cannotBePatched(operation, *attr) {
-			return errors.ValidationErrorInvalidValue
+			return errors.ScimErrorInvalidValue
 		}
 
 		// "remove" operations simply have to exist
@@ -82,16 +82,16 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 			_, scimErr = attr.validate(v)
 		}
 
-		if scimErr != errors.ValidationErrorNil {
+		if scimErr != nil {
 			return scimErr
 		}
 	}
 
-	return errors.ValidationErrorNil
+	return nil
 }
 
 // ValidatePatchOperationValue validates an individual operation and its related value
-func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) errors.ValidationError {
+func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) *errors.ScimError {
 	return s.ValidatePatchOperation(operation, operationValue, false)
 }
 

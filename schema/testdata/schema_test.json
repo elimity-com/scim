@@ -102,20 +102,6 @@
       "description": "",
       "multiValued": false,
       "mutability": "readWrite",
-      "name": "integerNumber",
-      "referenceTypes": null,
-      "required": false,
-      "returned": "default",
-      "subAttributes": [],
-      "type": "integer",
-      "uniqueness": "none"
-    },
-    {
-      "canonicalValues": null,
-      "caseExact": false,
-      "description": "",
-      "multiValued": false,
-      "mutability": "readWrite",
       "name": "decimal",
       "required": false,
       "returned": "default",
@@ -130,20 +116,6 @@
       "name": "decimalNumber",
       "required": false,
       "returned": "default",
-      "type": "decimal",
-      "uniqueness": "none"
-    },
-    {
-      "canonicalValues": null,
-      "caseExact": false,
-      "description": "",
-      "multiValued": false,
-      "mutability": "readWrite",
-      "name": "decimalNumber",
-      "referenceTypes": null,
-      "required": false,
-      "returned": "default",
-      "subAttributes": [],
       "type": "decimal",
       "uniqueness": "none"
     }

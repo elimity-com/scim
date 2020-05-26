@@ -51,14 +51,14 @@ func unmarshal(data []byte, v interface{}) error {
 	return d.Decode(v)
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.ValidationError) {
+func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
-		return ResourceAttributes{}, errors.ValidationErrorInvalidSyntax
+		return ResourceAttributes{}, errors.ScimErrorInvalidSyntax
 	}
 
 	attributes, scimErr := t.Schema.Validate(m)
-	if scimErr != errors.ValidationErrorNil {
+	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
 
@@ -66,20 +66,20 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, errors.Validatio
 		extensionField := m[extension.Schema.ID]
 		if extensionField == nil {
 			if extension.Required {
-				return ResourceAttributes{}, errors.ValidationErrorInvalidValue
+				return ResourceAttributes{}, errors.ScimErrorInvalidValue
 			}
 			continue
 		}
 
 		extensionAttributes, scimErr := extension.Schema.Validate(extensionField)
-		if scimErr != errors.ValidationErrorNil {
+		if scimErr != nil {
 			return ResourceAttributes{}, scimErr
 		}
 
 		attributes[extension.Schema.ID] = extensionAttributes
 	}
 
-	return attributes, errors.ValidationErrorNil
+	return attributes, nil
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
@@ -106,16 +106,16 @@ func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
 }
 
 // validatePatch parse and validate PATCH request
-func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.ValidationError) {
+func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
 	var req PatchRequest
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return req, errors.ValidationErrorInvalidSyntax
+		return req, errors.ScimErrorInvalidSyntax
 	}
 
 	if err := unmarshal(data, &req); err != nil {
-		return req, errors.ValidationErrorInvalidSyntax
+		return req, errors.ScimErrorInvalidSyntax
 	}
 
 	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
@@ -124,7 +124,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.Valid
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
 	if len(req.Operations) < 1 {
-		return req, errors.ValidationErrorInvalidValue
+		return req, errors.ScimErrorInvalidValue
 	}
 
 	for i := range req.Operations {
@@ -134,10 +134,10 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, errors.Valid
 
 	// Denotes all of the errors that have occurred parsing the request.
 	if len(errorCauses) > 0 {
-		return req, errors.ValidationErrorInvalidSyntax
+		return req, errors.ScimErrorInvalidSyntax
 	}
 
-	return req, errors.ValidationErrorNil
+	return req, nil
 }
 
 func (t ResourceType) validateOperation(op PatchOperation) []string {
@@ -169,18 +169,18 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 		errorCauses = append(errorCauses, "path is required on a remove operation")
 	}
 
-	if err := t.validateOperationValue(op); err != errors.ValidationErrorNil {
+	if err := t.validateOperationValue(op); err != nil {
 		return append(errorCauses, fmt.Sprintf("%s operation has an invalid value", op.Op))
 	}
 
 	return errorCauses
 }
 
-func (t ResourceType) validateOperationValue(op PatchOperation) errors.ValidationError {
+func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
 	// Not attempting to validate value or path if it is a filter based path.
 	// Perhaps we could at least validate the ComparePath
 	if op.GetPathFilter() != nil {
-		return errors.ValidationErrorNil
+		return nil
 	}
 
 	mapValue, ok := op.Value.(map[string]interface{})

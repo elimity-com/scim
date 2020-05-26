@@ -54,17 +54,17 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 // ResourceHandler represents a set of callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
 	// Create stores given attributes. Returns a resource with the attributes that are stored and a (new) unique identifier.
-	Create(r *http.Request, attributes ResourceAttributes) (Resource, errors.PostError)
+	Create(r *http.Request, attributes ResourceAttributes) (Resource, *errors.ScimError)
 	// Get returns the resource corresponding with the given identifier.
-	Get(r *http.Request, id string) (Resource, errors.GetError)
+	Get(r *http.Request, id string) (Resource, *errors.ScimError)
 	// GetAll returns a paginated list of resources.
-	GetAll(r *http.Request, params ListRequestParams) (Page, errors.GetError)
+	GetAll(r *http.Request, params ListRequestParams) (Page, *errors.ScimError)
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
-	Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError)
+	Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, *errors.ScimError)
 	// Delete removes the resource with corresponding ID.
-	Delete(r *http.Request, id string) errors.DeleteError
+	Delete(r *http.Request, id string) *errors.ScimError
 	// Patch update one or more attributes of a SCIM resource using a sequence of
 	// operations to "add", "remove", or "replace" values.
-	Patch(r *http.Request, id string, request PatchRequest) (Resource, errors.PatchError)
+	Patch(r *http.Request, id string, request PatchRequest) (Resource, *errors.ScimError)
 }

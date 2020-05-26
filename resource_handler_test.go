@@ -21,7 +21,7 @@ type testResourceHandler struct {
 	data map[string]ResourceAttributes
 }
 
-func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, errors.PostError) {
+func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, *errors.ScimError) {
 	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
@@ -33,24 +33,24 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
-	}, errors.PostErrorNil
+	}, nil
 }
 
-func (h testResourceHandler) Get(r *http.Request, id string) (Resource, errors.GetError) {
+func (h testResourceHandler) Get(r *http.Request, id string) (Resource, *errors.ScimError) {
 	// check if resource exists
 	data, ok := h.data[id]
 	if !ok {
-		return Resource{}, errors.GetErrorResourceNotFound
+		return Resource{}, errors.ScimErrorResourceNotFound(id)
 	}
 
 	// return resource with given identifier
 	return Resource{
 		ID:         id,
 		Attributes: data,
-	}, errors.GetErrorNil
+	}, nil
 }
 
-func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, errors.GetError) {
+func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, *errors.ScimError) {
 	resources := make([]Resource, 0)
 	i := 1
 
@@ -71,14 +71,14 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	return Page{
 		TotalResults: len(h.data),
 		Resources:    resources,
-	}, errors.GetErrorNil
+	}, nil
 }
 
-func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError) {
+func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, *errors.ScimError) {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
-		return Resource{}, errors.PutErrorResourceNotFound
+		return Resource{}, errors.ScimErrorResourceNotFound(id)
 	}
 
 	// replace (all) attributes
@@ -88,23 +88,23 @@ func (h testResourceHandler) Replace(r *http.Request, id string, attributes Reso
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
-	}, errors.PutErrorNil
+	}, nil
 }
 
-func (h testResourceHandler) Delete(r *http.Request, id string) errors.DeleteError {
+func (h testResourceHandler) Delete(r *http.Request, id string) *errors.ScimError {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
-		return errors.DeleteErrorResourceNotFound
+		return errors.ScimErrorResourceNotFound(id)
 	}
 
 	// delete resource
 	delete(h.data, id)
 
-	return errors.DeleteErrorNil
+	return nil
 }
 
-func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, errors.PatchError) {
+func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, *errors.ScimError) {
 	for _, op := range req.Operations {
 		switch op.Op {
 		case PatchOperationAdd:
@@ -139,5 +139,5 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 	return Resource{
 		ID:         id,
 		Attributes: h.data[id],
-	}, errors.PatchErrorNil
+	}, nil
 }
