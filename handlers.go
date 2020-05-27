@@ -171,7 +171,12 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
+
+	if len(resource.Meta.Version) != 0 {
+		w.Header().Set("Etag", resource.Meta.Version)
+	}
 	w.WriteHeader(http.StatusOK)
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -201,7 +206,12 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
+
+	if len(resource.Meta.Version) != 0 {
+		w.Header().Set("Etag", resource.Meta.Version)
+	}
 	w.WriteHeader(http.StatusCreated)
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -223,6 +233,11 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
+
+	if len(resource.Meta.Version) != 0 {
+		w.Header().Set("Etag", resource.Meta.Version)
+	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -289,6 +304,11 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
+
+	if len(resource.Meta.Version) != 0 {
+		w.Header().Set("Etag", resource.Meta.Version)
+	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
