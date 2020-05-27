@@ -51,7 +51,7 @@ type ScimError struct {
 	Status int
 }
 
-func (e *ScimError) Error() string {
+func (e ScimError) Error() string {
 	errorMessage := fmt.Sprint(e.Status)
 	if e.ScimType != "" {
 		errorMessage += fmt.Sprintf(" (%s)", e.ScimType)
@@ -63,7 +63,7 @@ func (e *ScimError) Error() string {
 }
 
 // MarshalJSON converts the error struct to its corresponding json representation.
-func (e *ScimError) MarshalJSON() ([]byte, error) {
+func (e ScimError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Schemas  []string `json:"schemas"`
 		ScimType ScimType `json:"scimType,omitempty"`
