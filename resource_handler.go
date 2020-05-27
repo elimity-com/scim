@@ -29,9 +29,9 @@ type ListRequestParams struct {
 type ResourceAttributes map[string]interface{}
 
 type Meta struct {
-	Created *time.Time
+	Created      *time.Time
 	LastModified *time.Time
-	Version string
+	Version      string
 }
 
 // Resource represents an entity returned by a callback method.
@@ -40,7 +40,7 @@ type Resource struct {
 	ID string
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
-	Meta Meta
+	Meta       Meta
 }
 
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
@@ -53,24 +53,24 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 
 	response["schemas"] = schemas
 
-	meta := meta{
+	m := meta{
 		ResourceType: resourceType.Name,
 		Location:     fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
 	}
 
 	if r.Meta.Created != nil {
-		meta.Created = r.Meta.Created.Format(time.RFC3339)
+		m.Created = r.Meta.Created.Format(time.RFC3339)
 	}
 
 	if r.Meta.LastModified != nil {
-		meta.LastModified = r.Meta.LastModified.Format(time.RFC3339)
+		m.LastModified = r.Meta.LastModified.Format(time.RFC3339)
 	}
 
 	if len(r.Meta.Version) != 0 {
-		meta.Version = r.Meta.Version
+		m.Version = r.Meta.Version
 	}
 
-	response["meta"] = meta
+	response["meta"] = m
 
 	return response
 }

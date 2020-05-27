@@ -18,7 +18,7 @@ func ExampleResourceHandler() {
 
 type testData struct {
 	resourceAttributes ResourceAttributes
-	meta map[string]string
+	meta               map[string]string
 }
 
 // simple in-memory resource database
@@ -58,9 +58,9 @@ func (h testResourceHandler) Get(r *http.Request, id string) (Resource, errors.G
 		ID:         id,
 		Attributes: data.resourceAttributes,
 		Meta: Meta{
-			Created: &created,
+			Created:      &created,
 			LastModified: &lastModified,
-			Version: fmt.Sprintf("%v", data.meta["version"]),
+			Version:      fmt.Sprintf("%v", data.meta["version"]),
 		},
 	}, errors.GetErrorNil
 }
@@ -89,7 +89,8 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError) {
+func (h testResourceHandler) Replace(
+	r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError) {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {

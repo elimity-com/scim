@@ -116,9 +116,7 @@ func newTestServer() Server {
 	}
 }
 
-
 func newTestResourceHandler() ResourceHandler {
-
 	data := make(map[string]testData)
 
 	// Generate enough test data to test pagination
@@ -128,9 +126,9 @@ func newTestResourceHandler() ResourceHandler {
 				"userName": fmt.Sprintf("test%d", i),
 			},
 			meta: map[string]string{
-				"created" : fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
-				"lastModified" : fmt.Sprintf("2020-02-%02dT16:05:04+07:00", i),
-				"version" : fmt.Sprintf("v%d", i),
+				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
+				"lastModified": fmt.Sprintf("2020-02-%02dT16:05:04+07:00", i),
+				"version":      fmt.Sprintf("v%d", i),
 			},
 		}
 	}
@@ -191,7 +189,6 @@ func TestServerSchemaEndpointInvalid(t *testing.T) {
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
-
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -347,19 +344,19 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Error("handler did not return the resource meta resource type correctly")
 	}
 
-	if meta["created"]  != "2020-01-01T15:04:05+07:00" {
+	if meta["created"] != "2020-01-01T15:04:05+07:00" {
 		t.Error("handler did not return the resource meta created correctly")
 	}
 
-	if meta["lastModified"]  != "2020-02-01T16:05:04+07:00" {
+	if meta["lastModified"] != "2020-02-01T16:05:04+07:00" {
 		t.Error("handler did not return the resource meta last modified correctly")
 	}
 
-	if meta["location"]  != "Users/0001" {
+	if meta["location"] != "Users/0001" {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 
-	if meta["version"]  != "v1" {
+	if meta["version"] != "v1" {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 }
