@@ -36,10 +36,17 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 		resourceAttributes: attributes,
 	}
 
+	now := time.Now()
+
 	// return stored resource
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
+		Meta: Meta{
+			Created: &now,
+			LastModified: &now,
+			Version: fmt.Sprintf("v%s", id),
+		},
 	}, errors.PostErrorNil
 }
 
@@ -153,9 +160,17 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 		}
 	}
 
+	created, _ := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%v", h.data[id].meta["created"]), time.UTC)
+	now := time.Now()
+
 	// return resource with replaced attributes
 	return Resource{
 		ID:         id,
 		Attributes: h.data[id].resourceAttributes,
+		Meta: Meta{
+			Created:      &created,
+			LastModified: &now,
+			Version:      fmt.Sprintf("%s.patch", h.data[id].meta["version"]),
+		},
 	}, errors.PatchErrorNil
 }
