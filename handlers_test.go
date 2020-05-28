@@ -304,7 +304,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Error("handler did not return the header content type correctly")
 	}
 
-	if  !strings.HasPrefix(rr.Header().Get("Etag"), "v") {
+	if !strings.HasPrefix(rr.Header().Get("Etag"), "v") {
 		t.Error("handler did not return the header entity tag correctly")
 	}
 
@@ -326,11 +326,11 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Error("handler did not return the resource meta resource type correctly")
 	}
 
-	if len(fmt.Sprintf("%v", meta["created"])) == 0  {
+	if len(fmt.Sprintf("%v", meta["created"])) == 0 {
 		t.Error("handler did not return the resource meta created correctly")
 	}
 
-	if len(fmt.Sprintf("%v", meta["lastModified"])) == 0{
+	if len(fmt.Sprintf("%v", meta["lastModified"])) == 0 {
 		t.Error("handler did not return the resource meta last modified correctly")
 	}
 

@@ -43,9 +43,9 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 		ID:         id,
 		Attributes: attributes,
 		Meta: Meta{
-			Created: &now,
+			Created:      &now,
 			LastModified: &now,
-			Version: fmt.Sprintf("v%s", id),
+			Version:      fmt.Sprintf("v%s", id),
 		},
 	}, errors.PostErrorNil
 }

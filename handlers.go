@@ -14,7 +14,9 @@ func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr scimError) {
 	if err != nil {
 		log.Fatalf("failed marshaling scim error: %v", err)
 	}
+
 	w.WriteHeader(scimErr.status)
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -48,6 +50,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed marshaling list response: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -69,6 +72,7 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 		log.Fatalf("failed marshaling schema: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -102,6 +106,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("failed marshaling list response: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -118,6 +123,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 			break
 		}
 	}
+
 	if resourceType.Name != name {
 		errorHandler(w, r, scimErrorResourceNotFound(name))
 		return
@@ -129,6 +135,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 		log.Fatalf("failed marshaling resource type: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -144,6 +151,7 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 		log.Fatalf("failed marshaling service provider config: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -175,6 +183,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 	if len(resource.Meta.Version) != 0 {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
+
 	w.WriteHeader(http.StatusOK)
 
 	_, err = w.Write(raw)
@@ -210,6 +219,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	if len(resource.Meta.Version) != 0 {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
+
 	w.WriteHeader(http.StatusCreated)
 
 	_, err = w.Write(raw)
@@ -275,6 +285,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		log.Fatalf("failed marshalling list response: %v", err)
 		return
 	}
+
 	_, err = w.Write(raw)
 	if err != nil {
 		log.Printf("failed writing response: %v", err)
@@ -323,5 +334,6 @@ func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id
 		errorHandler(w, r, scimDeleteError(deleteErr, id))
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
