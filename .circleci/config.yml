@@ -19,7 +19,7 @@ jobs:
       - checkout
       - run: mkdir -p $TEST_RESULTS_DIR
       - run: go get github.com/jstemmer/go-junit-report
-      - run: go test -v | go-junit-report > ${TEST_RESULTS_DIR}/results.xml
+      - run: go test -v ./... | go-junit-report > ${TEST_RESULTS_DIR}/results.xml
       - store_artifacts:
           path: /tmp/test-results
       - store_test_results:
