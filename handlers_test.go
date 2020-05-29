@@ -117,12 +117,19 @@ func newTestServer() Server {
 }
 
 func newTestResourceHandler() ResourceHandler {
-	data := make(map[string]ResourceAttributes)
+	data := make(map[string]testData)
 
 	// Generate enough test data to test pagination
 	for i := 1; i < 21; i++ {
-		data[fmt.Sprintf("000%d", i)] = ResourceAttributes{
-			"userName": fmt.Sprintf("test%d", i),
+		data[fmt.Sprintf("000%d", i)] = testData{
+			resourceAttributes: ResourceAttributes{
+				"userName": fmt.Sprintf("test%d", i),
+			},
+			meta: map[string]string{
+				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
+				"lastModified": fmt.Sprintf("2020-02-%02dT16:05:04+07:00", i),
+				"version":      fmt.Sprintf("v%d", i),
+			},
 		}
 	}
 
@@ -182,7 +189,6 @@ func TestServerSchemaEndpointInvalid(t *testing.T) {
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
-
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -294,12 +300,46 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
 	}
 
+	if rr.Header().Get("Content-Type") != "application/scim+json" {
+		t.Error("handler did not return the header content type correctly")
+	}
+
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
+
 	if resource["userName"] != "test1" {
 		t.Error("handler did not return the resource correctly")
+	}
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	if !ok {
+		t.Error("handler did not return the resource meta correctly")
+	}
+
+	if meta["resourceType"] != "User" {
+		t.Error("handler did not return the resource meta resource type correctly")
+	}
+
+	if len(fmt.Sprintf("%v", meta["created"])) == 0 {
+		t.Error("handler did not return the resource meta created correctly")
+	}
+
+	if len(fmt.Sprintf("%v", meta["lastModified"])) == 0 {
+		t.Error("handler did not return the resource meta last modified correctly")
+	}
+
+	if meta["location"] != fmt.Sprintf("Users/%s", resource["id"]) {
+		t.Error("handler did not return the resource meta version correctly")
+	}
+
+	if meta["version"] != fmt.Sprintf("v%s", resource["id"]) {
+		t.Error("handler did not return the resource meta version correctly")
+	}
+
+	if rr.Header().Get("Etag") != meta["version"] {
+		t.Error("handler did not return the header entity tag correctly")
 	}
 }
 
@@ -312,12 +352,48 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
+	if rr.Header().Get("Content-Type") != "application/scim+json" {
+		t.Error("handler did not return the header content type correctly")
+	}
+
+	expectedVersion := "v1"
+
+	if rr.Header().Get("Etag") != expectedVersion {
+		t.Error("handler did not return the header entity tag correctly")
+	}
+
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
+
 	if resource["userName"] != "test1" {
-		t.Error("handler did not return the resource correctly")
+		t.Error("handler did not return the resource username correctly")
+	}
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	if !ok {
+		t.Error("handler did not return the resource meta correctly")
+	}
+
+	if meta["resourceType"] != "User" {
+		t.Error("handler did not return the resource meta resource type correctly")
+	}
+
+	if meta["created"] != "2020-01-01T15:04:05+07:00" {
+		t.Error("handler did not return the resource meta created correctly")
+	}
+
+	if meta["lastModified"] != "2020-02-01T16:05:04+07:00" {
+		t.Error("handler did not return the resource meta last modified correctly")
+	}
+
+	if meta["location"] != "Users/0001" {
+		t.Error("handler did not return the resource meta version correctly")
+	}
+
+	if meta["version"] != expectedVersion {
+		t.Error("handler did not return the resource meta version correctly")
 	}
 }
 
@@ -426,6 +502,20 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	if rr.Header().Get("Content-Type") != "application/scim+json" {
+		t.Error("handler did not return the header content type correctly")
+	}
+
+	expectedVersion := "v1.patch"
+
+	if rr.Header().Get("Etag") != expectedVersion {
+		t.Error("handler did not return the header entity tag correctly")
+	}
+
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
@@ -446,6 +536,31 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 
 	if resource["emails"] == nil || len(resource["emails"].([]interface{})) < 1 {
 		t.Errorf("handler did not add user's email address")
+	}
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	if !ok {
+		t.Error("handler did not return the resource meta correctly")
+	}
+
+	if meta["resourceType"] != "User" {
+		t.Error("handler did not return the resource meta resource type correctly")
+	}
+
+	if meta["created"] != "2020-01-01T15:04:05+07:00" {
+		t.Error("handler did not return the resource meta created correctly")
+	}
+
+	if meta["lastModified"] == "2020-02-01T16:05:04+07:00" {
+		t.Error("handler did not return the resource meta last modified correctly")
+	}
+
+	if meta["location"] != "Users/0001" {
+		t.Error("handler did not return the resource meta version correctly")
+	}
+
+	if meta["version"] != expectedVersion {
+		t.Error("handler did not return the resource meta version correctly")
 	}
 }
 

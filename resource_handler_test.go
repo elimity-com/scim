@@ -16,9 +16,14 @@ func ExampleResourceHandler() {
 	// Output: true
 }
 
+type testData struct {
+	resourceAttributes ResourceAttributes
+	meta               map[string]string
+}
+
 // simple in-memory resource database
 type testResourceHandler struct {
-	data map[string]ResourceAttributes
+	data map[string]testData
 }
 
 func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, errors.PostError) {
@@ -27,12 +32,21 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
 
 	// store resource
-	h.data[id] = attributes
+	h.data[id] = testData{
+		resourceAttributes: attributes,
+	}
+
+	now := time.Now()
 
 	// return stored resource
 	return Resource{
 		ID:         id,
 		Attributes: attributes,
+		Meta: Meta{
+			Created:      &now,
+			LastModified: &now,
+			Version:      fmt.Sprintf("v%s", id),
+		},
 	}, errors.PostErrorNil
 }
 
@@ -43,10 +57,18 @@ func (h testResourceHandler) Get(r *http.Request, id string) (Resource, errors.G
 		return Resource{}, errors.GetErrorResourceNotFound
 	}
 
+	created, _ := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%v", data.meta["created"]), time.UTC)
+	lastModified, _ := time.Parse(time.RFC3339, fmt.Sprintf("%v", data.meta["lastModified"]))
+
 	// return resource with given identifier
 	return Resource{
 		ID:         id,
-		Attributes: data,
+		Attributes: data.resourceAttributes,
+		Meta: Meta{
+			Created:      &created,
+			LastModified: &lastModified,
+			Version:      fmt.Sprintf("%v", data.meta["version"]),
+		},
 	}, errors.GetErrorNil
 }
 
@@ -62,7 +84,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 		if i >= params.StartIndex {
 			resources = append(resources, Resource{
 				ID:         k,
-				Attributes: v,
+				Attributes: v.resourceAttributes,
 			})
 		}
 		i++
@@ -74,7 +96,8 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}, errors.GetErrorNil
 }
 
-func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError) {
+func (h testResourceHandler) Replace(
+	r *http.Request, id string, attributes ResourceAttributes) (Resource, errors.PutError) {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
@@ -82,7 +105,9 @@ func (h testResourceHandler) Replace(r *http.Request, id string, attributes Reso
 	}
 
 	// replace (all) attributes
-	h.data[id] = attributes
+	h.data[id] = testData{
+		resourceAttributes: attributes,
+	}
 
 	// return resource with replaced attributes
 	return Resource{
@@ -109,35 +134,43 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 		switch op.Op {
 		case PatchOperationAdd:
 			if op.Path != "" {
-				h.data[id][op.Path] = op.Value
+				h.data[id].resourceAttributes[op.Path] = op.Value
 			} else {
 				valueMap := op.Value.(map[string]interface{})
 				for k, v := range valueMap {
-					if arr, ok := h.data[id][k].([]interface{}); ok {
+					if arr, ok := h.data[id].resourceAttributes[k].([]interface{}); ok {
 						arr = append(arr, v)
-						h.data[id][k] = arr
+						h.data[id].resourceAttributes[k] = arr
 					} else {
-						h.data[id][k] = v
+						h.data[id].resourceAttributes[k] = v
 					}
 				}
 			}
 		case PatchOperationReplace:
 			if op.Path != "" {
-				h.data[id][op.Path] = op.Value
+				h.data[id].resourceAttributes[op.Path] = op.Value
 			} else {
 				valueMap := op.Value.(map[string]interface{})
 				for k, v := range valueMap {
-					h.data[id][k] = v
+					h.data[id].resourceAttributes[k] = v
 				}
 			}
 		case PatchOperationRemove:
-			h.data[id][op.Path] = nil
+			h.data[id].resourceAttributes[op.Path] = nil
 		}
 	}
+
+	created, _ := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%v", h.data[id].meta["created"]), time.UTC)
+	now := time.Now()
 
 	// return resource with replaced attributes
 	return Resource{
 		ID:         id,
-		Attributes: h.data[id],
+		Attributes: h.data[id].resourceAttributes,
+		Meta: Meta{
+			Created:      &created,
+			LastModified: &now,
+			Version:      fmt.Sprintf("%s.patch", h.data[id].meta["version"]),
+		},
 	}, errors.PatchErrorNil
 }
