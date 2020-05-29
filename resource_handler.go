@@ -40,6 +40,7 @@ type Resource struct {
 	ID string
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
+	// Meta contains dates and the version of the resource.
 	Meta       Meta
 }
 

@@ -304,10 +304,6 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Error("handler did not return the header content type correctly")
 	}
 
-	if !strings.HasPrefix(rr.Header().Get("Etag"), "v") {
-		t.Error("handler did not return the header entity tag correctly")
-	}
-
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
@@ -341,6 +337,10 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	if meta["version"] != fmt.Sprintf("v%s", resource["id"]) {
 		t.Error("handler did not return the resource meta version correctly")
 	}
+
+	if rr.Header().Get("Etag") != meta["version"] {
+		t.Error("handler did not return the header entity tag correctly")
+	}
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
@@ -356,7 +356,9 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Error("handler did not return the header content type correctly")
 	}
 
-	if rr.Header().Get("Etag") != "v1" {
+	expectedVersion := "v1"
+
+	if rr.Header().Get("Etag") != expectedVersion {
 		t.Error("handler did not return the header entity tag correctly")
 	}
 
@@ -390,7 +392,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 
-	if meta["version"] != "v1" {
+	if meta["version"] != expectedVersion {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 }
@@ -508,7 +510,9 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		t.Error("handler did not return the header content type correctly")
 	}
 
-	if rr.Header().Get("Etag") != "v1.patch" {
+	expectedVersion := "v1.patch"
+
+	if rr.Header().Get("Etag") != expectedVersion {
 		t.Error("handler did not return the header entity tag correctly")
 	}
 
@@ -555,7 +559,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 
-	if meta["version"] != "v1.patch" {
+	if meta["version"] != expectedVersion {
 		t.Error("handler did not return the resource meta version correctly")
 	}
 }
