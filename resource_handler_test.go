@@ -21,7 +21,7 @@ type testResourceHandler struct {
 	data map[string]ResourceAttributes
 }
 
-func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, *errors.ScimError) {
+func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, error) {
 	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
@@ -36,7 +36,7 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 	}, nil
 }
 
-func (h testResourceHandler) Get(r *http.Request, id string) (Resource, *errors.ScimError) {
+func (h testResourceHandler) Get(r *http.Request, id string) (Resource, error) {
 	// check if resource exists
 	data, ok := h.data[id]
 	if !ok {
@@ -50,7 +50,7 @@ func (h testResourceHandler) Get(r *http.Request, id string) (Resource, *errors.
 	}, nil
 }
 
-func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, *errors.ScimError) {
+func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
 	resources := make([]Resource, 0)
 	i := 1
 
@@ -74,7 +74,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}, nil
 }
 
-func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, *errors.ScimError) {
+func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, error) {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
@@ -91,7 +91,7 @@ func (h testResourceHandler) Replace(r *http.Request, id string, attributes Reso
 	}, nil
 }
 
-func (h testResourceHandler) Delete(r *http.Request, id string) *errors.ScimError {
+func (h testResourceHandler) Delete(r *http.Request, id string) error {
 	// check if resource exists
 	_, ok := h.data[id]
 	if !ok {
@@ -104,7 +104,7 @@ func (h testResourceHandler) Delete(r *http.Request, id string) *errors.ScimErro
 	return nil
 }
 
-func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, *errors.ScimError) {
+func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
 	for _, op := range req.Operations {
 		switch op.Op {
 		case PatchOperationAdd:

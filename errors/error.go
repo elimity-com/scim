@@ -105,15 +105,15 @@ func (e *ScimError) UnmarshalJSON(data []byte) error {
 }
 
 // ScimErrorResourceNotFound returns an 404 SCIM error with a detailed message based on the id.
-func ScimErrorResourceNotFound(id string) *ScimError {
-	return &ScimError{
+func ScimErrorResourceNotFound(id string) ScimError {
+	return ScimError{
 		Detail: fmt.Sprintf("Resource %s not found.", id),
 		Status: http.StatusNotFound,
 	}
 }
 
 // ScimErrorBadParams returns an 400 SCIM error with a detailed message based on the invalid parameters.
-func ScimErrorBadParams(invalidParams []string) *ScimError {
+func ScimErrorBadParams(invalidParams []string) ScimError {
 	var suffix string
 
 	if len(invalidParams) > 1 {
@@ -128,8 +128,8 @@ func ScimErrorBadParams(invalidParams []string) *ScimError {
 }
 
 // ScimErrorBadRequest returns an 400 SCIM error with the given message.
-func ScimErrorBadRequest(msg string) *ScimError {
-	return &ScimError{
+func ScimErrorBadRequest(msg string) ScimError {
+	return ScimError{
 		Detail: msg,
 		Status: http.StatusBadRequest,
 	}
@@ -137,50 +137,57 @@ func ScimErrorBadRequest(msg string) *ScimError {
 
 var (
 	// ScimErrorUniqueness returns an 409 SCIM error with a detailed message.
-	ScimErrorUniqueness = &ScimError{
+	ScimErrorUniqueness = ScimError{
 		ScimType: ScimTypeUniqueness,
 		Detail:   "One or more of the attribute values are already in use or are reserved.",
 		Status:   http.StatusConflict,
 	}
 	// ScimErrorMutability returns an 400 SCIM error with a detailed message.
-	ScimErrorMutability = &ScimError{
+	ScimErrorMutability = ScimError{
 		ScimType: ScimTypeMutability,
 		Detail:   "The attempted modification is not compatible with the target attribute's mutability or current state.",
 		Status:   http.StatusBadRequest,
 	}
 	// ScimErrorInvalidSyntax returns an 400 SCIM error with a detailed message.
-	ScimErrorInvalidSyntax = &ScimError{
+	ScimErrorInvalidSyntax = ScimError{
 		ScimType: ScimTypeInvalidSyntax,
 		Detail:   "The request body message structure was invalid or did not conform to the request schema.",
 		Status:   http.StatusBadRequest,
 	}
 	// ScimErrorInvalidValue returns an 400 SCIM error with a detailed message.
-	ScimErrorInvalidValue = &ScimError{
+	ScimErrorInvalidValue = ScimError{
 		ScimType: ScimTypeInvalidValue,
 		Detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
 		Status:   http.StatusBadRequest,
 	}
 	// ScimErrorNoTarget returns an 400 SCIM error with a detailed message.
-	ScimErrorNoTarget = &ScimError{
+	ScimErrorNoTarget = ScimError{
 		ScimType: ScimTypeNoTarget,
 		Detail:   "The specified path did not yield an attribute or attribute value that could be operated on.",
 		Status:   http.StatusBadRequest,
 	}
 	// ScimErrorInternal returns an 500 SCIM error without a message.
-	ScimErrorInternal = &ScimError{
+	ScimErrorInternal = ScimError{
 		Status: http.StatusInternalServerError,
 	}
 )
 
 // CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
-func CheckScimError(err *ScimError, method string) *ScimError {
-	if !checkApplicability(err, method) {
-		return &ScimError{
-			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", err.Status, method),
+func CheckScimError(err error, method string) ScimError {
+	scimErr, ok := err.(ScimError)
+	if !ok {
+		return ScimError{
+			Detail: err.Error(),
 			Status: http.StatusInternalServerError,
 		}
 	}
-	return err
+	if !checkApplicability(scimErr, method) {
+		return ScimError{
+			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
+			Status: http.StatusInternalServerError,
+		}
+	}
+	return scimErr
 }
 
 var (
@@ -215,11 +222,7 @@ var (
 	}
 )
 
-func checkApplicability(err *ScimError, method string) bool {
-	if err == nil {
-		return false
-	}
-
+func checkApplicability(err ScimError, method string) bool {
 	methods, ok := applicability[err.Status]
 	if !ok {
 		return false

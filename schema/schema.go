@@ -28,7 +28,7 @@ type Schema struct {
 func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.ScimError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
-		return nil, errors.ScimErrorInvalidSyntax
+		return nil, &errors.ScimErrorInvalidSyntax
 	}
 
 	attributes := make(map[string]interface{})
@@ -38,7 +38,7 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
 				if found {
-					return nil, errors.ScimErrorInvalidSyntax
+					return nil, &errors.ScimErrorInvalidSyntax
 				}
 				found = true
 				hit = v
@@ -74,7 +74,7 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 		// Attribute does not exist in the schema, thus it is an invalid request.
 		// Immutable attrs can only be added and Readonly attrs cannot be patched
 		if attr == nil || cannotBePatched(operation, *attr) {
-			return errors.ScimErrorInvalidValue
+			return &errors.ScimErrorInvalidValue
 		}
 
 		// "remove" operations simply have to exist

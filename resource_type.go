@@ -54,7 +54,7 @@ func unmarshal(data []byte, v interface{}) error {
 func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
-		return ResourceAttributes{}, errors.ScimErrorInvalidSyntax
+		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
 	attributes, scimErr := t.Schema.Validate(m)
@@ -66,7 +66,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 		extensionField := m[extension.Schema.ID]
 		if extensionField == nil {
 			if extension.Required {
-				return ResourceAttributes{}, errors.ScimErrorInvalidValue
+				return ResourceAttributes{}, &errors.ScimErrorInvalidValue
 			}
 			continue
 		}
@@ -111,11 +111,11 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return req, errors.ScimErrorInvalidSyntax
+		return req, &errors.ScimErrorInvalidSyntax
 	}
 
 	if err := unmarshal(data, &req); err != nil {
-		return req, errors.ScimErrorInvalidSyntax
+		return req, &errors.ScimErrorInvalidSyntax
 	}
 
 	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
@@ -124,7 +124,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
 	if len(req.Operations) < 1 {
-		return req, errors.ScimErrorInvalidValue
+		return req, &errors.ScimErrorInvalidValue
 	}
 
 	for i := range req.Operations {
@@ -134,7 +134,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 
 	// Denotes all of the errors that have occurred parsing the request.
 	if len(errorCauses) > 0 {
-		return req, errors.ScimErrorInvalidSyntax
+		return req, &errors.ScimErrorInvalidSyntax
 	}
 
 	return req, nil

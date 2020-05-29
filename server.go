@@ -153,7 +153,8 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 	}
 
 	if len(invalidParams) > 1 {
-		return ListRequestParams{}, errors.ScimErrorBadParams(invalidParams)
+		scimErr := errors.ScimErrorBadParams(invalidParams)
+		return ListRequestParams{}, &scimErr
 	}
 
 	// Ensure the count isn't more then the allowable max and not less then 1.
@@ -167,7 +168,8 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 
 	filter, filterErr := getFilter(r)
 	if filterErr != nil {
-		return ListRequestParams{}, errors.ScimErrorBadParams([]string{"filter"})
+		scimErr := errors.ScimErrorBadParams([]string{"filter"})
+		return ListRequestParams{}, &scimErr
 	}
 
 	return ListRequestParams{

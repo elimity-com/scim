@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -78,7 +79,7 @@ func TestCheckScimError(t *testing.T) {
 		{413, http.MethodPut, false},
 		{413, http.MethodPatch, false},
 	} {
-		err := CheckScimError(&ScimError{
+		err := CheckScimError(ScimError{
 			Status: test.statusCode,
 		}, test.method)
 		if test.applicable {
@@ -90,5 +91,16 @@ func TestCheckScimError(t *testing.T) {
 				t.Errorf("status code 500 expected, got %d", err.Status)
 			}
 		}
+	}
+}
+
+func TestCheckError(t *testing.T) {
+	err := fmt.Errorf("error message")
+	scimErr := CheckScimError(err, http.MethodGet)
+	if scimErr.Detail != err.Error() {
+		t.Error("invalid detail message")
+	}
+	if scimErr.Status != 500 {
+		t.Errorf("status code 500 expected, got %d", scimErr.Status)
 	}
 }

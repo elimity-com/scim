@@ -44,7 +44,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		Resources:    resources,
 	})
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling list response: %v", err)
 		return
 	}
@@ -59,13 +59,14 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	schema := s.getSchema(id)
 	if schema.ID != id {
-		errorHandler(w, r, errors.ScimErrorResourceNotFound(id))
+		scimErr := errors.ScimErrorResourceNotFound(id)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(schema)
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling schema: %v", err)
 		return
 	}
@@ -98,7 +99,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 		Resources:    resources,
 	})
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling list response: %v", err)
 		return
 	}
@@ -119,13 +120,14 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 		}
 	}
 	if resourceType.Name != name {
-		errorHandler(w, r, errors.ScimErrorResourceNotFound(name))
+		scimErr := errors.ScimErrorResourceNotFound(name)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(resourceType.getRaw())
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource type: %v", err)
 		return
 	}
@@ -140,7 +142,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
 	raw, err := json.Marshal(s.Config.getRaw())
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling service provider config: %v", err)
 		return
 	}
@@ -161,13 +163,14 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 
 	resource, patchErr := resourceType.Handler.Patch(r, id, patch)
 	if patchErr != nil {
-		errorHandler(w, r, errors.CheckScimError(patchErr, http.MethodPatch))
+		scimErr := errors.CheckScimError(patchErr, http.MethodPatch)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
@@ -191,13 +194,14 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 
 	resource, postErr := resourceType.Handler.Create(r, attributes)
 	if postErr != nil {
-		errorHandler(w, r, errors.CheckScimError(postErr, http.MethodPost))
+		scimErr := errors.CheckScimError(postErr, http.MethodPost)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
@@ -213,13 +217,14 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	resource, getErr := resourceType.Handler.Get(r, id)
 	if getErr != nil {
-		errorHandler(w, r, errors.CheckScimError(getErr, http.MethodGet))
+		scimErr := errors.CheckScimError(getErr, http.MethodGet)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
@@ -240,7 +245,8 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 
 	page, getError := resourceType.Handler.GetAll(r, params)
 	if getError != nil {
-		errorHandler(w, r, errors.CheckScimError(getError, http.MethodGet))
+		scimErr := errors.CheckScimError(getError, http.MethodGet)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
@@ -256,7 +262,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		ItemsPerPage: params.Count,
 	})
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshalling list response: %v", err)
 		return
 	}
@@ -279,13 +285,14 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 
 	resource, putError := resourceType.Handler.Replace(r, id, attributes)
 	if putError != nil {
-		errorHandler(w, r, errors.CheckScimError(putError, http.MethodPut))
+		scimErr := errors.CheckScimError(putError, http.MethodPut)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 
 	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
-		errorHandler(w, r, errors.ScimErrorInternal)
+		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
@@ -300,7 +307,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	deleteErr := resourceType.Handler.Delete(r, id)
 	if deleteErr != nil {
-		errorHandler(w, r, errors.CheckScimError(deleteErr, http.MethodDelete))
+		scimErr := errors.CheckScimError(deleteErr, http.MethodDelete)
+		errorHandler(w, r, &scimErr)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

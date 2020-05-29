@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	scim "github.com/di-wu/scim-filter-parser"
-	"github.com/elimity-com/scim/errors"
 )
 
 // ListRequestParams request parameters sent to the API via a "GetAll" route.
@@ -54,17 +53,17 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 // ResourceHandler represents a set of callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {
 	// Create stores given attributes. Returns a resource with the attributes that are stored and a (new) unique identifier.
-	Create(r *http.Request, attributes ResourceAttributes) (Resource, *errors.ScimError)
+	Create(r *http.Request, attributes ResourceAttributes) (Resource, error)
 	// Get returns the resource corresponding with the given identifier.
-	Get(r *http.Request, id string) (Resource, *errors.ScimError)
+	Get(r *http.Request, id string) (Resource, error)
 	// GetAll returns a paginated list of resources.
-	GetAll(r *http.Request, params ListRequestParams) (Page, *errors.ScimError)
+	GetAll(r *http.Request, params ListRequestParams) (Page, error)
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.
-	Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, *errors.ScimError)
+	Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, error)
 	// Delete removes the resource with corresponding ID.
-	Delete(r *http.Request, id string) *errors.ScimError
+	Delete(r *http.Request, id string) error
 	// Patch update one or more attributes of a SCIM resource using a sequence of
 	// operations to "add", "remove", or "replace" values.
-	Patch(r *http.Request, id string, request PatchRequest) (Resource, *errors.ScimError)
+	Patch(r *http.Request, id string, request PatchRequest) (Resource, error)
 }
