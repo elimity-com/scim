@@ -28,6 +28,7 @@ type ListRequestParams struct {
 // a resource based on the given attributes.
 type ResourceAttributes map[string]interface{}
 
+// Meta represents the metadata of a resource
 type Meta struct {
 	Created      *time.Time
 	LastModified *time.Time
@@ -41,7 +42,7 @@ type Resource struct {
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
 	// Meta contains dates and the version of the resource.
-	Meta       Meta
+	Meta Meta
 }
 
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
