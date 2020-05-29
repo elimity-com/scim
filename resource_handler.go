@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	scim "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
@@ -42,6 +43,11 @@ func (r Resource) response(resourceType ResourceType, basePath string) ResourceA
 	for _, schema := range resourceType.SchemaExtensions {
 		schemas = append(schemas, schema.Schema.ID)
 	}
+
+	if len(basePath) > 0 {
+		basePath = strings.TrimSuffix(basePath[1:], "/") + "/"
+	}
+
 	response["schemas"] = schemas
 	response["meta"] = meta{
 		ResourceType: resourceType.Name,

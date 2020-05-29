@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/elimity-com/scim/errors"
 )
@@ -166,7 +165,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r, true)))
+	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -196,7 +195,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r, true)))
+	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -218,7 +217,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r, true)))
+	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -247,7 +246,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 
 	resources := []interface{}{}
 	for _, v := range page.Resources {
-		resources = append(resources, v.response(resourceType, s.getBasePath(r, true)))
+		resources = append(resources, v.response(resourceType, s.getBasePath(r)))
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -284,7 +283,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r, true)))
+	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -307,17 +306,10 @@ func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s Server) getBasePath(r *http.Request, trailingSlash bool) string {
-	if s.Config.BasePathFunc == nil {
+func (s Server) getBasePath(r *http.Request) string {
+	if s.Config.BasePathResolver == nil {
 		return ""
 	}
 
-	basePath := s.Config.BasePathFunc(r)
-
-	basePath = strings.TrimSuffix(basePath, "/")
-	if trailingSlash {
-		basePath += "/"
-	}
-
-	return basePath
+	return s.Config.BasePathResolver(r)
 }

@@ -62,7 +62,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 
 	path := r.URL.Path
-	basePath := s.getBasePath(r, false)
+	basePath := strings.TrimSuffix(s.getBasePath(r), "/")
 
 	if !strings.HasPrefix(path, basePath) {
 		errorHandler(w, r, scimError{
