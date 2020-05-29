@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	scim "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
@@ -28,12 +29,21 @@ type ListRequestParams struct {
 // a resource based on the given attributes.
 type ResourceAttributes map[string]interface{}
 
+// Meta represents the metadata of a resource
+type Meta struct {
+	Created      *time.Time
+	LastModified *time.Time
+	Version      string
+}
+
 // Resource represents an entity returned by a callback method.
 type Resource struct {
 	// ID is the unique identifier created by the callback method "Create".
 	ID string
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
+	// Meta contains dates and the version of the resource.
+	Meta Meta
 }
 
 func (r Resource) response(resourceType ResourceType, basePath string) ResourceAttributes {
@@ -49,10 +59,25 @@ func (r Resource) response(resourceType ResourceType, basePath string) ResourceA
 	}
 
 	response["schemas"] = schemas
-	response["meta"] = meta{
+
+	m := meta{
 		ResourceType: resourceType.Name,
 		Location:     fmt.Sprintf("%s%s/%s", basePath, resourceType.Endpoint[1:], url.PathEscape(r.ID)),
 	}
+
+	if r.Meta.Created != nil {
+		m.Created = r.Meta.Created.Format(time.RFC3339)
+	}
+
+	if r.Meta.LastModified != nil {
+		m.LastModified = r.Meta.LastModified.Format(time.RFC3339)
+	}
+
+	if len(r.Meta.Version) != 0 {
+		m.Version = r.Meta.Version
+	}
+
+	response["meta"] = m
 
 	return response
 }

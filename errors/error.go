@@ -6,8 +6,8 @@ type GetError int
 const (
 	// GetErrorNil indicates that no error occurred during handling a GET HTTP request.
 	GetErrorNil GetError = iota
-	// GetErrorResourceNotFound returns an error with status code 404 and a human readable message containing the identifier
-	// of the resource that was requested but not found.
+	// GetErrorResourceNotFound returns an error with status code 404 and a human readable message containing
+	// the identifier of the resource that was requested but not found.
 	GetErrorResourceNotFound
 	// GetErrorNotImplemented allows consumers to create a get handler that simply returns an unsupported error.
 	GetErrorNotImplemented

@@ -36,11 +36,13 @@ func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 
 	names := map[string]int{}
 	var sa []CoreAttribute
+
 	for i, a := range params.SubAttributes {
 		name := strings.ToLower(a.name)
 		if j, ok := names[name]; ok {
 			panic(fmt.Errorf("duplicate name %q for sub-attributes %d and %d", name, i, j))
 		}
+
 		names[name] = i
 
 		sa = append(sa, CoreAttribute{
@@ -94,6 +96,7 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, errors.Vali
 		if !a.required {
 			return nil, errors.ValidationErrorNil
 		}
+
 		return nil, errors.ValidationErrorInvalidValue
 	}
 
@@ -115,8 +118,10 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, errors.Vali
 			if scimErr != errors.ValidationErrorNil {
 				return nil, scimErr
 			}
+
 			attributes = append(attributes, attr)
 		}
+
 		return attributes, errors.ValidationErrorNil
 	}
 
@@ -146,6 +151,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		if !ok {
 			return nil, errors.ValidationErrorInvalidValue
 		}
+
 		return b, errors.ValidationErrorNil
 	case attributeDataTypeComplex:
 		complex, ok := attribute.(map[string]interface{})
@@ -154,14 +160,17 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		}
 
 		attributes := make(map[string]interface{})
+
 		for _, sub := range a.subAttributes {
 			var hit interface{}
 			var found bool
+
 			for k, v := range complex {
 				if strings.EqualFold(sub.name, k) {
 					if found {
 						return nil, errors.ValidationErrorInvalidSyntax
 					}
+
 					found = true
 					hit = v
 				}
@@ -171,6 +180,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 			if scimErr != errors.ValidationErrorNil {
 				return nil, scimErr
 			}
+
 			attributes[sub.name] = attr
 		}
 		return attributes, errors.ValidationErrorNil
@@ -179,10 +189,11 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		if !ok {
 			return nil, errors.ValidationErrorInvalidValue
 		}
-		_, err := datetime.Parse(date)
-		if err != nil {
+
+		if _, err := datetime.Parse(date); err != nil {
 			return nil, errors.ValidationErrorInvalidValue
 		}
+
 		return date, errors.ValidationErrorNil
 	case attributeDataTypeDecimal:
 		switch n := attribute.(type) {
@@ -191,6 +202,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 			if err != nil {
 				return nil, errors.ValidationErrorInvalidValue
 			}
+
 			return f, errors.ValidationErrorNil
 		case float64:
 			return n, errors.ValidationErrorNil
@@ -204,6 +216,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 			if err != nil {
 				return nil, errors.ValidationErrorInvalidValue
 			}
+
 			return i, errors.ValidationErrorNil
 		case int, int8, int16, int32, int64:
 			return n, errors.ValidationErrorNil
@@ -215,6 +228,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, err
 		if !ok {
 			return nil, errors.ValidationErrorInvalidValue
 		}
+
 		return s, errors.ValidationErrorNil
 	default:
 		return nil, errors.ValidationErrorInvalidSyntax
@@ -244,6 +258,7 @@ func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
 	for i, subAttr := range a.subAttributes {
 		rawSubAttributes[i] = subAttr.getRawAttributes()
 	}
+
 	if a.subAttributes != nil && len(a.subAttributes) != 0 {
 		attributes["subAttributes"] = rawSubAttributes
 	}
