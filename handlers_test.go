@@ -3,6 +3,7 @@ package scim
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,8 +13,43 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
-func newTestServer() Server {
-	userSchema := schema.Schema{
+func newTestServer(basePath string) Server {
+	userSchema := getUserSchema()
+
+	userSchemaExtension := getUserExtensionSchema()
+
+	return Server{
+		Config: ServiceProviderConfig{
+			BasePathResolver: func(r *http.Request) string {
+				return basePath
+			},
+		},
+		ResourceTypes: []ResourceType{
+			{
+				ID:          optional.NewString("User"),
+				Name:        "User",
+				Endpoint:    "/Users",
+				Description: optional.NewString("User Account"),
+				Schema:      userSchema,
+				Handler:     newTestResourceHandler(),
+			},
+			{
+				ID:          optional.NewString("EnterpriseUser"),
+				Name:        "EnterpriseUser",
+				Endpoint:    "/EnterpriseUser",
+				Description: optional.NewString("Enterprise User Account"),
+				Schema:      userSchema,
+				SchemaExtensions: []SchemaExtension{
+					{Schema: userSchemaExtension},
+				},
+				Handler: newTestResourceHandler(),
+			},
+		},
+	}
+}
+
+func getUserSchema() schema.Schema {
+	return schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
 		Name:        optional.NewString("User"),
 		Description: optional.NewString("User Account"),
@@ -75,8 +111,10 @@ func newTestServer() Server {
 			}),
 		},
 	}
+}
 
-	userSchemaExtension := schema.Schema{
+func getUserExtensionSchema() schema.Schema {
+	return schema.Schema{
 		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 		Name:        optional.NewString("EnterpriseUser"),
 		Description: optional.NewString("Enterprise User"),
@@ -87,31 +125,6 @@ func newTestServer() Server {
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name: "organization",
 			})),
-		},
-	}
-
-	return Server{
-		Config: ServiceProviderConfig{},
-		ResourceTypes: []ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      userSchema,
-				Handler:     newTestResourceHandler(),
-			},
-			{
-				ID:          optional.NewString("EnterpriseUser"),
-				Name:        "EnterpriseUser",
-				Endpoint:    "/EnterpriseUser",
-				Description: optional.NewString("Enterprise User Account"),
-				Schema:      userSchema,
-				SchemaExtensions: []SchemaExtension{
-					{Schema: userSchemaExtension},
-				},
-				Handler: newTestResourceHandler(),
-			},
 		},
 	}
 }
@@ -139,268 +152,538 @@ func newTestResourceHandler() ResourceHandler {
 }
 
 func TestInvalidEndpoint(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/v2/Invalid", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	tests := []struct {
+		name           string
+		method         string
+		basePath       string
+		target         string
+		body           io.Reader
+		expectedStatus int
+	}{
+		{
+			name:           "invalid get request, no base path",
+			method:         http.MethodGet,
+			target:         "/v2/Invalid",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid get request, with base path",
+			method:         http.MethodGet,
+			basePath:       "/my/test/base/path",
+			target:         "/my/test/base/path/v2/Invalid",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid get request, outside base path",
+			method:         http.MethodGet,
+			basePath:       "my/test/base/path/v2",
+			target:         "/v2/Invalid",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid schema request, no base path",
+			method:         http.MethodGet,
+			target:         "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid schema request, with base path",
+			method:         http.MethodGet,
+			basePath:       "/my/test/base/path",
+			target:         "/my/test/base/path/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid resource types request, no base path",
+			method:         http.MethodGet,
+			target:         "/ResourceTypes/Group",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid resource types request, with base path",
+			method:         http.MethodGet,
+			basePath:       "/my/test/base/path",
+			target:         "/my/test/base/path/ResourceTypes/Group",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid post request, no base path",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"id": "other"}`),
+			expectedStatus: http.StatusBadRequest,
+		}, {
+			name:           "invalid post request, with base path",
+			method:         http.MethodPost,
+			basePath:       "/my/test/base/path",
+			target:         "/my/test/base/path/Users",
+			body:           strings.NewReader(`{"id": "other"}`),
+			expectedStatus: http.StatusBadRequest,
+		}, {
+			name:           "invalid put request, no base path",
+			method:         http.MethodPut,
+			target:         "/Users/0001",
+			body:           strings.NewReader(`{"more": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		}, {
+			name:           "invalid put request, with base path",
+			method:         http.MethodPut,
+			basePath:       "/my/test/base/path",
+			target:         "/my/test/base/path/Users/0001",
+			body:           strings.NewReader(`{"more": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
+			}
+		})
 	}
 }
 
 func TestServerSchemasEndpoint(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Schemas", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name     string
+		basePath string
+		target   string
+	}{
+		{
+			name:   "schemas request without version",
+			target: "/Schemas",
+		}, {
+			name:   "schemas request with version",
+			target: "/v2/Schemas",
+		}, {
+			name:     "schemas request without version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/Schemas",
+		}, {
+			name:     "schemas request with version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/v2/Schemas",
+		},
 	}
 
-	var response listResponse
-	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-		t.Error(err)
-	}
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
 
-	if response.TotalResults != 2 {
-		t.Errorf("handler returned unexpected body: got %v want 2 total result", rr.Body.String())
-	}
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
 
-	if len(response.Resources) != 2 {
-		t.Fatal("resources contains more than one schema")
-	}
+			var response listResponse
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Error(err)
+			}
 
-	s, ok := response.Resources[0].(map[string]interface{})
-	if !ok {
-		t.Fatal("schema is not an object")
-	}
+			if response.TotalResults != 2 {
+				t.Errorf("handler returned unexpected body: got %v want 2 total result", rr.Body.String())
+			}
 
-	if s["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" &&
-		s["id"].(string) != "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User" {
-		t.Errorf("schema does not contain the correct id: %v", s["id"])
-	}
-}
+			if len(response.Resources) != 2 {
+				t.Fatal("resources contains more than one schema")
+			}
 
-func TestServerSchemaEndpointInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+			s, ok := response.Resources[0].(map[string]interface{})
+			if !ok {
+				t.Fatal("schema is not an object")
+			}
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+			if s["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" &&
+				s["id"].(string) != "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User" {
+				t.Errorf("schema does not contain the correct id: %v", s["id"])
+			}
+		})
 	}
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name     string
+		basePath string
+		schema   string
+	}{
+		{
+			name:   "User schema",
+			schema: "urn:ietf:params:scim:schemas:core:2.0:User",
+		}, {
+			name:   "Enterprice user schema",
+			schema: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+		}, {
+			name:     "User schema, with base path",
+			schema:   "urn:ietf:params:scim:schemas:core:2.0:User",
+			basePath: "/my/test/base/path",
+		}, {
+			name:     "Enterprice user schema, with base path",
+			schema:   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+			basePath: "/my/test/base/path",
+		},
 	}
 
-	var s map[string]interface{}
-	if err := json.Unmarshal(rr.Body.Bytes(), &s); err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/Schemas/%s", tt.basePath, tt.schema), nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
 
-	if s["id"].(string) != "urn:ietf:params:scim:schemas:core:2.0:User" {
-		t.Errorf("schema does not contain the correct id: %s", s["id"])
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
+
+			var s map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &s); err != nil {
+				t.Fatal(err)
+			}
+
+			if s["id"].(string) != tt.schema {
+				t.Errorf("schema does not contain the correct id: %s", s["id"])
+			}
+		})
 	}
 }
 
 func TestServerResourceTypesHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Fatalf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name     string
+		basePath string
+		target   string
+	}{
+		{
+			name:   "resource types request without version",
+			target: "/ResourceTypes",
+		}, {
+			name:   "resource types request with version",
+			target: "/v2/ResourceTypes",
+		}, {
+			name:     "resource types request without version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/ResourceTypes",
+		}, {
+			name:     "resource types request with version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/v2/ResourceTypes",
+		},
 	}
 
-	var response listResponse
-	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
 
-	if response.TotalResults != 2 {
-		t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
-	}
+			if status := rr.Code; status != http.StatusOK {
+				t.Fatalf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
 
-	if len(response.Resources) != 2 {
-		t.Fatal("resources contains more than one schema")
-	}
+			var response listResponse
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
 
-	resourceType, ok := response.Resources[0].(map[string]interface{})
-	if !ok {
-		t.Errorf("resource type is not an object")
-	}
+			if response.TotalResults != 2 {
+				t.Errorf("handler returned unexpected body: got %v want 1 total result", rr.Body.String())
+			}
 
-	if resourceType["name"].(string) != "User" &&
-		resourceType["name"].(string) != "EnterpriseUser" {
-		t.Errorf("schema does not contain the correct id: %v", resourceType["name"])
-	}
-}
+			if len(response.Resources) != 2 {
+				t.Fatal("resources contains more than one schema")
+			}
 
-func TestServerResourceTypeHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/Group", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+			resourceType, ok := response.Resources[0].(map[string]interface{})
+			if !ok {
+				t.Errorf("resource type is not an object")
+			}
 
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+			if resourceType["name"].(string) != "User" &&
+				resourceType["name"].(string) != "EnterpriseUser" {
+				t.Errorf("schema does not contain the correct id: %v", resourceType["name"])
+			}
+		})
 	}
 }
 
 func TestServerResourceTypeHandlerValid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/ResourceTypes/User", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name         string
+		basePath     string
+		resourceType string
+	}{
+		{
+			name:         "User schema",
+			resourceType: "User",
+		}, {
+			name:         "Enterprice user schema",
+			resourceType: "EnterpriseUser",
+		}, {
+			name:         "User schema, with base path",
+			resourceType: "User",
+			basePath:     "/my/test/base/path",
+		}, {
+			name:         "Enterprice user schema, with base path",
+			resourceType: "EnterpriseUser",
+			basePath:     "/my/test/base/path",
+		},
 	}
 
-	var resourceType map[string]interface{}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resourceType); err != nil {
-		t.Fatal(err)
-	}
-	if resourceType["id"] != "User" {
-		t.Errorf("schema does not contain the correct name: %s", resourceType["name"])
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.basePath, tt.resourceType), nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
+
+			var resourceType map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &resourceType); err != nil {
+				t.Fatal(err)
+			}
+			if resourceType["id"] != tt.resourceType {
+				t.Errorf("schema does not contain the correct name: %s", resourceType["name"])
+			}
+		})
 	}
 }
 
 func TestServerServiceProviderConfigHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/ServiceProviderConfig", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name     string
+		basePath string
+		target   string
+	}{
+		{
+			name:   "service provide config request without version",
+			target: "/ServiceProviderConfig",
+		}, {
+			name:   "service provide config request with version",
+			target: "/v2/ServiceProviderConfig",
+		}, {
+			name:     "service provide config request without version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/ServiceProviderConfig",
+		}, {
+			name:     "service provide config request with version, with base path",
+			basePath: "/my/test/base/path",
+			target:   "/my/test/base/path/v2/ServiceProviderConfig",
+		},
 	}
-}
 
-func TestServerResourcePostHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other"}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
+		})
 	}
 }
 
 func TestServerResourcePostHandlerValid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"id": "other", "userName": "test1"}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusCreated {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
+	tests := []struct {
+		name             string
+		basePath         string
+		target           string
+		body             io.Reader
+		expectedUserName string
+	}{
+		{
+			name:             "Users post request without version",
+			target:           "/Users",
+			body:             strings.NewReader(`{"id": "other", "userName": "test1"}`),
+			expectedUserName: "test1",
+		}, {
+			name:             "Users post request with version",
+			target:           "/v2/Users",
+			body:             strings.NewReader(`{"id": "other", "userName": "test2"}`),
+			expectedUserName: "test2",
+		}, {
+			name:             "Users post request without version, with base path",
+			basePath:         "/my/test/base/path",
+			target:           "/my/test/base/path/Users",
+			body:             strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			expectedUserName: "test3",
+		}, {
+			name:             "Users post request with version, with base path",
+			basePath:         "/my/test/base/path",
+			target:           "/my/test/base/path/v2/Users",
+			body:             strings.NewReader(`{"id": "other", "userName": "test4"}`),
+			expectedUserName: "test4",
+		},
 	}
 
-	if rr.Header().Get("Content-Type") != "application/scim+json" {
-		t.Error("handler did not return the header content type correctly")
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tt.target, tt.body)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusCreated {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
+			}
+
+			if rr.Header().Get("Content-Type") != "application/scim+json" {
+				t.Error("handler did not return the header content type correctly")
+			}
+
+			var resource map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+				t.Fatal(err)
+			}
+
+			if resource["userName"] != tt.expectedUserName {
+				t.Error("handler did not return the resource correctly")
+			}
+
+			meta, ok := resource["meta"].(map[string]interface{})
+			if !ok {
+				t.Error("handler did not return the resource meta correctly")
+			}
+
+			if meta["resourceType"] != "User" {
+				t.Error("handler did not return the resource meta resource type correctly")
+			}
+
+			if len(fmt.Sprintf("%v", meta["created"])) == 0 {
+				t.Error("handler did not return the resource meta created correctly")
+			}
+
+			if len(fmt.Sprintf("%v", meta["lastModified"])) == 0 {
+				t.Error("handler did not return the resource meta last modified correctly")
+			}
+
+			if meta["location"] != strings.TrimPrefix(fmt.Sprintf("%s/Users/%s", tt.basePath, resource["id"]), "/") {
+				t.Error("handler did not return the resource meta location correctly", meta["location"])
+			}
+
+			if meta["version"] != fmt.Sprintf("v%s", resource["id"]) {
+				t.Error("handler did not return the resource meta version correctly")
+			}
+
+			if rr.Header().Get("Etag") != meta["version"] {
+				t.Error("handler did not return the header entity tag correctly")
+			}
+		})
 	}
 
-	var resource map[string]interface{}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
-		t.Fatal(err)
-	}
-
-	if resource["userName"] != "test1" {
-		t.Error("handler did not return the resource correctly")
-	}
-
-	meta, ok := resource["meta"].(map[string]interface{})
-	if !ok {
-		t.Error("handler did not return the resource meta correctly")
-	}
-
-	if meta["resourceType"] != "User" {
-		t.Error("handler did not return the resource meta resource type correctly")
-	}
-
-	if len(fmt.Sprintf("%v", meta["created"])) == 0 {
-		t.Error("handler did not return the resource meta created correctly")
-	}
-
-	if len(fmt.Sprintf("%v", meta["lastModified"])) == 0 {
-		t.Error("handler did not return the resource meta last modified correctly")
-	}
-
-	if meta["location"] != fmt.Sprintf("Users/%s", resource["id"]) {
-		t.Error("handler did not return the resource meta version correctly")
-	}
-
-	if meta["version"] != fmt.Sprintf("v%s", resource["id"]) {
-		t.Error("handler did not return the resource meta version correctly")
-	}
-
-	if rr.Header().Get("Etag") != meta["version"] {
-		t.Error("handler did not return the header entity tag correctly")
-	}
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users/0001", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	tests := []struct {
+		name                 string
+		basePath             string
+		target               string
+		expectedUserName     string
+		expectedVersion      string
+		expectedCreated      string
+		expectedLastModified string
+	}{
+		{
+			name:                 "Users get request without version",
+			target:               "/Users/0001",
+			expectedUserName:     "test1",
+			expectedVersion:      "v1",
+			expectedCreated:      "2020-01-01T15:04:05+07:00",
+			expectedLastModified: "2020-02-01T16:05:04+07:00",
+		}, {
+			name:                 "Users get request with version",
+			target:               "/v2/Users/0002",
+			expectedUserName:     "test2",
+			expectedVersion:      "v2",
+			expectedCreated:      "2020-01-02T15:04:05+07:00",
+			expectedLastModified: "2020-02-02T16:05:04+07:00",
+		}, {
+			name:                 "Users get request without version, with base path",
+			basePath:             "/my/test/base/path",
+			target:               "/my/test/base/path/Users/0003",
+			expectedUserName:     "test3",
+			expectedVersion:      "v3",
+			expectedCreated:      "2020-01-03T15:04:05+07:00",
+			expectedLastModified: "2020-02-03T16:05:04+07:00",
+		}, {
+			name:                 "Users get request with version, with base path",
+			basePath:             "/my/test/base/path",
+			target:               "/my/test/base/path/v2/Users/0004",
+			expectedUserName:     "test4",
+			expectedVersion:      "v4",
+			expectedCreated:      "2020-01-04T15:04:05+07:00",
+			expectedLastModified: "2020-02-04T16:05:04+07:00",
+		},
 	}
 
-	if rr.Header().Get("Content-Type") != "application/scim+json" {
-		t.Error("handler did not return the header content type correctly")
-	}
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(tt.basePath).ServeHTTP(rr, req)
 
-	expectedVersion := "v1"
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			}
 
-	if rr.Header().Get("Etag") != expectedVersion {
-		t.Error("handler did not return the header entity tag correctly")
-	}
+			if rr.Header().Get("Content-Type") != "application/scim+json" {
+				t.Error("handler did not return the header content type correctly")
+			}
 
-	var resource map[string]interface{}
-	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
-		t.Fatal(err)
-	}
+			if rr.Header().Get("Etag") != tt.expectedVersion {
+				t.Error("handler did not return the header entity tag correctly")
+			}
 
-	if resource["userName"] != "test1" {
-		t.Error("handler did not return the resource username correctly")
-	}
+			var resource map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
+				t.Fatal(err)
+			}
 
-	meta, ok := resource["meta"].(map[string]interface{})
-	if !ok {
-		t.Error("handler did not return the resource meta correctly")
-	}
+			if resource["userName"] != tt.expectedUserName {
+				t.Error("handler did not return the resource correctly")
+			}
 
-	if meta["resourceType"] != "User" {
-		t.Error("handler did not return the resource meta resource type correctly")
-	}
+			meta, ok := resource["meta"].(map[string]interface{})
+			if !ok {
+				t.Error("handler did not return the resource meta correctly")
+			}
 
-	if meta["created"] != "2020-01-01T15:04:05+07:00" {
-		t.Error("handler did not return the resource meta created correctly")
-	}
+			if meta["resourceType"] != "User" {
+				t.Error("handler did not return the resource meta resource type correctly")
+			}
 
-	if meta["lastModified"] != "2020-02-01T16:05:04+07:00" {
-		t.Error("handler did not return the resource meta last modified correctly")
-	}
+			if meta["created"] != tt.expectedCreated {
+				t.Error("handler did not return the resource meta created correctly")
+			}
 
-	if meta["location"] != "Users/0001" {
-		t.Error("handler did not return the resource meta version correctly")
-	}
+			if meta["lastModified"] != tt.expectedLastModified {
+				t.Error("handler did not return the resource meta last modified correctly")
+			}
 
-	if meta["version"] != expectedVersion {
-		t.Error("handler did not return the resource meta version correctly")
+			if meta["location"] != strings.TrimPrefix(fmt.Sprintf("%s/Users/%s", tt.basePath, resource["id"]), "/") {
+				t.Error("handler did not return the resource meta location correctly", meta["location"])
+			}
+
+			if meta["version"] != tt.expectedVersion {
+				t.Error("handler did not return the resource meta version correctly")
+			}
+		})
 	}
 }
 
 func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
@@ -418,7 +701,7 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 func TestServerResourcesGetHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -437,7 +720,7 @@ func TestServerResourcesGetHandler(t *testing.T) {
 func TestServerResourcesGetHandlerPagination(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -456,7 +739,7 @@ func TestServerResourcesGetHandlerPagination(t *testing.T) {
 func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -500,7 +783,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -576,7 +859,7 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
@@ -602,7 +885,7 @@ func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
@@ -627,7 +910,7 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 		]
 	}`, op, path)))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
@@ -650,20 +933,10 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 }
 
-func TestServerResourcePutHandlerInvalid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"more": "test"}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
-	}
-}
-
 func TestServerResourcePutHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"id": "test", "userName": "other"}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -681,7 +954,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 func TestServerResourcePutHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
@@ -700,7 +973,7 @@ func TestServerResourcePutHandlerNotFound(t *testing.T) {
 func TestServerResourceDeleteHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNoContent)
@@ -710,7 +983,7 @@ func TestServerResourceDeleteHandler(t *testing.T) {
 func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer("").ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)

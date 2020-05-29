@@ -60,7 +60,23 @@ func (s Server) getSchema(id string) schema.Schema {
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
-	path := strings.TrimPrefix(r.URL.Path, "/v2")
+
+	path := r.URL.Path
+	basePath := strings.TrimSuffix(s.getBasePath(r), "/")
+
+	if !strings.HasPrefix(path, basePath) {
+		errorHandler(w, r, scimError{
+			detail: "Specified endpoint does not exist.",
+			status: http.StatusNotFound,
+		})
+
+		return
+	}
+
+	path = strings.TrimPrefix(path, basePath)
+	// Keeping this for backwards compatible reasons
+	path = strings.TrimPrefix(path, "/v2")
+
 	switch {
 	case path == "/Schemas" && r.Method == http.MethodGet:
 		s.schemasHandler(w, r)

@@ -1,6 +1,8 @@
 package scim
 
 import (
+	"net/http"
+
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -10,6 +12,9 @@ type ServiceProviderConfig struct {
 	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
 	// documentation.
 	DocumentationURI optional.String
+	// BasePathResolver is used to be able to handle requests with a common prefix for the exposed endpoints
+	// (Schema, ResourceTypes, ServiceProviderConfig & configured ResourceType endpoints.)
+	BasePathResolver func(r *http.Request) string
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
 	AuthenticationSchemes []AuthenticationScheme
 	// MaxResults denotes the the integer value specifying the maximum number of resources returned in a response. It defaults to 100.

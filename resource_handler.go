@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	scim "github.com/di-wu/scim-filter-parser"
@@ -45,7 +46,7 @@ type Resource struct {
 	Meta Meta
 }
 
-func (r Resource) response(resourceType ResourceType) ResourceAttributes {
+func (r Resource) response(resourceType ResourceType, basePath string) ResourceAttributes {
 	response := r.Attributes
 	response["id"] = r.ID
 	schemas := []string{resourceType.Schema.ID}
@@ -53,11 +54,15 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 		schemas = append(schemas, schema.Schema.ID)
 	}
 
+	if len(basePath) > 0 {
+		basePath = strings.TrimSuffix(basePath[1:], "/") + "/"
+	}
+
 	response["schemas"] = schemas
 
 	m := meta{
 		ResourceType: resourceType.Name,
-		Location:     fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
+		Location:     fmt.Sprintf("%s%s/%s", basePath, resourceType.Endpoint[1:], url.PathEscape(r.ID)),
 	}
 
 	if r.Meta.Created != nil {
