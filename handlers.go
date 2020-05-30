@@ -180,7 +180,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	if len(resource.Meta.Version) != 0 {
+	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
 
