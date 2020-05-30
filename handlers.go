@@ -216,7 +216,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	if len(resource.Meta.Version) != 0 {
+	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
 
