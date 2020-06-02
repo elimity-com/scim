@@ -136,6 +136,18 @@ func ScimErrorBadRequest(msg string) ScimError {
 }
 
 var (
+	// ScimErrorInvalidFilter returns an 400 SCIM error with a detailed message.
+	ScimErrorInvalidFilter = ScimError{
+		ScimType: ScimTypeInvalidFilter,
+		Detail:   "The specified filter syntax was invalid, or the specified attribute and filter comparison combination is not supported.",
+		Status:   http.StatusBadRequest,
+	}
+	// ScimErrorTooMany returns an 400 SCIM error with a detailed message.
+	ScimErrorTooMany = ScimError{
+		ScimType: ScimTypeTooMany,
+		Detail:   "The specified filter yields many more results than the server is willing to calculate or process.",
+		Status:   http.StatusBadRequest,
+	}
 	// ScimErrorUniqueness returns an 409 SCIM error with a detailed message.
 	ScimErrorUniqueness = ScimError{
 		ScimType: ScimTypeUniqueness,
@@ -154,10 +166,10 @@ var (
 		Detail:   "The request body message structure was invalid or did not conform to the request schema.",
 		Status:   http.StatusBadRequest,
 	}
-	// ScimErrorInvalidValue returns an 400 SCIM error with a detailed message.
-	ScimErrorInvalidValue = ScimError{
-		ScimType: ScimTypeInvalidValue,
-		Detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
+	// ScimErrorInvalidPath returns an 400 SCIM error with a detailed message.
+	ScimErrorInvalidPath = ScimError{
+		ScimType: ScimTypeInvalidPath,
+		Detail:   "The \"path\" attribute was invalid or malformed.",
 		Status:   http.StatusBadRequest,
 	}
 	// ScimErrorNoTarget returns an 400 SCIM error with a detailed message.
@@ -165,6 +177,24 @@ var (
 		ScimType: ScimTypeNoTarget,
 		Detail:   "The specified path did not yield an attribute or attribute value that could be operated on.",
 		Status:   http.StatusBadRequest,
+	}
+	// ScimErrorInvalidValue returns an 400 SCIM error with a detailed message.
+	ScimErrorInvalidValue = ScimError{
+		ScimType: ScimTypeInvalidValue,
+		Detail:   "A required value was missing, or the value specified was not compatible with the operation or attribute type, or resource schema.",
+		Status:   http.StatusBadRequest,
+	}
+	// ScimErrorInvalidVersion returns an 400 SCIM error with a detailed message.
+	ScimErrorInvalidVersion = ScimError{
+		ScimType: ScimTypeInvalidVersion,
+		Detail:   "The specified SCIM protocol version is not supported.",
+		Status:   http.StatusBadRequest,
+	}
+	// ScimErrorSensitive returns an 403 SCIM error with a detailed message.
+	ScimErrorSensitive = ScimError{
+		ScimType: ScimTypeSensitive,
+		Detail:   "The specified request cannot be completed, due to the passing of sensitive information in a request URI.",
+		Status:   http.StatusForbidden,
 	}
 	// ScimErrorInternal returns an 500 SCIM error without a message.
 	ScimErrorInternal = ScimError{
