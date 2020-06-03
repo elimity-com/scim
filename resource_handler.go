@@ -30,9 +30,12 @@ type ResourceAttributes map[string]interface{}
 
 // Meta represents the metadata of a resource
 type Meta struct {
-	Created      *time.Time
+	// Created is the time that the resource was added to the service provider.
+	Created *time.Time
+	// LastModified is the most recent time that the details of this resource were updated at the service provider.
 	LastModified *time.Time
-	Version      string
+	// Version is the version / entity-tag of the resource
+	Version string
 }
 
 // Resource represents an entity returned by a callback method.
