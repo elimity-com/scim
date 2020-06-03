@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 
@@ -518,11 +519,15 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
 	assert.NoError(t, err, "json unmarshalling failed")
 
-	assert.Equal(t, scimErrorResourceNotFound("9999"), scimErr)
+	expectedError := &errors.ScimError{
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("Resource %d not found.", 9999),
+	}
+	assert.Equal(t, expectedError, scimErr)
 }
 
 func TestServerResourcesGetHandler(t *testing.T) {
@@ -723,11 +728,20 @@ func TestServerResourcePutHandlerNotFound(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
 	assert.NoError(t, err, "json unmarshalling failed")
 
-	assert.Equal(t, scimErrorResourceNotFound("9999"), scimErr)
+	expectedError := &errors.ScimError{
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("Resource %d not found.", 9999),
+	}
+	assert.Equal(t, expectedError, scimErr)
+
+	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
+		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
+		t.Errorf("wrong scim error: %v", scimErr)
+	}
 }
 
 func TestServerResourceDeleteHandler(t *testing.T) {
@@ -745,9 +759,13 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
 	assert.NoError(t, err, "json unmarshalling failed")
 
-	assert.Equal(t, scimErrorResourceNotFound("9999"), scimErr, "wrong scim error")
+	expectedError := &errors.ScimError{
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("Resource %d not found.", 9999),
+	}
+	assert.Equal(t, expectedError, scimErr, "wrong scim error")
 }
