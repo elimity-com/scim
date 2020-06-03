@@ -173,7 +173,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
+	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -209,7 +209,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
+	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -237,7 +237,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
+	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -271,7 +271,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 
 	resources := []interface{}{}
 	for _, v := range page.Resources {
-		resources = append(resources, v.response(resourceType, s.getBasePath(r)))
+		resources = append(resources, v.response(resourceType))
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -309,7 +309,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType, s.getBasePath(r)))
+	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, scimErrorInternalServer)
 		log.Fatalf("failed marshaling resource: %v", err)
@@ -336,12 +336,4 @@ func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s Server) getBasePath(r *http.Request) string {
-	if s.Config.BasePathResolver == nil {
-		return ""
-	}
-
-	return s.Config.BasePathResolver(r)
 }
