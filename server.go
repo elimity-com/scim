@@ -61,21 +61,7 @@ func (s Server) getSchema(id string) schema.Schema {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 
-	path := r.URL.Path
-	basePath := strings.TrimSuffix(s.getBasePath(r), "/")
-
-	if !strings.HasPrefix(path, basePath) {
-		errorHandler(w, r, scimError{
-			detail: "Specified endpoint does not exist.",
-			status: http.StatusNotFound,
-		})
-
-		return
-	}
-
-	path = strings.TrimPrefix(path, basePath)
-	// Keeping this for backwards compatible reasons
-	path = strings.TrimPrefix(path, "/v2")
+	path := strings.TrimPrefix(r.URL.Path, "/v2")
 
 	switch {
 	case path == "/Schemas" && r.Method == http.MethodGet:

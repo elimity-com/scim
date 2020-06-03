@@ -15,17 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newTestServer(basePath string) Server {
+func newTestServer() Server {
 	userSchema := getUserSchema()
 
 	userSchemaExtension := getUserExtensionSchema()
 
 	return Server{
-		Config: ServiceProviderConfig{
-			BasePathResolver: func(r *http.Request) string {
-				return basePath
-			},
-		},
+		Config: ServiceProviderConfig{},
 		ResourceTypes: []ResourceType{
 			{
 				ID:          optional.NewString("User"),
@@ -157,74 +153,40 @@ func TestInvalidEndpoint(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
-		basePath       string
 		target         string
 		body           io.Reader
 		expectedStatus int
 	}{
 		{
-			name:           "invalid get request, no base path",
+			name:           "invalid get request",
+			method:         http.MethodGet,
+			target:         "/Invalid",
+			expectedStatus: http.StatusNotFound,
+		}, {
+			name:           "invalid get request, with version",
 			method:         http.MethodGet,
 			target:         "/v2/Invalid",
 			expectedStatus: http.StatusNotFound,
 		}, {
-			name:           "invalid get request, with base path",
-			method:         http.MethodGet,
-			basePath:       "/my/test/base/path",
-			target:         "/my/test/base/path/v2/Invalid",
-			expectedStatus: http.StatusNotFound,
-		}, {
-			name:           "invalid get request, outside base path",
-			method:         http.MethodGet,
-			basePath:       "my/test/base/path/v2",
-			target:         "/v2/Invalid",
-			expectedStatus: http.StatusNotFound,
-		}, {
-			name:           "invalid schema request, no base path",
+			name:           "invalid schema request",
 			method:         http.MethodGet,
 			target:         "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group",
 			expectedStatus: http.StatusNotFound,
 		}, {
-			name:           "invalid schema request, with base path",
-			method:         http.MethodGet,
-			basePath:       "/my/test/base/path",
-			target:         "/my/test/base/path/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group",
-			expectedStatus: http.StatusNotFound,
-		}, {
-			name:           "invalid resource types request, no base path",
+			name:           "invalid resource types request",
 			method:         http.MethodGet,
 			target:         "/ResourceTypes/Group",
 			expectedStatus: http.StatusNotFound,
 		}, {
-			name:           "invalid resource types request, with base path",
-			method:         http.MethodGet,
-			basePath:       "/my/test/base/path",
-			target:         "/my/test/base/path/ResourceTypes/Group",
-			expectedStatus: http.StatusNotFound,
-		}, {
-			name:           "invalid post request, no base path",
+			name:           "invalid post request",
 			method:         http.MethodPost,
 			target:         "/Users",
 			body:           strings.NewReader(`{"id": "other"}`),
 			expectedStatus: http.StatusBadRequest,
 		}, {
-			name:           "invalid post request, with base path",
-			method:         http.MethodPost,
-			basePath:       "/my/test/base/path",
-			target:         "/my/test/base/path/Users",
-			body:           strings.NewReader(`{"id": "other"}`),
-			expectedStatus: http.StatusBadRequest,
-		}, {
-			name:           "invalid put request, no base path",
+			name:           "invalid put request",
 			method:         http.MethodPut,
 			target:         "/Users/0001",
-			body:           strings.NewReader(`{"more": "test"}`),
-			expectedStatus: http.StatusBadRequest,
-		}, {
-			name:           "invalid put request, with base path",
-			method:         http.MethodPut,
-			basePath:       "/my/test/base/path",
-			target:         "/my/test/base/path/Users/0001",
 			body:           strings.NewReader(`{"more": "test"}`),
 			expectedStatus: http.StatusBadRequest,
 		},
@@ -235,7 +197,7 @@ func TestInvalidEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.expectedStatus, rr.Code, "status code mismatch")
 		})
@@ -245,7 +207,6 @@ func TestInvalidEndpoint(t *testing.T) {
 func TestServerSchemasEndpoint(t *testing.T) {
 	tests := []struct {
 		name     string
-		basePath string
 		target   string
 	}{
 		{
@@ -254,14 +215,6 @@ func TestServerSchemasEndpoint(t *testing.T) {
 		}, {
 			name:   "schemas request with version",
 			target: "/v2/Schemas",
-		}, {
-			name:     "schemas request without version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/Schemas",
-		}, {
-			name:     "schemas request with version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/v2/Schemas",
 		},
 	}
 
@@ -270,7 +223,7 @@ func TestServerSchemasEndpoint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -303,8 +256,8 @@ func TestServerSchemasEndpoint(t *testing.T) {
 func TestServerSchemaEndpointValid(t *testing.T) {
 	tests := []struct {
 		name     string
-		basePath string
 		schema   string
+		versionPrefix string
 	}{
 		{
 			name:   "User schema",
@@ -315,20 +268,20 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 		}, {
 			name:     "User schema, with base path",
 			schema:   "urn:ietf:params:scim:schemas:core:2.0:User",
-			basePath: "/my/test/base/path",
+			versionPrefix: "/v2",
 		}, {
 			name:     "Enterprice user schema, with base path",
 			schema:   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-			basePath: "/my/test/base/path",
+			versionPrefix: "/v2",
 		},
 	}
 
 	for _, tt := range tests {
 		tt := tt // scopelint
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/Schemas/%s", tt.basePath, tt.schema), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/Schemas/%s", tt.versionPrefix, tt.schema), nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -344,7 +297,6 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 func TestServerResourceTypesHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		basePath string
 		target   string
 	}{
 		{
@@ -353,14 +305,6 @@ func TestServerResourceTypesHandler(t *testing.T) {
 		}, {
 			name:   "resource types request with version",
 			target: "/v2/ResourceTypes",
-		}, {
-			name:     "resource types request without version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/ResourceTypes",
-		}, {
-			name:     "resource types request with version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/v2/ResourceTypes",
 		},
 	}
 
@@ -369,7 +313,7 @@ func TestServerResourceTypesHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -395,10 +339,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 func TestServerResourceTypeHandlerValid(t *testing.T) {
 	tests := []struct {
 		name         string
-		basePath     string
 		resourceType string
+		versionPrefix string
 	}{
-		{
+	{
 			name:         "User schema",
 			resourceType: "User",
 		}, {
@@ -407,20 +351,20 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 		}, {
 			name:         "User schema, with base path",
 			resourceType: "User",
-			basePath:     "/my/test/base/path",
+			versionPrefix:     "/v2",
 		}, {
 			name:         "Enterprice user schema, with base path",
 			resourceType: "EnterpriseUser",
-			basePath:     "/my/test/base/path",
+			versionPrefix:     "/v2",
 		},
 	}
 
 	for _, tt := range tests {
 		tt := tt // scopelint
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.basePath, tt.resourceType), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -436,7 +380,6 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 func TestServerServiceProviderConfigHandler(t *testing.T) {
 	tests := []struct {
 		name     string
-		basePath string
 		target   string
 	}{
 		{
@@ -445,14 +388,6 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 		}, {
 			name:   "service provide config request with version",
 			target: "/v2/ServiceProviderConfig",
-		}, {
-			name:     "service provide config request without version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/ServiceProviderConfig",
-		}, {
-			name:     "service provide config request with version, with base path",
-			basePath: "/my/test/base/path",
-			target:   "/my/test/base/path/v2/ServiceProviderConfig",
 		},
 	}
 
@@ -461,7 +396,7 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 		})
@@ -471,7 +406,6 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 func TestServerResourcePostHandlerValid(t *testing.T) {
 	tests := []struct {
 		name             string
-		basePath         string
 		target           string
 		body             io.Reader
 		expectedUserName string
@@ -486,18 +420,6 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			target:           "/v2/Users",
 			body:             strings.NewReader(`{"id": "other", "userName": "test2"}`),
 			expectedUserName: "test2",
-		}, {
-			name:             "Users post request without version, with base path",
-			basePath:         "/my/test/base/path",
-			target:           "/my/test/base/path/Users",
-			body:             strings.NewReader(`{"id": "other", "userName": "test3"}`),
-			expectedUserName: "test3",
-		}, {
-			name:             "Users post request with version, with base path",
-			basePath:         "/my/test/base/path",
-			target:           "/my/test/base/path/v2/Users",
-			body:             strings.NewReader(`{"id": "other", "userName": "test4"}`),
-			expectedUserName: "test4",
 		},
 	}
 
@@ -506,7 +428,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, tt.target, tt.body)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusCreated, rr.Code, "status code mismatch")
 
@@ -523,8 +445,8 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 
 			assert.Equal(t, "User", meta["resourceType"])
 			assert.NotEmpty(t, meta["created"], "missing meta created")
-			assert.NotEmpty(t, meta["lastModified"], "missing meta last modifie")
-			assert.Equal(t, strings.TrimPrefix(fmt.Sprintf("%s/Users/%s", tt.basePath, resource["id"]), "/"), meta["location"])
+			assert.NotEmpty(t, meta["lastModified"], "missing meta last modified")
+			assert.Equal(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
 			assert.Equal(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
 			assert.Equal(t, rr.Header().Get("Etag"), meta["version"], "ETag and version needs to be the same")
 		})
@@ -533,10 +455,8 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
-
 	tests := []struct {
 		name                 string
-		basePath             string
 		target               string
 		expectedUserName     string
 		expectedVersion      string
@@ -557,22 +477,6 @@ func TestServerResourceGetHandler(t *testing.T) {
 			expectedVersion:      "v2",
 			expectedCreated:      "2020-01-02T15:04:05+07:00",
 			expectedLastModified: "2020-02-02T16:05:04+07:00",
-		}, {
-			name:                 "Users get request without version, with base path",
-			basePath:             "/my/test/base/path",
-			target:               "/my/test/base/path/Users/0003",
-			expectedUserName:     "test3",
-			expectedVersion:      "v3",
-			expectedCreated:      "2020-01-03T15:04:05+07:00",
-			expectedLastModified: "2020-02-03T16:05:04+07:00",
-		}, {
-			name:                 "Users get request with version, with base path",
-			basePath:             "/my/test/base/path",
-			target:               "/my/test/base/path/v2/Users/0004",
-			expectedUserName:     "test4",
-			expectedVersion:      "v4",
-			expectedCreated:      "2020-01-04T15:04:05+07:00",
-			expectedLastModified: "2020-02-04T16:05:04+07:00",
 		},
 	}
 
@@ -581,7 +485,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer(tt.basePath).ServeHTTP(rr, req)
+			newTestServer().ServeHTTP(rr, req)
 
 			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -601,7 +505,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 			assert.Equal(t, "User", meta["resourceType"])
 			assert.Equal(t, tt.expectedCreated, meta["created"])
 			assert.Equal(t, tt.expectedLastModified, meta["lastModified"])
-			assert.Equal(t, strings.TrimPrefix(fmt.Sprintf("%s/Users/%s", tt.basePath, resource["id"]), "/"), meta["location"])
+			assert.Equal(t,fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
 			assert.Equal(t, tt.expectedVersion, meta["version"])
 		})
 	}
@@ -610,7 +514,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
@@ -624,7 +528,7 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 func TestServerResourcesGetHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -638,7 +542,7 @@ func TestServerResourcesGetHandler(t *testing.T) {
 func TestServerResourcesGetHandlerPagination(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -652,7 +556,7 @@ func TestServerResourcesGetHandlerPagination(t *testing.T) {
 func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -691,7 +595,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -736,7 +640,7 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	err := json.Unmarshal(rr.Body.Bytes(), &resource)
@@ -758,7 +662,7 @@ func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	err := json.Unmarshal(rr.Body.Bytes(), &resource)
@@ -779,7 +683,7 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 		]
 	}`, op, path)))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	err := json.Unmarshal(rr.Body.Bytes(), &resource)
@@ -801,7 +705,7 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 func TestServerResourcePutHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"id": "test", "userName": "other"}`))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
@@ -815,7 +719,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 func TestServerResourcePutHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
@@ -829,7 +733,7 @@ func TestServerResourcePutHandlerNotFound(t *testing.T) {
 func TestServerResourceDeleteHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNoContent, rr.Code, "status code mismatch")
 }
@@ -837,7 +741,7 @@ func TestServerResourceDeleteHandler(t *testing.T) {
 func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer("").ServeHTTP(rr, req)
+	newTestServer().ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
 
