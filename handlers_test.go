@@ -206,8 +206,8 @@ func TestInvalidEndpoint(t *testing.T) {
 
 func TestServerSchemasEndpoint(t *testing.T) {
 	tests := []struct {
-		name     string
-		target   string
+		name   string
+		target string
 	}{
 		{
 			name:   "schemas request without version",
@@ -255,8 +255,8 @@ func TestServerSchemasEndpoint(t *testing.T) {
 
 func TestServerSchemaEndpointValid(t *testing.T) {
 	tests := []struct {
-		name     string
-		schema   string
+		name          string
+		schema        string
 		versionPrefix string
 	}{
 		{
@@ -266,12 +266,12 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 			name:   "Enterprice user schema",
 			schema: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 		}, {
-			name:     "User schema, with base path",
-			schema:   "urn:ietf:params:scim:schemas:core:2.0:User",
+			name:          "User schema, with base path",
+			schema:        "urn:ietf:params:scim:schemas:core:2.0:User",
 			versionPrefix: "/v2",
 		}, {
-			name:     "Enterprice user schema, with base path",
-			schema:   "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+			name:          "Enterprice user schema, with base path",
+			schema:        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 			versionPrefix: "/v2",
 		},
 	}
@@ -296,8 +296,8 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 
 func TestServerResourceTypesHandler(t *testing.T) {
 	tests := []struct {
-		name     string
-		target   string
+		name   string
+		target string
 	}{
 		{
 			name:   "resource types request without version",
@@ -338,24 +338,24 @@ func TestServerResourceTypesHandler(t *testing.T) {
 
 func TestServerResourceTypeHandlerValid(t *testing.T) {
 	tests := []struct {
-		name         string
-		resourceType string
+		name          string
+		resourceType  string
 		versionPrefix string
 	}{
-	{
+		{
 			name:         "User schema",
 			resourceType: "User",
 		}, {
 			name:         "Enterprice user schema",
 			resourceType: "EnterpriseUser",
 		}, {
-			name:         "User schema, with base path",
-			resourceType: "User",
-			versionPrefix:     "/v2",
+			name:          "User schema, with base path",
+			resourceType:  "User",
+			versionPrefix: "/v2",
 		}, {
-			name:         "Enterprice user schema, with base path",
-			resourceType: "EnterpriseUser",
-			versionPrefix:     "/v2",
+			name:          "Enterprice user schema, with base path",
+			resourceType:  "EnterpriseUser",
+			versionPrefix: "/v2",
 		},
 	}
 
@@ -379,8 +379,8 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 
 func TestServerServiceProviderConfigHandler(t *testing.T) {
 	tests := []struct {
-		name     string
-		target   string
+		name   string
+		target string
 	}{
 		{
 			name:   "service provide config request without version",
@@ -505,7 +505,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 			assert.Equal(t, "User", meta["resourceType"])
 			assert.Equal(t, tt.expectedCreated, meta["created"])
 			assert.Equal(t, tt.expectedLastModified, meta["lastModified"])
-			assert.Equal(t,fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
+			assert.Equal(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
 			assert.Equal(t, tt.expectedVersion, meta["version"])
 		})
 	}
