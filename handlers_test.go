@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -330,11 +331,12 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	if err := json.Unmarshal(rr.Body.Bytes(), &scimErr); err != nil {
 		t.Error(err)
 	}
-	if scimErr != scimErrorResourceNotFound("9999") {
+	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
+		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
 		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
@@ -572,12 +574,13 @@ func TestServerResourcePutHandlerNotFound(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	if err := json.Unmarshal(rr.Body.Bytes(), &scimErr); err != nil {
 		t.Error(err)
 	}
 
-	if scimErr != scimErrorResourceNotFound("9999") {
+	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
+		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
 		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }
@@ -601,12 +604,13 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 	}
 
-	var scimErr scimError
+	var scimErr *errors.ScimError
 	if err := json.Unmarshal(rr.Body.Bytes(), &scimErr); err != nil {
 		t.Error(err)
 	}
 
-	if scimErr != scimErrorResourceNotFound("9999") {
+	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
+		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
 		t.Errorf("wrong scim error: %v", scimErr)
 	}
 }

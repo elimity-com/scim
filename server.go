@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	scim "github.com/di-wu/scim-filter-parser"
+	"github.com/di-wu/scim-filter-parser"
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -114,9 +115,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, r, scimError{
-		detail: "Specified endpoint does not exist.",
-		status: http.StatusNotFound,
+	errorHandler(w, r, &errors.ScimError{
+		Detail: "Specified endpoint does not exist.",
+		Status: http.StatusNotFound,
 	})
 }
 
@@ -138,7 +139,7 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
-func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimError) {
+func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
 	defaultCount := s.Config.getItemsPerPage()
@@ -152,8 +153,8 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 	}
 
 	if len(invalidParams) > 1 {
-		err := scimErrorBadParams(invalidParams)
-		return ListRequestParams{}, &err
+		scimErr := errors.ScimErrorBadParams(invalidParams)
+		return ListRequestParams{}, &scimErr
 	}
 
 	// Ensure the count isn't more then the allowable max and not less then 1.
@@ -167,8 +168,8 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *scimErr
 
 	filter, filterErr := getFilter(r)
 	if filterErr != nil {
-		err := scimErrorBadParams([]string{"filter"})
-		return ListRequestParams{}, &err
+		scimErr := errors.ScimErrorBadParams([]string{"filter"})
+		return ListRequestParams{}, &scimErr
 	}
 
 	return ListRequestParams{

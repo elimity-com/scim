@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -78,7 +77,7 @@ var testSchema = Schema{
 
 func TestResourceInvalid(t *testing.T) {
 	var resource interface{}
-	if _, scimErr := testSchema.Validate(resource); scimErr == errors.ValidationErrorNil {
+	if _, scimErr := testSchema.Validate(resource); scimErr == nil {
 		t.Error("invalid resource expected")
 	}
 }
@@ -196,7 +195,7 @@ func TestValidationInvalid(t *testing.T) {
 			"decimalNumber": json.Number("fail"),
 		},
 	} {
-		if _, scimErr := testSchema.Validate(test); scimErr == errors.ValidationErrorNil {
+		if _, scimErr := testSchema.Validate(test); scimErr == nil {
 			t.Errorf("invalid resource expected")
 		}
 	}
@@ -222,7 +221,7 @@ func TestValidValidation(t *testing.T) {
 			"decimalNumber": json.Number("11.12"),
 		},
 	} {
-		if _, scimErr := testSchema.Validate(test); scimErr != errors.ValidationErrorNil {
+		if _, scimErr := testSchema.Validate(test); scimErr != nil {
 			t.Errorf("valid resource expected")
 		}
 	}
@@ -231,25 +230,25 @@ func TestValidValidation(t *testing.T) {
 func TestJSONMarshalling(t *testing.T) {
 	expectedJSON, err := ioutil.ReadFile("./testdata/schema_test.json")
 	if err != nil {
-		t.Errorf("Failed to acquire test data")
+		t.Errorf("failed to acquire test data")
 		return
 	}
 
 	actualJSON, err := testSchema.MarshalJSON()
 	if err != nil {
-		t.Errorf("Failed to marshal schema into JSON")
+		t.Errorf("failed to marshal schema into JSON")
 		return
 	}
 
 	normalizedActual, err := normalizeJSON(actualJSON)
 	normalizedExpected, expectedErr := normalizeJSON(expectedJSON)
 	if err != nil || expectedErr != nil {
-		t.Errorf("Failed to normalize test JSON")
+		t.Errorf("failed to normalize test JSON")
 		return
 	}
 
 	if normalizedActual != normalizedExpected {
-		t.Errorf("Schema output by MarshalJSON did not match the expected output. Want %s, Got %s", normalizedExpected, normalizedActual)
+		t.Errorf("schema output by MarshalJSON did not match the expected output. want %s, got %s", normalizedExpected, normalizedActual)
 	}
 }
 
