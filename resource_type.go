@@ -99,13 +99,13 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 }
 
 func (t ResourceType) validateCommonAttributes(m map[string]interface{}) (map[string]interface{}, *errors.ScimError) {
-	if eId, ok := m["externalId"]; ok {
-		externalId, ok := eId.(string)
+	if eID, ok := m["externalId"]; ok {
+		externalID, ok := eID.(string)
 		if !ok {
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		return map[string]interface{}{"externalId": externalId}, nil
+		return map[string]interface{}{"externalId": externalID}, nil
 	}
 	return nil, nil
 }
