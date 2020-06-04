@@ -57,7 +57,13 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := t.Schema.Validate(m)
+	// validate common attributes
+	commonAttributes, scimErr := t.validateCommonAttributes(m)
+	if scimErr != nil {
+		return ResourceAttributes{}, scimErr
+	}
+
+	schemaAttributes, scimErr := t.Schema.Validate(m)
 	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
@@ -76,10 +82,32 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 			return ResourceAttributes{}, scimErr
 		}
 
-		attributes[extension.Schema.ID] = extensionAttributes
+		schemaAttributes[extension.Schema.ID] = extensionAttributes
+	}
+
+	attributes := make(map[string]interface{}, len(commonAttributes)+len(schemaAttributes))
+
+	for k, v := range schemaAttributes {
+		attributes[k] = v
+	}
+
+	for k, v := range commonAttributes {
+		attributes[k] = v
 	}
 
 	return attributes, nil
+}
+
+func (t ResourceType) validateCommonAttributes(m map[string]interface{}) (map[string]interface{}, *errors.ScimError) {
+	if eId, ok := m["externalId"]; ok {
+		externalId, ok := eId.(string)
+		if !ok {
+			return nil, &errors.ScimErrorInvalidValue
+		}
+
+		return map[string]interface{}{"externalId": externalId}, nil
+	}
+	return nil, nil
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
@@ -186,6 +214,15 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 	mapValue, ok := op.Value.(map[string]interface{})
 	if !ok {
 		mapValue = map[string]interface{}{op.Path: op.Value}
+	}
+
+	// Check if it's a patch on a common attribute.
+	if op.Path == "externalId" {
+		_, scimError := t.validateCommonAttributes(mapValue)
+		if scimError != nil {
+			return scimError
+		}
+		return nil
 	}
 
 	// Check if it's a patch on a extension.
