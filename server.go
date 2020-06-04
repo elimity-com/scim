@@ -181,10 +181,10 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 	}, nil
 }
 
-func getFilter(r *http.Request) (scim.Expression, error) {
+func getFilter(r *http.Request) (filter.Expression, error) {
 	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
 	if rawFilter != "" {
-		parser := scim.NewParser(strings.NewReader(rawFilter))
+		parser := filter.NewParser(strings.NewReader(rawFilter))
 		return parser.Parse()
 	}
 	return nil, nil
