@@ -13,6 +13,8 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
+const externalID = "externalId"
+
 // ResourceType specifies the metadata about a resource type.
 type ResourceType struct {
 	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
@@ -99,13 +101,13 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 }
 
 func (t ResourceType) validateCommonAttributes(m map[string]interface{}) (map[string]interface{}, *errors.ScimError) {
-	if eID, ok := m["externalId"]; ok {
+	if eID, ok := m[externalID]; ok {
 		externalID, ok := eID.(string)
 		if !ok {
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		return map[string]interface{}{"externalId": externalID}, nil
+		return map[string]interface{}{externalID: externalID}, nil
 	}
 	return nil, nil
 }
@@ -217,7 +219,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 	}
 
 	// Check if it's a patch on a common attribute.
-	if op.Path == "externalId" {
+	if op.Path == externalID {
 		_, scimError := t.validateCommonAttributes(mapValue)
 		if scimError != nil {
 			return scimError
