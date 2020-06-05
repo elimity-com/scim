@@ -784,7 +784,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 			expectedExternalID: ptr("external_test2"),
 		}, {
 			name:               "Users put request without externalId",
-			target:             "/v2/Users/0003",
+			target:             "/Users/0003",
 			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
@@ -834,7 +834,7 @@ func TestServerResourcePutHandlerInvalid(t *testing.T) {
 			body:   strings.NewReader(`{"id": "other", "userName": "test2", "externalId": {"test":"test"}}`),
 		}, {
 			name:   "Users put request with invalid userName",
-			target: "/v2/Users/0003",
+			target: "/Users/0003",
 			body:   strings.NewReader(`{"id": "other", "userName": {"test": "test"}}`),
 		},
 	}
