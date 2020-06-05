@@ -89,7 +89,7 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 		schema.SimpleStringParams(schema.StringParams{
 			CaseExact:  true,
 			Mutability: schema.AttributeMutabilityReadWrite(),
-			Name:       "externalId",
+			Name:       schema.CommonAttributeExternalID,
 			Uniqueness: schema.AttributeUniquenessNone(),
 		}),
 	)
