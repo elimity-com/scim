@@ -2,6 +2,7 @@ package scim
 
 import (
 	"fmt"
+	"github.com/elimity-com/scim/optional"
 	"math/rand"
 	"net/http"
 	"time"
@@ -179,14 +180,14 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 	}, nil
 }
 
-func (h testResourceHandler) externalID(attributes ResourceAttributes) string {
+func (h testResourceHandler) externalID(attributes ResourceAttributes) optional.String {
 	if eID, ok := attributes["externalId"]; ok {
 		externalID, ok := eID.(string)
 		if !ok {
-			return ""
+			return optional.String{}
 		}
-		return externalID
+		return optional.NewString(externalID)
 	}
 
-	return ""
+	return optional.String{}
 }

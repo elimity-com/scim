@@ -2,6 +2,7 @@ package scim
 
 import (
 	"fmt"
+	"github.com/elimity-com/scim/optional"
 	"net/http"
 	"net/url"
 	"time"
@@ -44,7 +45,7 @@ type Resource struct {
 	// ID is the unique identifier created by the callback method "Create".
 	ID string
 	// ExternalID is an identifier for the resource as defined by the provisioning client.
-	ExternalID string
+	ExternalID optional.String
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
 	// Meta contains dates and the version of the resource.
@@ -54,8 +55,8 @@ type Resource struct {
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response := r.Attributes
 	response[schema.CommonAttributeID] = r.ID
-	if r.ExternalID != "" {
-		response[schema.CommonAttributeExternalID] = r.ExternalID
+	if r.ExternalID.Present() {
+		response[schema.CommonAttributeExternalID] = r.ExternalID.Value()
 	}
 	schemas := []string{resourceType.Schema.ID}
 	for _, s := range resourceType.SchemaExtensions {
