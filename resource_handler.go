@@ -2,11 +2,11 @@ package scim
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/optional"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 
 	scim "github.com/di-wu/scim-filter-parser"

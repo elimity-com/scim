@@ -2,12 +2,12 @@ package scim
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/optional"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/optional"
 )
 
 func ExampleResourceHandler() {

@@ -431,30 +431,26 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 	}
 }
 
-func ptr(s string) *string {
-	return &s
-}
-
 func TestServerResourcePostHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string
 		target             string
 		body               io.Reader
 		expectedUserName   string
-		expectedExternalID *string
+		expectedExternalID interface{}
 	}{
 		{
 			name:               "Users post request without version",
 			target:             "/Users",
 			body:               strings.NewReader(`{"id": "other", "userName": "test1", "externalId": "external_test1"}`),
 			expectedUserName:   "test1",
-			expectedExternalID: ptr("external_test1"),
+			expectedExternalID: "external_test1",
 		}, {
 			name:               "Users post request with version",
 			target:             "/v2/Users",
 			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
 			expectedUserName:   "test2",
-			expectedExternalID: ptr("external_test2"),
+			expectedExternalID: "external_test2",
 		}, {
 			name:               "Users post request without externalId",
 			target:             "/v2/Users",
@@ -481,11 +477,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 
 			assert.Equal(t, tt.expectedUserName, resource["userName"])
 
-			if tt.expectedExternalID != nil {
-				assert.EqualValues(t, *tt.expectedExternalID, resource["externalId"])
-			} else {
-				assert.NotContains(t, resource, "externalId")
-			}
+			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
 			assert.True(t, ok, "handler did not return the resource meta correctly")
@@ -769,14 +761,14 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 		target             string
 		body               io.Reader
 		expectedUserName   string
-		expectedExternalID *string
+		expectedExternalID interface{}
 	}{
 		{
 			name:               "Users put request",
 			target:             "/v2/Users/0002",
 			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
 			expectedUserName:   "test2",
-			expectedExternalID: ptr("external_test2"),
+			expectedExternalID: "external_test2",
 		}, {
 			name:               "Users put request without externalId",
 			target:             "/Users/0003",
@@ -803,11 +795,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 
 			assert.Equal(t, tt.expectedUserName, resource["userName"])
 
-			if tt.expectedExternalID != nil {
-				assert.EqualValues(t, *tt.expectedExternalID, resource["externalId"])
-			} else {
-				assert.NotContains(t, resource, "externalId")
-			}
+			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
 			assert.True(t, ok, "handler did not return the resource meta correctly")

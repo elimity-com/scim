@@ -57,13 +57,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
-	// validate common attributes
-	commonAttributes, scimErr := t.validateCommonAttributes(m)
-	if scimErr != nil {
-		return ResourceAttributes{}, scimErr
-	}
-
-	schemaAttributes, scimErr := t.Schema.Validate(m)
+	attributes, scimErr := t.schemaWithCommon().Validate(m)
 	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
@@ -82,32 +76,28 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 			return ResourceAttributes{}, scimErr
 		}
 
-		schemaAttributes[extension.Schema.ID] = extensionAttributes
-	}
-
-	attributes := make(map[string]interface{}, len(commonAttributes)+len(schemaAttributes))
-
-	for k, v := range schemaAttributes {
-		attributes[k] = v
-	}
-
-	for k, v := range commonAttributes {
-		attributes[k] = v
+		attributes[extension.Schema.ID] = extensionAttributes
 	}
 
 	return attributes, nil
 }
 
-func (t ResourceType) validateCommonAttributes(m map[string]interface{}) (map[string]interface{}, *errors.ScimError) {
-	if eID, ok := m[schema.CommonAttributeExternalID]; ok {
-		externalID, ok := eID.(string)
-		if !ok {
-			return nil, &errors.ScimErrorInvalidValue
-		}
+func (t ResourceType) schemaWithCommon() schema.Schema {
+	s := t.Schema
 
-		return map[string]interface{}{schema.CommonAttributeExternalID: externalID}, nil
-	}
-	return nil, nil
+	externalID := schema.SimpleCoreAttribute(
+		schema.SimpleStringParams(schema.StringParams{
+			CaseExact:  true,
+			Mutability: schema.AttributeMutabilityReadWrite(),
+			Name:       "externalId",
+			Uniqueness: schema.AttributeUniquenessNone(),
+		}),
+	)
+
+	s.Attributes = append(s.Attributes, externalID)
+
+	return s
+
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
@@ -216,15 +206,6 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		mapValue = map[string]interface{}{op.Path: op.Value}
 	}
 
-	// Check if it's a patch on a common attribute.
-	if op.Path == schema.CommonAttributeExternalID {
-		_, scimError := t.validateCommonAttributes(mapValue)
-		if scimError != nil {
-			return scimError
-		}
-		return nil
-	}
-
 	// Check if it's a patch on a extension.
 	if op.Path != "" {
 		if i := strings.LastIndex(op.Path, ":"); i != -1 {
@@ -237,5 +218,5 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		}
 	}
 
-	return t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
+	return t.schemaWithCommon().ValidatePatchOperationValue(op.Op, mapValue)
 }
