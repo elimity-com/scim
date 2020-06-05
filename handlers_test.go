@@ -151,7 +151,7 @@ func newTestResourceHandler() ResourceHandler {
 	}
 }
 
-func TestInvalidEndpoint(t *testing.T) {
+func TestInvalidRequests(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
@@ -190,6 +190,33 @@ func TestInvalidEndpoint(t *testing.T) {
 			method:         http.MethodPut,
 			target:         "/Users/0001",
 			body:           strings.NewReader(`{"more": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		}, {
+			name:           "users post request with invalid externalId",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"id": "other", "userName": "test1", "externalId": {"not": "this"}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users post request with invalid userName",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"id": "other", "userName":  {"not": "this""}}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users put request with invalid externalId",
+			method:         http.MethodPut,
+			target:         "/v2/Users/0002",
+			body:           strings.NewReader(`{"id": "other", "userName": "test2", "externalId": {"test":"test"}}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users put request with invalid userName",
+			method:         http.MethodPut,
+			target:         "/Users/0003",
+			body:           strings.NewReader(`{"id": "other", "userName": {"test": "test"}}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -469,38 +496,6 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			assert.Equal(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
 			assert.Equal(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
 			assert.Equal(t, rr.Header().Get("Etag"), meta["version"], "ETag and version needs to be the same")
-		})
-	}
-}
-
-func TestServerResourcePostHandlerInvalid(t *testing.T) {
-	tests := []struct {
-		name   string
-		target string
-		body   io.Reader
-	}{
-		{
-			name:   "Users post request with invalid externalId",
-			target: "/Users",
-			body:   strings.NewReader(`{"id": "other", "userName": "test1", "externalId": {"not": "this"}`),
-		},
-		{
-			name:   "Users post request with invalid userName",
-			target: "/Users",
-			body:   strings.NewReader(`{"id": "other", "userName":  {"not": "this""}}`),
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, tt.target, tt.body)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
-
-			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
 		})
 	}
 }
@@ -818,37 +813,6 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 			assert.True(t, ok, "handler did not return the resource meta correctly")
 
 			assert.Equal(t, "User", meta["resourceType"])
-		})
-	}
-}
-
-func TestServerResourcePutHandlerInvalid(t *testing.T) {
-	tests := []struct {
-		name   string
-		target string
-		body   io.Reader
-	}{
-		{
-			name:   "Users put request with invalid externalId",
-			target: "/v2/Users/0002",
-			body:   strings.NewReader(`{"id": "other", "userName": "test2", "externalId": {"test":"test"}}`),
-		}, {
-			name:   "Users put request with invalid userName",
-			target: "/Users/0003",
-			body:   strings.NewReader(`{"id": "other", "userName": {"test": "test"}}`),
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPut, tt.target, tt.body)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
-
-			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
 		})
 	}
 }
