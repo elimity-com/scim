@@ -135,7 +135,8 @@ func newTestResourceHandler() ResourceHandler {
 	for i := 1; i < 21; i++ {
 		data[fmt.Sprintf("000%d", i)] = testData{
 			resourceAttributes: ResourceAttributes{
-				"userName": fmt.Sprintf("test%d", i),
+				"userName":   fmt.Sprintf("test%d", i),
+				"externalId": fmt.Sprintf("external%d", i),
 			},
 			meta: map[string]string{
 				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
@@ -150,7 +151,7 @@ func newTestResourceHandler() ResourceHandler {
 	}
 }
 
-func TestInvalidEndpoint(t *testing.T) {
+func TestInvalidRequests(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
@@ -189,6 +190,33 @@ func TestInvalidEndpoint(t *testing.T) {
 			method:         http.MethodPut,
 			target:         "/Users/0001",
 			body:           strings.NewReader(`{"more": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		}, {
+			name:           "users post request with invalid externalId",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"id": "other", "userName": "test1", "externalId": {"not": "this"}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users post request with invalid userName",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"id": "other", "userName":  {"not": "this""}}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users put request with invalid externalId",
+			method:         http.MethodPut,
+			target:         "/v2/Users/0002",
+			body:           strings.NewReader(`{"id": "other", "userName": "test2", "externalId": {"test":"test"}}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "users put request with invalid userName",
+			method:         http.MethodPut,
+			target:         "/Users/0003",
+			body:           strings.NewReader(`{"id": "other", "userName": {"test": "test"}}`),
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -249,7 +277,6 @@ func TestServerSchemasEndpoint(t *testing.T) {
 					"urn:ietf:params:scim:schemas:core:2.0:User",
 					"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 				}, resourceIDs)
-
 		})
 	}
 }
@@ -406,21 +433,30 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 
 func TestServerResourcePostHandlerValid(t *testing.T) {
 	tests := []struct {
-		name             string
-		target           string
-		body             io.Reader
-		expectedUserName string
+		name               string
+		target             string
+		body               io.Reader
+		expectedUserName   string
+		expectedExternalID interface{}
 	}{
 		{
-			name:             "Users post request without version",
-			target:           "/Users",
-			body:             strings.NewReader(`{"id": "other", "userName": "test1"}`),
-			expectedUserName: "test1",
+			name:               "Users post request without version",
+			target:             "/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test1", "externalId": "external_test1"}`),
+			expectedUserName:   "test1",
+			expectedExternalID: "external_test1",
 		}, {
-			name:             "Users post request with version",
-			target:           "/v2/Users",
-			body:             strings.NewReader(`{"id": "other", "userName": "test2"}`),
-			expectedUserName: "test2",
+			name:               "Users post request with version",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
+			expectedUserName:   "test2",
+			expectedExternalID: "external_test2",
+		}, {
+			name:               "Users post request without externalId",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
 		},
 	}
 
@@ -441,6 +477,8 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 
 			assert.Equal(t, tt.expectedUserName, resource["userName"])
 
+			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
+
 			meta, ok := resource["meta"].(map[string]interface{})
 			assert.True(t, ok, "handler did not return the resource meta correctly")
 
@@ -452,7 +490,6 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			assert.Equal(t, rr.Header().Get("Etag"), meta["version"], "ETag and version needs to be the same")
 		})
 	}
-
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
@@ -460,6 +497,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		name                 string
 		target               string
 		expectedUserName     string
+		expectedExternalID   string
 		expectedVersion      string
 		expectedCreated      string
 		expectedLastModified string
@@ -468,6 +506,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 			name:                 "Users get request without version",
 			target:               "/Users/0001",
 			expectedUserName:     "test1",
+			expectedExternalID:   "external1",
 			expectedVersion:      "v1",
 			expectedCreated:      "2020-01-01T15:04:05+07:00",
 			expectedLastModified: "2020-02-01T16:05:04+07:00",
@@ -475,6 +514,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 			name:                 "Users get request with version",
 			target:               "/v2/Users/0002",
 			expectedUserName:     "test2",
+			expectedExternalID:   "external2",
 			expectedVersion:      "v2",
 			expectedCreated:      "2020-01-02T15:04:05+07:00",
 			expectedLastModified: "2020-02-02T16:05:04+07:00",
@@ -499,6 +539,8 @@ func TestServerResourceGetHandler(t *testing.T) {
 			assert.NoError(t, err, "json unmarshalling failed")
 
 			assert.Equal(t, tt.expectedUserName, resource["userName"])
+
+			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
 			assert.True(t, ok, "handler did not return the resource meta correctly")
@@ -594,6 +636,11 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		    "value":false
 		  },
 		  {
+		    "op":"replace",
+		    "path":"externalId",
+		    "value": "external_test_replace"
+		  },
+		  {
 		    "op":"remove",
 		    "path":"displayName"
 		  }
@@ -618,6 +665,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 
 	assert.Nil(t, resource["displayName"], "handler did not remove the displayName attribute")
 	assert.False(t, resource["active"].(bool), "handler did not deactivate user")
+	assert.Equal(t, "external_test_replace", resource["externalId"])
 
 	if resource["emails"] == nil || len(resource["emails"].([]interface{})) < 1 {
 		t.Errorf("handler did not add user's email address")
@@ -708,17 +756,53 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 }
 
 func TestServerResourcePutHandlerValid(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(`{"id": "test", "userName": "other"}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	tests := []struct {
+		name               string
+		target             string
+		body               io.Reader
+		expectedUserName   string
+		expectedExternalID interface{}
+	}{
+		{
+			name:               "Users put request",
+			target:             "/v2/Users/0002",
+			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
+			expectedUserName:   "test2",
+			expectedExternalID: "external_test2",
+		}, {
+			name:               "Users put request without externalId",
+			target:             "/Users/0003",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
+		},
+	}
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	for _, tt := range tests {
+		tt := tt // scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPut, tt.target, tt.body)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
 
-	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
+			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
 
-	assert.Equal(t, "other", resource["userName"])
+			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
+
+			var resource map[string]interface{}
+			err := json.Unmarshal(rr.Body.Bytes(), &resource)
+			assert.NoError(t, err, "json unmarshalling failed")
+
+			assert.Equal(t, tt.expectedUserName, resource["userName"])
+
+			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
+
+			meta, ok := resource["meta"].(map[string]interface{})
+			assert.True(t, ok, "handler did not return the resource meta correctly")
+
+			assert.Equal(t, "User", meta["resourceType"])
+		})
+	}
 }
 
 func TestServerResourcePutHandlerNotFound(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/di-wu/scim-filter-parser"
+	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
 )
@@ -168,23 +168,23 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 		startIndex = defaultStartIndex
 	}
 
-	filter, filterErr := getFilter(r)
-	if filterErr != nil {
+	filterExpr, filterExprErr := getFilter(r)
+	if filterExprErr != nil {
 		scimErr := errors.ScimErrorBadParams([]string{"filter"})
 		return ListRequestParams{}, &scimErr
 	}
 
 	return ListRequestParams{
 		Count:      count,
-		Filter:     filter,
+		Filter:     filterExpr,
 		StartIndex: startIndex,
 	}, nil
 }
 
-func getFilter(r *http.Request) (scim.Expression, error) {
+func getFilter(r *http.Request) (filter.Expression, error) {
 	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
 	if rawFilter != "" {
-		parser := scim.NewParser(strings.NewReader(rawFilter))
+		parser := filter.NewParser(strings.NewReader(rawFilter))
 		return parser.Parse()
 	}
 	return nil, nil

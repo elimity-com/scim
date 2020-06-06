@@ -57,7 +57,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := t.Schema.Validate(m)
+	attributes, scimErr := t.schemaWithCommon().Validate(m)
 	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
@@ -80,6 +80,24 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 	}
 
 	return attributes, nil
+}
+
+func (t ResourceType) schemaWithCommon() schema.Schema {
+	s := t.Schema
+
+	externalID := schema.SimpleCoreAttribute(
+		schema.SimpleStringParams(schema.StringParams{
+			CaseExact:  true,
+			Mutability: schema.AttributeMutabilityReadWrite(),
+			Name:       schema.CommonAttributeExternalID,
+			Uniqueness: schema.AttributeUniquenessNone(),
+		}),
+	)
+
+	s.Attributes = append(s.Attributes, externalID)
+
+	return s
+
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
@@ -200,5 +218,5 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		}
 	}
 
-	return t.Schema.ValidatePatchOperationValue(op.Op, mapValue)
+	return t.schemaWithCommon().ValidatePatchOperationValue(op.Op, mapValue)
 }

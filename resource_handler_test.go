@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/optional"
 )
 
 func ExampleResourceHandler() {
@@ -41,6 +42,7 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 	// return stored resource
 	return Resource{
 		ID:         id,
+		ExternalID: h.externalID(attributes),
 		Attributes: attributes,
 		Meta: Meta{
 			Created:      &now,
@@ -63,6 +65,7 @@ func (h testResourceHandler) Get(r *http.Request, id string) (Resource, error) {
 	// return resource with given identifier
 	return Resource{
 		ID:         id,
+		ExternalID: h.externalID(data.resourceAttributes),
 		Attributes: data.resourceAttributes,
 		Meta: Meta{
 			Created:      &created,
@@ -84,6 +87,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 		if i >= params.StartIndex {
 			resources = append(resources, Resource{
 				ID:         k,
+				ExternalID: h.externalID(v.resourceAttributes),
 				Attributes: v.resourceAttributes,
 			})
 		}
@@ -111,6 +115,7 @@ func (h testResourceHandler) Replace(r *http.Request, id string, attributes Reso
 	// return resource with replaced attributes
 	return Resource{
 		ID:         id,
+		ExternalID: h.externalID(attributes),
 		Attributes: attributes,
 	}, nil
 }
@@ -165,6 +170,7 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 	// return resource with replaced attributes
 	return Resource{
 		ID:         id,
+		ExternalID: h.externalID(h.data[id].resourceAttributes),
 		Attributes: h.data[id].resourceAttributes,
 		Meta: Meta{
 			Created:      &created,
@@ -172,4 +178,16 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 			Version:      fmt.Sprintf("%s.patch", h.data[id].meta["version"]),
 		},
 	}, nil
+}
+
+func (h testResourceHandler) externalID(attributes ResourceAttributes) optional.String {
+	if eID, ok := attributes["externalId"]; ok {
+		externalID, ok := eID.(string)
+		if !ok {
+			return optional.String{}
+		}
+		return optional.NewString(externalID)
+	}
+
+	return optional.String{}
 }

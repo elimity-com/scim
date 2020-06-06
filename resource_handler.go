@@ -6,6 +6,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/elimity-com/scim/optional"
+	"github.com/elimity-com/scim/schema"
+
 	scim "github.com/di-wu/scim-filter-parser"
 )
 
@@ -41,6 +44,8 @@ type Meta struct {
 type Resource struct {
 	// ID is the unique identifier created by the callback method "Create".
 	ID string
+	// ExternalID is an identifier for the resource as defined by the provisioning client.
+	ExternalID optional.String
 	// Attributes is a list of attributes defining the resource.
 	Attributes ResourceAttributes
 	// Meta contains dates and the version of the resource.
@@ -49,10 +54,13 @@ type Resource struct {
 
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response := r.Attributes
-	response["id"] = r.ID
+	response[schema.CommonAttributeID] = r.ID
+	if r.ExternalID.Present() {
+		response[schema.CommonAttributeExternalID] = r.ExternalID.Value()
+	}
 	schemas := []string{resourceType.Schema.ID}
-	for _, schema := range resourceType.SchemaExtensions {
-		schemas = append(schemas, schema.Schema.ID)
+	for _, s := range resourceType.SchemaExtensions {
+		schemas = append(schemas, s.Schema.ID)
 	}
 
 	response["schemas"] = schemas
@@ -74,7 +82,7 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 		m.Version = r.Meta.Version
 	}
 
-	response["meta"] = m
+	response[schema.CommonAttributeMeta] = m
 
 	return response
 }
