@@ -274,7 +274,8 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	var resources []interface{}
+	// return empty slice instead of null if there are no resources.
+	resources := []interface{}{}
 	for _, v := range page.Resources {
 		resources = append(resources, v.response(resourceType))
 	}
