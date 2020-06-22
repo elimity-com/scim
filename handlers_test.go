@@ -18,9 +18,7 @@ import (
 
 func newTestServer() Server {
 	userSchema := getUserSchema()
-
 	userSchemaExtension := getUserExtensionSchema()
-
 	return Server{
 		Config: ServiceProviderConfig{},
 		ResourceTypes: []ResourceType{

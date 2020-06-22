@@ -24,8 +24,18 @@ type Schema struct {
 	Name        optional.String
 }
 
-// Validate validates given resource based on the schema.
+// Validate validates given resource based on the schema. Does NOT validate mutability.
+// NOTE: only used in POST and PUT requests where attributes MAY be (re)defined.
 func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+	return s.validate(resource, false)
+}
+
+// ValidateMutability validates given resource based on the schema, including strict immutability checks.
+func (s Schema) ValidateMutability(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+	return s.validate(resource, true)
+}
+
+func (s Schema) validate(resource interface{}, checkMutability bool) (map[string]interface{}, *errors.ScimError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
 		return nil, &errors.ScimErrorInvalidSyntax
@@ -37,12 +47,19 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.
 		var found bool
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
+				// duplicate found
 				if found {
 					return nil, &errors.ScimErrorInvalidSyntax
 				}
 				found = true
 				hit = v
 			}
+		}
+
+		// An immutable attribute SHALL NOT be updated.
+		if found && checkMutability &&
+			attribute.mutability == attributeMutabilityImmutable {
+			return nil, &errors.ScimErrorMutability
 		}
 
 		attr, scimErr := attribute.validate(hit)

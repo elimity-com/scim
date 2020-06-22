@@ -91,13 +91,20 @@ type CoreAttribute struct {
 }
 
 func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
-	// return false if the attribute is not present but required.
+	// whether or not the attribute is required.
 	if attribute == nil {
 		if !a.required {
 			return nil, nil
 		}
 
+		// the attribute is not present but required.
 		return nil, &errors.ScimErrorInvalidValue
+	}
+
+	// whether the value of the attribute can be (re)defined
+	// readOnly: the attribute SHALL NOT be modified.
+	if a.mutability == attributeMutabilityReadOnly {
+		return nil, nil
 	}
 
 	if a.multiValued {

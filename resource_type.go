@@ -51,13 +51,20 @@ func unmarshal(data []byte, v interface{}) error {
 	return d.Decode(v)
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
+func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *errors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := t.schemaWithCommon().Validate(m)
+	var attributes map[string]interface{}
+	var scimErr *errors.ScimError
+	switch method {
+	case http.MethodGet, http.MethodPut:
+		attributes, scimErr = t.schemaWithCommon().Validate(m)
+	default:
+		attributes, scimErr = t.schemaWithCommon().ValidateMutability(m)
+	}
 	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
