@@ -19,8 +19,12 @@ var validOps = []string{PatchOperationAdd, PatchOperationRemove, PatchOperationR
 
 // PatchOperation represents a single PATCH operation.
 type PatchOperation struct {
-	Op    string
-	Path  string
+	// Op indicates the operation to perform and MAY be one of "add", "remove", or "replace".
+	Op string
+	// Path contains an attribute path describing the target of the operation. The "path" attribute is OPTIONAL for
+	// "add" and "replace" and is REQUIRED for "remove" operations.
+	Path string
+	// Value specifies the value to be added or replaced.
 	Value interface{}
 }
 

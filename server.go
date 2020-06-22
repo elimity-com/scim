@@ -170,8 +170,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 
 	filterExpr, filterExprErr := getFilter(r)
 	if filterExprErr != nil {
-		scimErr := errors.ScimErrorBadParams([]string{"filter"})
-		return ListRequestParams{}, &scimErr
+		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
 
 	return ListRequestParams{

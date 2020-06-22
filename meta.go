@@ -15,7 +15,7 @@ type meta struct {
 	// Location is the URI of the resource being returned. This value MUST be the same as the "Content-Location" HTTP
 	// response header.
 	Location string `json:"location"`
-	// Version is the version of the resource being returned.  This value must be the same as the entity-tag (ETag) HTTP
+	// Version is the version of the resource being returned. This value must be the same as the entity-tag (ETag) HTTP
 	// response header.
 	Version string `json:"version,omitempty"`
 }
