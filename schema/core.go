@@ -85,9 +85,39 @@ type CoreAttribute struct {
 	referenceTypes  []AttributeReferenceType
 	required        bool
 	returned        attributeReturned
-	subAttributes   []CoreAttribute
+	subAttributes   Attributes
 	typ             attributeType
 	uniqueness      attributeUniqueness
+}
+
+// Name returns the case insensitive name of the attribute.
+func (a CoreAttribute) Name() string {
+	return a.name
+}
+
+// AttributeType returns the attribute type.
+func (a CoreAttribute) AttributeType() string {
+	return a.typ.String()
+}
+
+// HasSubAttributes returns whether the attribute is complex and has sub attributes.
+func (a CoreAttribute) HasSubAttributes() bool {
+	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
+}
+
+// SubAttributes returns the sub attributes.
+func (a CoreAttribute) SubAttributes() Attributes {
+	return a.subAttributes
+}
+
+// CaseExact returns whether the attribute is case exact.
+func (a CoreAttribute) CaseExact() bool {
+	return a.caseExact
+}
+
+// MultiValued returns whether the attribute is multi valued.
+func (a CoreAttribute) MultiValued() bool {
+	return a.multiValued
 }
 
 func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {

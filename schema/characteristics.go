@@ -162,23 +162,27 @@ const (
 )
 
 func (a attributeType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
+}
+
+func (a attributeType) String() string {
 	switch a {
 	case attributeDataTypeDecimal:
-		return json.Marshal("decimal")
+		return "decimal"
 	case attributeDataTypeInteger:
-		return json.Marshal("integer")
+		return "integer"
 	case attributeDataTypeBinary:
-		return json.Marshal("binary")
+		return "binary"
 	case attributeDataTypeBoolean:
-		return json.Marshal("boolean")
+		return "boolean"
 	case attributeDataTypeComplex:
-		return json.Marshal("complex")
+		return "complex"
 	case attributeDataTypeDateTime:
-		return json.Marshal("dateTime")
+		return "dateTime"
 	case attributeDataTypeReference:
-		return json.Marshal("reference")
+		return "reference"
 	default:
-		return json.Marshal("string")
+		return "string"
 	}
 }
 

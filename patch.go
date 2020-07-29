@@ -1,11 +1,5 @@
 package scim
 
-import (
-	"strings"
-
-	filter "github.com/di-wu/scim-filter-parser"
-)
-
 const (
 	// PatchOperationAdd is used to add a new attribute value to an existing resource.
 	PatchOperationAdd = "add"
@@ -32,19 +26,4 @@ type PatchOperation struct {
 type PatchRequest struct {
 	Schemas    []string
 	Operations []PatchOperation
-}
-
-// GetPathFilter parses patch operation path to determine if it is a attribute filter.
-// If it is, filter.Expression will be returned, nil otherwise.
-func (p PatchOperation) GetPathFilter() *filter.AttributeExpression {
-	parser := filter.NewParser(strings.NewReader(p.Path))
-	pathFilter, err := parser.Parse()
-	if err != nil {
-		return nil
-	}
-
-	if attrFilter, ok := pathFilter.(filter.AttributeExpression); ok {
-		return &attrFilter
-	}
-	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -202,10 +203,8 @@ func (t ResourceType) validateOperation(op PatchOperation) []string {
 }
 
 func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
-	// Not attempting to validate value or path if it is a filter based path.
-	// Perhaps we could at least validate the ComparePath
-	if op.GetPathFilter() != nil {
-		return nil
+	if _, err := filter.GetPathFilter(op.Path); err != nil {
+		return &errors.ScimErrorInvalidFilter
 	}
 
 	mapValue, ok := op.Value.(map[string]interface{})

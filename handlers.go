@@ -2,9 +2,12 @@ package scim
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/elimity-com/scim/schema"
 
 	"github.com/elimity-com/scim/errors"
 )
@@ -25,7 +28,7 @@ func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr *errors.ScimEr
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
 // provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
+	params, paramsErr := s.parseRequestParams(r, schema.Definition())
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
@@ -35,7 +38,20 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
 	var resources []interface{}
 	for _, v := range schemas[start:end] {
-		resources = append(resources, v)
+		resource := v.ToMap()
+		if params.Filter.Expression != nil {
+			valid, err := params.Filter.IsValid(resource)
+			if err != nil {
+				scimErr := errors.CheckScimError(err, http.MethodGet)
+				errorHandler(w, r, &scimErr)
+				return
+			}
+			fmt.Println(resource["id"])
+			if !valid {
+				continue
+			}
+		}
+		resources = append(resources, resource)
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -59,14 +75,14 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	schema := s.getSchema(id)
-	if schema.ID != id {
+	getSchema := s.getSchema(id)
+	if getSchema.ID != id {
 		scimErr := errors.ScimErrorResourceNotFound(id)
 		errorHandler(w, r, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(schema)
+	raw, err := json.Marshal(getSchema)
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling schema: %v", err)
@@ -83,7 +99,7 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 // resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
 // the core schema URI that defines the resource, and any supported schema extensions.
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
+	params, paramsErr := s.parseRequestParams(r, schema.ResourceTypeSchema())
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
@@ -261,7 +277,11 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
-	params, paramsErr := s.parseRequestParams(r)
+	schemas := []schema.Schema{resourceType.Schema}
+	for _, extension := range resourceType.SchemaExtensions {
+		schemas = append(schemas, extension.Schema)
+	}
+	params, paramsErr := s.parseRequestParams(r, schemas...)
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return

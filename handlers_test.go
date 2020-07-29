@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -133,7 +134,7 @@ func newTestResourceHandler() ResourceHandler {
 	for i := 1; i < 21; i++ {
 		data[fmt.Sprintf("000%d", i)] = testData{
 			resourceAttributes: ResourceAttributes{
-				"userName":   fmt.Sprintf("test%d", i),
+				"userName":   fmt.Sprintf("test%02d", i),
 				"externalId": fmt.Sprintf("external%d", i),
 			},
 			meta: map[string]string{
@@ -277,6 +278,24 @@ func TestServerSchemasEndpoint(t *testing.T) {
 				}, resourceIDs)
 		})
 	}
+}
+
+func TestServerSchemasEndpointFilter(t *testing.T) {
+	params := url.Values{
+		"filter": []string{"id co \"extension\""},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Schemas?%s", params.Encode()), nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+
+	var response listResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.NoError(t, err, "json unmarshalling failed")
+	assert.Len(t, response.Resources, 1)
+	assert.Equal(t, 2, response.TotalResults)
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -503,7 +522,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		{
 			name:                 "Users get request without version",
 			target:               "/Users/0001",
-			expectedUserName:     "test1",
+			expectedUserName:     "test01",
 			expectedExternalID:   "external1",
 			expectedVersion:      "v1",
 			expectedCreated:      "2020-01-01T15:04:05+07:00",
@@ -511,7 +530,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		}, {
 			name:                 "Users get request with version",
 			target:               "/v2/Users/0002",
-			expectedUserName:     "test2",
+			expectedUserName:     "test02",
 			expectedExternalID:   "external2",
 			expectedVersion:      "v2",
 			expectedCreated:      "2020-01-02T15:04:05+07:00",
@@ -609,6 +628,23 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.NoError(t, err, "json unmarshalling failed")
 
+	assert.Equal(t, 20, response.TotalResults)
+}
+
+func TestServerResourcesGetHandlerFilter(t *testing.T) {
+	params := url.Values{
+		"filter": []string{"userName le \"test10\""},
+	}
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Users?%s", params.Encode()), nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+
+	var response listResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.NoError(t, err, "json unmarshalling failed")
+	assert.Len(t, response.Resources, 10)
 	assert.Equal(t, 20, response.TotalResults)
 }
 

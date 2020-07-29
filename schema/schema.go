@@ -18,10 +18,23 @@ const (
 
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
-	Attributes  []CoreAttribute
+	Attributes  Attributes
 	Description optional.String
 	ID          string
 	Name        optional.String
+}
+
+// Attributes represent a list of Core Attributes
+type Attributes []CoreAttribute
+
+// ContainsAttribute checks whether the list of Core Attributes contains an attribute with the given name.
+func (as Attributes) ContainsAttribute(name string) (CoreAttribute, bool) {
+	for _, a := range as {
+		if strings.EqualFold(name, a.name) {
+			return a, true
+		}
+	}
+	return CoreAttribute{}, false
 }
 
 // Validate validates given resource based on the schema. Does NOT validate mutability.
@@ -124,14 +137,19 @@ func isReadOnly(attr CoreAttribute) bool {
 	return attr.mutability == attributeMutabilityReadOnly
 }
 
-// MarshalJSON converts the schema struct to its corresponding json representation.
-func (s Schema) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+// ToMap returns the map representation of a schema.
+func (s Schema) ToMap() map[string]interface{} {
+	return map[string]interface{}{
 		"id":          s.ID,
 		"name":        s.Name.Value(),
 		"description": s.Description.Value(),
 		"attributes":  s.getRawAttributes(),
-	})
+	}
+}
+
+// MarshalJSON converts the schema struct to its corresponding json representation.
+func (s Schema) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.ToMap())
 }
 
 func (s Schema) getRawAttributes() []map[string]interface{} {

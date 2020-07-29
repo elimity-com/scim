@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -141,7 +141,7 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
-func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.ScimError) {
+func (s Server) parseRequestParams(r *http.Request, schemas ...schema.Schema) (ListRequestParams, *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
 	defaultCount := s.Config.getItemsPerPage()
@@ -168,7 +168,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 		startIndex = defaultStartIndex
 	}
 
-	filterExpr, filterExprErr := getFilter(r)
+	filterExpr, filterExprErr := filter.NewFilter(r, schemas...)
 	if filterExprErr != nil {
 		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
@@ -178,13 +178,4 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 		Filter:     filterExpr,
 		StartIndex: startIndex,
 	}, nil
-}
-
-func getFilter(r *http.Request) (filter.Expression, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter != "" {
-		parser := filter.NewParser(strings.NewReader(rawFilter))
-		return parser.Parse()
-	}
-	return nil, nil
 }
