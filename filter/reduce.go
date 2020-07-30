@@ -199,16 +199,18 @@ func (f Filter) IsValid(resource map[string]interface{}) (bool, *errors.ScimErro
 				return false, err
 			}
 			return ok1 || ok2, nil
+		default:
+			return false, unknownOperatorError(exp.CompareOperator, exp)
 		}
-		return false, nil
+	case nil:
+		return true, nil // failsafe if filter does not contain an expression
 	default:
-		return false, nil
+		return false, unknownExpressionTypeError(exp)
 	}
 }
 
 func (f Filter) reduceAttributeExpression(attr schema.CoreAttribute) (func(interface{}) bool, error) {
-	exp := f.Expression.(filter.AttributeExpression)
-	switch exp.CompareOperator {
+	switch exp := f.Expression.(filter.AttributeExpression); exp.CompareOperator {
 	case filter.EQ:
 		return eq(exp.CompareValue, attr), nil
 	case filter.NE:
@@ -243,7 +245,7 @@ func (f Filter) reduceAttributeExpression(attr schema.CoreAttribute) (func(inter
 		})
 	default:
 		return func(value interface{}) bool {
-			return true
-		}, nil
+			return false
+		}, unknownOperatorError(exp.CompareOperator, exp)
 	}
 }

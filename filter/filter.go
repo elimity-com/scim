@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -15,6 +16,14 @@ func invalidFilterError(msg string) *errors.ScimError {
 		Detail:   msg,
 		Status:   http.StatusBadRequest,
 	}
+}
+
+func unknownOperatorError(token filter.Token, exp filter.Expression) *errors.ScimError {
+	return invalidFilterError(fmt.Sprintf("unknown operator in expression: %s %s", token, exp))
+}
+
+func unknownExpressionTypeError(exp filter.Expression) *errors.ScimError {
+	return invalidFilterError(fmt.Sprintf("unknown expression type: %s", exp))
 }
 
 // NewFilter get the filter from the request, parses it and adds reference schemas to validate against.
