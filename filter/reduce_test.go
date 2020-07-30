@@ -126,7 +126,7 @@ func TestReduceErrors(t *testing.T) {
 			filter: "none eq \"di-wu\"",
 		},
 		{
-			err:    "attribute \"username\" has no sub attribute \"none\"",
+			err:    "attribute \"userName\" has no sub attribute \"none\"",
 			filter: "userName.none eq \"di-wu\"",
 		},
 		{
