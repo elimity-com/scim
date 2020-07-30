@@ -23,9 +23,8 @@ func newTypeFilter(f string) Filter {
 				schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 					Name: "str",
 				})),
-				schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-					CaseExact: true,
-					Name:      "strCE",
+				schema.SimpleCoreAttribute(schema.SimpleReferenceParams(schema.ReferenceParams{
+					Name: "strCE",
 				})),
 				schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
 					Name: "dec",
@@ -34,6 +33,12 @@ func newTypeFilter(f string) Filter {
 				schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
 					Name: "int",
 					Type: schema.AttributeTypeInteger(),
+				})),
+				schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+					Name: "bool",
+				})),
+				schema.SimpleCoreAttribute(schema.SimpleDateTimeParams(schema.DateTimeParams{
+					Name: "time",
 				})),
 			},
 		},
@@ -291,6 +296,187 @@ func TestFilterNumber(t *testing.T) {
 			comparator: "le",
 			invalid: []bool{
 				false, true, false, true,
+				false, false, true,
+			},
+		},
+	} {
+		t.Run(test.comparator, func(t *testing.T) {
+			for i, c := range testCases {
+				t.Run(c.filter, func(t *testing.T) {
+					f := newTypeFilter(fmt.Sprintf(c.filter, test.comparator))
+					valid, err := f.IsValid(c.resource)
+					if err != nil {
+						t.Error(err)
+					}
+
+					if test.invalid[i] {
+						if valid {
+							t.Errorf("resource should be invalid")
+						}
+						return
+					}
+
+					if !valid {
+						t.Errorf("resource should be valid")
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestFilterBoolean(t *testing.T) {
+	for i, test := range []struct {
+		comparator string
+		invalid    bool
+	}{
+		{
+			comparator: "eq",
+			invalid:    false,
+		},
+		{
+			comparator: "ne",
+			invalid:    true,
+		},
+		{
+			comparator: "co",
+			invalid:    false,
+		},
+		{
+			comparator: "sw",
+			invalid:    false,
+		},
+		{
+			comparator: "ew",
+			invalid:    false,
+		},
+		{
+			comparator: "gt",
+			invalid:    true,
+		},
+		{
+			comparator: "ge",
+			invalid:    true,
+		},
+		{
+			comparator: "lt",
+			invalid:    true,
+		},
+		{
+			comparator: "le",
+			invalid:    true,
+		},
+	} {
+		t.Run(test.comparator, func(t *testing.T) {
+			f := newTypeFilter(fmt.Sprintf("bool %s \"true\"", test.comparator))
+			valid, err := f.IsValid(map[string]interface{}{
+				"bool": true,
+			})
+			if i <= 4 {
+				if err != nil {
+					t.Error(err)
+				}
+			} else {
+				// can not compare gt, ge, lt, ge
+				if err == nil {
+					t.Errorf("error expected, got none")
+				}
+			}
+
+			if test.invalid {
+				if valid {
+					t.Errorf("resource should be invalid")
+				}
+				return
+			}
+
+			if !valid {
+				t.Errorf("resource should be valid")
+			}
+		})
+	}
+}
+
+func TestFilterDateTime(t *testing.T) {
+	testCases := []struct {
+		filter   string
+		resource map[string]interface{}
+	}{
+		{
+			filter: "time %s \"2020-07-30T12:32:11Z\"",
+			resource: map[string]interface{}{
+				"time": "2020-07-30T12:32:11Z",
+			},
+		},
+		{
+			filter: "time %s \"2020-07-30T12:32:11Z\"",
+			resource: map[string]interface{}{
+				"time": "2020-07-01T12:32:11Z",
+			},
+		},
+		{
+			filter: "time %s \"2020-07-30T12:32:11Z\"",
+			resource: map[string]interface{}{
+				"time": "2020-08-01T11:45:56Z",
+			},
+		},
+	}
+
+	for _, test := range []struct {
+		comparator string
+		invalid    []bool
+	}{
+		{
+			comparator: "eq",
+			invalid: []bool{
+				false, true, true,
+			},
+		},
+		{
+			comparator: "ne",
+			invalid: []bool{
+				true, false, false,
+			},
+		},
+		{
+			comparator: "co",
+			invalid: []bool{
+				false, true, true,
+			},
+		},
+		{
+			comparator: "sw",
+			invalid: []bool{
+				false, true, true,
+			},
+		},
+		{
+			comparator: "ew",
+			invalid: []bool{
+				false, true, true,
+			},
+		},
+		{
+			comparator: "gt",
+			invalid: []bool{
+				true, true, false,
+			},
+		},
+		{
+			comparator: "ge",
+			invalid: []bool{
+				false, true, false,
+			},
+		},
+		{
+			comparator: "lt",
+			invalid: []bool{
+				true, false, true,
+			},
+		},
+		{
+			comparator: "le",
+			invalid: []bool{
 				false, false, true,
 			},
 		},
