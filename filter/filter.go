@@ -155,7 +155,7 @@ func NewFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (F
 		if err != nil {
 			return Filter{}, err
 		}
-		
+
 		return Filter{
 			Expression: exp,
 			schema:     s,

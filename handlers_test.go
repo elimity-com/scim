@@ -734,6 +734,8 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
 func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
@@ -756,6 +758,8 @@ func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
 func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
@@ -777,6 +781,10 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, expectedStatus, rr.Code, "status code mismatch")
+
+	if expectedStatus >= 400 {
+		assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+	}
 }
 
 // Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
@@ -787,6 +795,29 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
+}
+
+func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"name.invalid",
+		    "value":"test"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &resource)
+	assert.NoError(t, err, "json unmarshalling failed")
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidPath.Detail, resource["detail"])
 }
 
 func TestServerResourcePutHandlerValid(t *testing.T) {

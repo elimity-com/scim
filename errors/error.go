@@ -204,20 +204,29 @@ var (
 
 // CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
 func CheckScimError(err error, method string) ScimError {
-	scimErr, ok := err.(ScimError)
-	if !ok {
-		return ScimError{
-			Detail: err.Error(),
-			Status: http.StatusInternalServerError,
+	switch scimErr := err.(type) {
+	case ScimError:
+		if !checkApplicability(scimErr, method) {
+			return ScimError{
+				Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
+				Status: http.StatusInternalServerError,
+			}
 		}
-	}
-	if !checkApplicability(scimErr, method) {
-		return ScimError{
-			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
-			Status: http.StatusInternalServerError,
+		return scimErr
+	case *ScimError:
+		if !checkApplicability(*scimErr, method) {
+			return ScimError{
+				Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
+				Status: http.StatusInternalServerError,
+			}
 		}
+		return *scimErr
 	}
-	return scimErr
+
+	return ScimError{
+		Detail: err.Error(),
+		Status: http.StatusInternalServerError,
+	}
 }
 
 var (

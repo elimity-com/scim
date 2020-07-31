@@ -2,6 +2,7 @@ package filter
 
 import (
 	"fmt"
+
 	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
