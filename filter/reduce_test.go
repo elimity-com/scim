@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -9,75 +10,7 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
-func newFilter(f string) Filter {
-	parser := filter.NewParser(strings.NewReader(f))
-	exp, err := parser.Parse()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	userSchema := schema.CoreUserSchema()
-	userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
-
-	return Filter{
-		Expression: exp,
-		schema:     userSchema,
-	}
-}
-
-func testResources() []map[string]interface{} {
-	return []map[string]interface{}{
-		{
-			"schemas": []string{
-				"urn:ietf:params:scim:schemas:core:2.0:User",
-			},
-			"userName": "di-wu",
-			"userType": "admin",
-			"name": map[string]interface{}{
-				"familyName": "di",
-				"givenName":  "wu",
-			},
-			"emails": []map[string]interface{}{
-				{
-					"value": "quint@elimity.com",
-					"type":  "work",
-				},
-			},
-			"meta": map[string]interface{}{
-				"lastModified": "2020-07-26T20:02:34Z",
-			},
-		},
-		{
-			"schemas": []interface{}{
-				"urn:ietf:params:scim:schemas:core:2.0:User",
-			},
-			"userName": "interface",
-			"emails": []interface{}{
-				map[string]interface{}{
-					"value": "noreply@elimity.com",
-					"type":  "work",
-				},
-			},
-		},
-		{
-			"userName": "admin",
-			"userType": "admin",
-			"name": map[string]interface{}{
-				"familyName": "ad",
-				"givenName":  "min",
-			},
-		},
-		{"userName": "guest"},
-		{
-			"userName": "unknown",
-			"name": map[string]interface{}{
-				"familyName": "un",
-				"givenName":  "known",
-			},
-		},
-		{"userName": "another"},
-	}
-}
+var eUID = schema.ExtensionEnterpriseUser().ID
 
 func TestReduce(t *testing.T) {
 	for _, test := range []struct {
@@ -153,5 +86,103 @@ func TestReduceErrors(t *testing.T) {
 		if resources != nil {
 			t.Errorf("expected nil, got %d resources", len(resources))
 		}
+	}
+}
+
+func TestReduceWithExtensions(t *testing.T) {
+	for _, test := range []struct {
+		len    int
+		filter string
+	}{
+		{
+			len:    1,
+			filter: fmt.Sprintf("%s:manager.displayName eq \"di-wu\"]", eUID),
+		},
+		{
+			len:    1,
+			filter: fmt.Sprintf("%s:organization eq \"Elimity\"", eUID),
+		},
+	} {
+		resources, err := newFilter(test.filter).Reduce(testResources())
+		if err != nil {
+			t.Errorf("no error expected, got %s", err)
+		}
+		if len(resources) != test.len {
+			t.Errorf("expected %d resources, got %d\n%s", test.len, len(resources), resources)
+		}
+	}
+}
+
+func testResources() []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"schemas": []string{
+				"urn:ietf:params:scim:schemas:core:2.0:User",
+			},
+			"userName": "di-wu",
+			"userType": "admin",
+			"name": map[string]interface{}{
+				"familyName": "di",
+				"givenName":  "wu",
+			},
+			"emails": []map[string]interface{}{
+				{
+					"value": "quint@elimity.com",
+					"type":  "work",
+				},
+			},
+			"meta": map[string]interface{}{
+				"lastModified": "2020-07-26T20:02:34Z",
+			},
+			fmt.Sprintf("%s:organization", eUID): "Elimity",
+		},
+		{
+			"schemas": []interface{}{
+				"urn:ietf:params:scim:schemas:core:2.0:User",
+			},
+			"userName": "interface",
+			"emails": []interface{}{
+				map[string]interface{}{
+					"value": "noreply@elimity.com",
+					"type":  "work",
+				},
+			},
+		},
+		{
+			"userName": "admin",
+			"userType": "admin",
+			"name": map[string]interface{}{
+				"familyName": "ad",
+				"givenName":  "min",
+			},
+			fmt.Sprintf("%s:%s", eUID, "manager"): map[string]interface{}{
+				"displayName": "di-wu",
+			},
+		},
+		{"userName": "guest"},
+		{
+			"userName": "unknown",
+			"name": map[string]interface{}{
+				"familyName": "un",
+				"givenName":  "known",
+			},
+		},
+		{"userName": "another"},
+	}
+}
+
+func newFilter(f string) Filter {
+	parser := filter.NewParser(strings.NewReader(f))
+	exp, err := parser.Parse()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	userSchema := schema.CoreUserSchema()
+	userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
+	return Filter{
+		Expression: exp,
+		schema:     userSchema,
+		extensions: []schema.Schema{schema.ExtensionEnterpriseUser()},
 	}
 }

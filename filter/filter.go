@@ -10,39 +10,6 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
-func invalidFilterError(msg string) *errors.ScimError {
-	return &errors.ScimError{
-		ScimType: errors.ScimTypeInvalidFilter,
-		Detail:   msg,
-		Status:   http.StatusBadRequest,
-	}
-}
-
-func unknownOperatorError(token filter.Token, exp filter.Expression) *errors.ScimError {
-	return invalidFilterError(fmt.Sprintf("unknown operator in expression: %s %s", token, exp))
-}
-
-func unknownExpressionTypeError(exp filter.Expression) *errors.ScimError {
-	return invalidFilterError(fmt.Sprintf("unknown expression type: %s", exp))
-}
-
-// NewFilter get the filter from the request, parses it and adds reference schemas to validate against.
-func NewFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (Filter, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter != "" {
-		parser := filter.NewParser(strings.NewReader(rawFilter))
-		exp, err := parser.Parse()
-		if err != nil {
-			return Filter{}, err
-		}
-		return Filter{
-			Expression: exp,
-			schema:     s,
-		}, nil
-	}
-	return Filter{}, nil
-}
-
 // GetPathFilter returns a parsed filter path.
 func GetPathFilter(path string) (filter.Path, error) {
 	if path != "" {
@@ -52,24 +19,71 @@ func GetPathFilter(path string) (filter.Path, error) {
 	return filter.Path{}, nil
 }
 
+// ValidateExpressionPath returns whether the path in the expression can be found in one of the given schemas.
+func ValidateExpressionPath(exp filter.Expression, s schema.Schema, extensions ...schema.Schema) bool {
+	if validateExpressionPath(exp, s) {
+		return true
+	}
+
+	for _, e := range extensions {
+		if validateExpressionPath(exp, e) {
+			return true
+		}
+	}
+	return false
+}
+
 // ValidatePath returns whether the path can be found in one of the given schemas.
 func ValidatePath(path filter.Path, s schema.Schema, extensions ...schema.Schema) bool {
-	ok1 := validateAttributeNames(path.URIPrefix, path.AttributeName, path.SubAttribute, s)
-	var ok2 bool
-	for _, e := range extensions {
-		if validateAttributeNames(path.URIPrefix, path.AttributeName, path.SubAttribute, e) {
-			ok2 = true
-			break
+	// get correct reference schema matching path
+	var ok bool
+	var refSchema schema.Schema
+	if ok = validateAttributeNames(path.URIPrefix, path.AttributeName, path.SubAttribute, s); ok {
+		refSchema = s
+	} else if path.URIPrefix != "" { // extensions must have a path URI prefix
+		for _, e := range extensions {
+			if validateAttributeNames(path.URIPrefix, path.AttributeName, path.SubAttribute, e) {
+				ok = true
+				refSchema = e
+				break
+			}
 		}
 	}
 
-	fmt.Println(path, ok1, ok2)
-
-	if !ok1 && !ok2 {
+	// no reference schema found, not in main schemas as extensions.
+	if !ok {
 		return false
 	}
 
-	return ValidateExpressionPath(path.ValueExpression, s, extensions...)
+	// path has no value filter expression
+	if path.ValueExpression == nil {
+		return true
+	}
+
+	attr, _ := s.Attributes.ContainsAttribute(path.AttributeName)
+	if !attr.HasSubAttributes() {
+		return false
+	}
+	return validateExpressionPath(path.ValueExpression, schema.Schema{
+		Attributes: attr.SubAttributes(),
+		ID:         refSchema.ID,
+	})
+}
+
+func invalidFilterError(msg string) *errors.ScimError {
+	return &errors.ScimError{
+		ScimType: errors.ScimTypeInvalidFilter,
+		Detail:   msg,
+		Status:   http.StatusBadRequest,
+	}
+}
+
+func unknownExpressionTypeError(exp filter.Expression) *errors.ScimError {
+	return invalidFilterError(fmt.Sprintf("unknown expression type: %s", exp))
+}
+
+func unknownOperatorError(token filter.Token, exp filter.Expression) *errors.ScimError {
+	return invalidFilterError(fmt.Sprintf("unknown operator in expression: %s %s", token, exp))
 }
 
 func validateAttributeNames(uriPrefix, attrName, subAttrName string, s schema.Schema) bool {
@@ -95,25 +109,6 @@ func validateAttributeNames(uriPrefix, attrName, subAttrName string, s schema.Sc
 	return true
 }
 
-// Filter represents a parsed SCIM Filter.
-type Filter struct {
-	filter.Expression
-	schema schema.Schema
-}
-
-func ValidateExpressionPath(exp filter.Expression, s schema.Schema, extensions ...schema.Schema) bool {
-	if validateExpressionPath(exp, s) {
-		return true
-	}
-
-	for _, e := range extensions {
-		if validateExpressionPath(exp, e) {
-			return true
-		}
-	}
-	return false
-}
-
 func validateExpressionPath(exp filter.Expression, s schema.Schema) bool {
 	switch exp := exp.(type) {
 	case filter.AttributeExpression:
@@ -123,7 +118,16 @@ func validateExpressionPath(exp filter.Expression, s schema.Schema) bool {
 		if !validateAttributeNames("", exp.AttributeName, "", s) {
 			return false
 		}
-		return validateExpressionPath(exp.ValueExpression, s)
+
+		attr, _ := s.Attributes.ContainsAttribute(exp.AttributeName)
+		if !attr.HasSubAttributes() {
+			return false
+		}
+
+		return validateExpressionPath(exp.ValueExpression, schema.Schema{
+			Attributes: attr.SubAttributes(),
+			ID:         s.ID,
+		})
 	case filter.BinaryExpression:
 		return validateExpressionPath(exp.X, s) && validateExpressionPath(exp.Y, s)
 	case filter.UnaryExpression:
@@ -133,4 +137,30 @@ func validateExpressionPath(exp filter.Expression, s schema.Schema) bool {
 	default:
 		return false
 	}
+}
+
+// Filter represents a parsed SCIM Filter.
+type Filter struct {
+	filter.Expression
+	schema     schema.Schema
+	extensions []schema.Schema
+}
+
+// NewFilter get the filter from the request, parses it and adds reference schemas to validate against.
+func NewFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (Filter, error) {
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if rawFilter != "" {
+		parser := filter.NewParser(strings.NewReader(rawFilter))
+		exp, err := parser.Parse()
+		if err != nil {
+			return Filter{}, err
+		}
+		
+		return Filter{
+			Expression: exp,
+			schema:     s,
+			extensions: extensions,
+		}, nil
+	}
+	return Filter{}, nil
 }

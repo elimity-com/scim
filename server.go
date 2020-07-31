@@ -168,7 +168,7 @@ func (s Server) parseRequestParams(r *http.Request, schemas ...schema.Schema) (L
 		startIndex = defaultStartIndex
 	}
 
-	filterExpr, filterExprErr := filter.NewFilter(r, schemas...)
+	filterExpr, filterExprErr := filter.NewFilter(r, schemas[0], schemas[1:]...)
 	if filterExprErr != nil {
 		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
