@@ -144,7 +144,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 	}
 
 	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
-	errorCauses := make([]error, 0)
+	errorCauses := make([]*errors.ScimError, 0)
 
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
@@ -159,15 +159,14 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 
 	// Denotes all of the errors that have occurred parsing the request.
 	if len(errorCauses) > 0 {
-		scimErr := errors.CheckScimError(errorCauses[0], http.MethodPatch)
-		return req, &scimErr
+		return req, errorCauses[0]
 	}
 
 	return req, nil
 }
 
-func (t ResourceType) validateOperation(op PatchOperation) []error {
-	errorCauses := make([]error, 0)
+func (t ResourceType) validateOperation(op PatchOperation) []*errors.ScimError {
+	errorCauses := make([]*errors.ScimError, 0)
 
 	// Ensure the operation is a valid one. "add", "replace", or "remove".
 	if !contains(validOps, op.Op) {

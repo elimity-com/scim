@@ -100,13 +100,13 @@ func c(compValue string, attr schema.CoreAttribute, comp func(int) bool) (func(i
 			}
 			return comp(strings.Compare(str, compValue))
 		}, nil
+	default:
+		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}
-	// should never happen
-	return invalid, nil
 }
 
 func co(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
-	switch attr.AttributeType() {
+	switch typ := attr.AttributeType(); typ {
 	case "decimal", "integer":
 		return func(value interface{}) bool {
 			return strings.Contains(fmt.Sprint(value), compValue)
@@ -127,12 +127,13 @@ func co(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
 			}
 			return strings.Contains(str, compValue)
 		}
+	default:
+		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}
-	return invalid
 }
 
 func eq(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
-	switch attr.AttributeType() {
+	switch typ := attr.AttributeType(); typ {
 	case "binary":
 		return func(value interface{}) bool {
 			str, ok := value.(string)
@@ -158,12 +159,13 @@ func eq(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
 			return i == 0
 		})
 		return f
+	default:
+		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}
-	return invalid
 }
 
 func ew(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
-	switch attr.AttributeType() {
+	switch typ := attr.AttributeType(); typ {
 	case "decimal", "integer":
 		return func(value interface{}) bool {
 			return strings.HasSuffix(fmt.Sprint(value), compValue)
@@ -184,12 +186,13 @@ func ew(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
 			}
 			return strings.HasSuffix(str, compValue)
 		}
+	default:
+		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}
-	return invalid
 }
 
 func sw(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
-	switch attr.AttributeType() {
+	switch typ := attr.AttributeType(); typ {
 	case "decimal", "integer":
 		return func(value interface{}) bool {
 			return strings.HasPrefix(fmt.Sprint(value), compValue)
@@ -210,6 +213,7 @@ func sw(compValue string, attr schema.CoreAttribute) func(interface{}) bool {
 			}
 			return strings.HasPrefix(str, compValue)
 		}
+	default:
+		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}
-	return invalid
 }
