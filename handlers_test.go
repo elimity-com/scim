@@ -631,23 +631,6 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	assert.Equal(t, 20, response.TotalResults)
 }
 
-func TestServerResourcesGetHandlerFilter(t *testing.T) {
-	params := url.Values{
-		"filter": []string{"userName le \"test10\""},
-	}
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Users?%s", params.Encode()), nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
-
-	var response listResponse
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	assert.NoError(t, err, "json unmarshalling failed")
-	assert.Len(t, response.Resources, 10)
-	assert.Equal(t, 20, response.TotalResults)
-}
-
 // Tests valid add, replace, and remove operations
 func TestServerResourcePatchHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{

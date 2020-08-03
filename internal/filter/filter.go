@@ -146,21 +146,11 @@ type Filter struct {
 	extensions []schema.Schema
 }
 
-// NewFilter get the filter from the request, parses it and adds reference schemas to validate against.
-func NewFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (Filter, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter != "" {
-		parser := filter.NewParser(strings.NewReader(rawFilter))
-		exp, err := parser.Parse()
-		if err != nil {
-			return Filter{}, err
-		}
-
-		return Filter{
-			Expression: exp,
-			schema:     s,
-			extensions: extensions,
-		}, nil
+// NewFilter creates a new Filter and adds reference schemas to validate against.
+func NewFilter(exp filter.Expression, s schema.Schema, extensions ...schema.Schema) Filter {
+	return Filter{
+		Expression: exp,
+		schema:     s,
+		extensions: extensions,
 	}
-	return Filter{}, nil
 }

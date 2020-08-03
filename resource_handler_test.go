@@ -84,14 +84,6 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 			break
 		}
 
-		ok, err := params.Filter.IsValid(v.resourceAttributes)
-		if err != nil {
-			return Page{}, err
-		}
-		if !ok {
-			continue
-		}
-
 		if i >= params.StartIndex {
 			resources = append(resources, Resource{
 				ID:         k,

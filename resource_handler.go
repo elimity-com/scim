@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/elimity-com/scim/filter"
+	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -19,7 +19,7 @@ type ListRequestParams struct {
 
 	// Filter represents the parsed and tokenized filter query parameter.
 	// It is an optional parameter and thus will be nil when the parameter is not present.
-	Filter filter.Filter
+	Filter filter.Expression
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
 	StartIndex int

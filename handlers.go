@@ -2,14 +2,13 @@ package scim
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
-	"github.com/elimity-com/scim/schema"
-
 	"github.com/elimity-com/scim/errors"
+	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/elimity-com/scim/schema"
 )
 
 func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr *errors.ScimError) {
@@ -28,25 +27,25 @@ func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr *errors.ScimEr
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
 // provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r, schema.Definition())
+	params, paramsErr := s.parseRequestParams(r)
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
 	}
+	filter := f.NewFilter(params.Filter, schema.Definition())
 
 	schemas := s.getSchemas()
 	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
 	var resources []interface{}
 	for _, v := range schemas[start:end] {
 		resource := v.ToMap()
-		if params.Filter.Expression != nil {
-			valid, err := params.Filter.IsValid(resource)
+		if params.Filter != nil {
+			valid, err := filter.IsValid(resource)
 			if err != nil {
 				scimErr := errors.CheckScimError(err, http.MethodGet)
 				errorHandler(w, r, &scimErr)
 				return
 			}
-			fmt.Println(resource["id"])
 			if !valid {
 				continue
 			}
@@ -99,7 +98,7 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 // resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
 // the core schema URI that defines the resource, and any supported schema extensions.
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r, schema.ResourceTypeSchema())
+	params, paramsErr := s.parseRequestParams(r)
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
@@ -277,11 +276,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
-	schemas := []schema.Schema{resourceType.Schema}
-	for _, extension := range resourceType.SchemaExtensions {
-		schemas = append(schemas, extension.Schema)
-	}
-	params, paramsErr := s.parseRequestParams(r, schemas...)
+	params, paramsErr := s.parseRequestParams(r)
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return

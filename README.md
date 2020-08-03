@@ -104,32 +104,6 @@ server := Server{
 }
 ```
 
-### 5. Listen and Serve
-```go
-log.Fatal(http.ListenAndServe(":8080", server))
-```
-
-### Filtering
-In the `ListRequestParams` a parsed `Filter` can be found. This is just the filter query from the incoming request.
-This structure provides a two methods:
-
-- `Reduce`: removes all resources from a []map that do not pass the filter.
-- `IsValid`: checks whether the given map is passed the filter.
-
-```go
-// filter = userName eq "di-wu"
-
-params.Filter.IsValid(map[string]interface{}{
-    "userName": "not di-wu",
-})
-// OUT: false <nil>
-
-params.Filter.IsValid(map[string]interface{}{
-    "userName": "di-wu",
-})
-// OUT: true <nil>
-```
-
 ## Addition Checks/Tests
 Not everything can be checked by the SCIM server itself.
 Below are some things listed that we expect that the implementation covers.

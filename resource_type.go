@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
-	"github.com/elimity-com/scim/filter"
+	"github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -180,7 +180,12 @@ func (t ResourceType) validateOperation(op PatchOperation) []*errors.ScimError {
 
 	// "remove" operations require a path.
 	// The "replace" and "add" operations can have implicit paths, which is part of the value.
-	if op.Op == PatchOperationRemove && op.Path == "" {
+	path, err := filter.GetPathFilter(op.Path)
+	if err != nil {
+		scimErr := errors.CheckScimError(err, http.MethodPatch)
+		errorCauses = append(errorCauses, &scimErr)
+	}
+	if op.Op == PatchOperationRemove && path.String() == "" {
 		errorCauses = append(errorCauses, &errors.ScimErrorNoTarget)
 	}
 
@@ -198,7 +203,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		return &scimErr
 	}
 
-	if op.Path != "" {
+	if path.String() != "" {
 		s := t.Schema
 		s.Attributes = append(s.Attributes, schema.CommonAttributes()...)
 		var extensions []schema.Schema
@@ -213,13 +218,12 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 
 	mapValue, ok := op.Value.(map[string]interface{})
 	if !ok {
-		mapValue = map[string]interface{}{op.Path: op.Value}
+		mapValue = map[string]interface{}{path.String(): op.Value}
 	}
 
 	// Check if it's a patch on a extension.
-	if op.Path != "" {
-		if i := strings.LastIndex(op.Path, ":"); i != -1 {
-			id := op.Path[:i]
+	if path.String() != "" {
+		if id := path.URIPrefix; id != "" {
 			for _, ext := range t.SchemaExtensions {
 				if strings.EqualFold(id, ext.Schema.ID) {
 					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
