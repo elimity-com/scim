@@ -104,10 +104,21 @@ server := Server{
 }
 ```
 
-### 5. Listen and Serve
-```go
-log.Fatal(http.ListenAndServe(":8080", server))
-```
+## Addition Checks/Tests
+Not everything can be checked by the SCIM server itself.
+Below are some things listed that we expect that the implementation covers.
+
+**!** this list is currently incomplete!
+
+We want to keep this list as short as possible. 
+If you have ideas how we could enforce these rules in the server itself do not hesitate to open
+[an issue](https://github.com/elimity-com/scim/issues/new) or a PR.
+### Mutability
+#### Immutable Attributes
+*PUT Handler*: If one or more values are already set for the attribute, the input value(s) MUST match.
+#### WriteOnly Attributes
+*ALL Handlers*: Attribute values SHALL NOT be returned. \
+Note: These attributes usually also has a returned setting of "never".
 
 ## Contributing
 We are happy to review pull requests,

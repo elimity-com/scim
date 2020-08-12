@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/di-wu/scim-filter-parser v0.0.0-20191024153148-b33ea97ae796 h1:pzRK8hH/UoxQn2FqqUSYZwvKOvWMuNKyAurHVu2oU0M=
-github.com/di-wu/scim-filter-parser v0.0.0-20191024153148-b33ea97ae796/go.mod h1:Q9X8NLzgdqI3Z0XcbiPpdAEql664lC6ExBN7B6ZLhco=
+github.com/di-wu/scim-filter-parser v0.0.0-20200731092905-86ddcb7e62bd h1:a5k7fCAnlAbzSFVV5j/aClknO+e08FnmW4zZcnfmHaE=
+github.com/di-wu/scim-filter-parser v0.0.0-20200731092905-86ddcb7e62bd/go.mod h1:jrab8v6Ax/lJkC4XLnRQW6RuH+UxXRDL3BrNDg6qdd0=
 github.com/di-wu/xsd-datetime v0.0.0-20190813080539-55a8ba70aa69 h1:KlIk21PbvrYUBb2Dv2gsd4VZjYviGgevIadTj9ebExU=
 github.com/di-wu/xsd-datetime v0.0.0-20190813080539-55a8ba70aa69/go.mod h1:i3iEhrP3WchwseOBeIdW/zxeoleXTOzx1WyDXgdmOww=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

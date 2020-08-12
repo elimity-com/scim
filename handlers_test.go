@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -18,9 +19,7 @@ import (
 
 func newTestServer() Server {
 	userSchema := getUserSchema()
-
 	userSchemaExtension := getUserExtensionSchema()
-
 	return Server{
 		Config: ServiceProviderConfig{},
 		ResourceTypes: []ResourceType{
@@ -135,7 +134,7 @@ func newTestResourceHandler() ResourceHandler {
 	for i := 1; i < 21; i++ {
 		data[fmt.Sprintf("000%d", i)] = testData{
 			resourceAttributes: ResourceAttributes{
-				"userName":   fmt.Sprintf("test%d", i),
+				"userName":   fmt.Sprintf("test%02d", i),
 				"externalId": fmt.Sprintf("external%d", i),
 			},
 			meta: map[string]string{
@@ -279,6 +278,24 @@ func TestServerSchemasEndpoint(t *testing.T) {
 				}, resourceIDs)
 		})
 	}
+}
+
+func TestServerSchemasEndpointFilter(t *testing.T) {
+	params := url.Values{
+		"filter": []string{"id co \"extension\""},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Schemas?%s", params.Encode()), nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+
+	var response listResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.NoError(t, err, "json unmarshalling failed")
+	assert.Len(t, response.Resources, 1)
+	assert.Equal(t, 2, response.TotalResults)
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -505,7 +522,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		{
 			name:                 "Users get request without version",
 			target:               "/Users/0001",
-			expectedUserName:     "test1",
+			expectedUserName:     "test01",
 			expectedExternalID:   "external1",
 			expectedVersion:      "v1",
 			expectedCreated:      "2020-01-01T15:04:05+07:00",
@@ -513,7 +530,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		}, {
 			name:                 "Users get request with version",
 			target:               "/v2/Users/0002",
-			expectedUserName:     "test2",
+			expectedUserName:     "test02",
 			expectedExternalID:   "external2",
 			expectedVersion:      "v2",
 			expectedCreated:      "2020-01-02T15:04:05+07:00",
@@ -700,6 +717,8 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
 func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
@@ -722,6 +741,8 @@ func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
 func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
@@ -743,6 +764,10 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 	assert.NoError(t, err, "json unmarshalling failed")
 
 	assert.Equal(t, expectedStatus, rr.Code, "status code mismatch")
+
+	if expectedStatus >= 400 {
+		assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+	}
 }
 
 // Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
@@ -753,6 +778,29 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
+}
+
+func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"name.invalid",
+		    "value":"test"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	var resource map[string]interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &resource)
+	assert.NoError(t, err, "json unmarshalling failed")
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+
+	assert.Equal(t, errors.ScimErrorInvalidPath.Detail, resource["detail"])
 }
 
 func TestServerResourcePutHandlerValid(t *testing.T) {

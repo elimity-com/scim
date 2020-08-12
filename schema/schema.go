@@ -18,14 +18,37 @@ const (
 
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
 type Schema struct {
-	Attributes  []CoreAttribute
+	Attributes  Attributes
 	Description optional.String
 	ID          string
 	Name        optional.String
 }
 
-// Validate validates given resource based on the schema.
+// Attributes represent a list of Core Attributes
+type Attributes []CoreAttribute
+
+// ContainsAttribute checks whether the list of Core Attributes contains an attribute with the given name.
+func (as Attributes) ContainsAttribute(name string) (CoreAttribute, bool) {
+	for _, a := range as {
+		if strings.EqualFold(name, a.name) {
+			return a, true
+		}
+	}
+	return CoreAttribute{}, false
+}
+
+// Validate validates given resource based on the schema. Does NOT validate mutability.
+// NOTE: only used in POST and PUT requests where attributes MAY be (re)defined.
 func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+	return s.validate(resource, false)
+}
+
+// ValidateMutability validates given resource based on the schema, including strict immutability checks.
+func (s Schema) ValidateMutability(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+	return s.validate(resource, true)
+}
+
+func (s Schema) validate(resource interface{}, checkMutability bool) (map[string]interface{}, *errors.ScimError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
 		return nil, &errors.ScimErrorInvalidSyntax
@@ -37,12 +60,19 @@ func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.
 		var found bool
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {
+				// duplicate found
 				if found {
 					return nil, &errors.ScimErrorInvalidSyntax
 				}
 				found = true
 				hit = v
 			}
+		}
+
+		// An immutable attribute SHALL NOT be updated.
+		if found && checkMutability &&
+			attribute.mutability == attributeMutabilityImmutable {
+			return nil, &errors.ScimErrorMutability
 		}
 
 		attr, scimErr := attribute.validate(hit)
@@ -107,14 +137,19 @@ func isReadOnly(attr CoreAttribute) bool {
 	return attr.mutability == attributeMutabilityReadOnly
 }
 
-// MarshalJSON converts the schema struct to its corresponding json representation.
-func (s Schema) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+// ToMap returns the map representation of a schema.
+func (s Schema) ToMap() map[string]interface{} {
+	return map[string]interface{}{
 		"id":          s.ID,
 		"name":        s.Name.Value(),
 		"description": s.Description.Value(),
 		"attributes":  s.getRawAttributes(),
-	})
+	}
+}
+
+// MarshalJSON converts the schema struct to its corresponding json representation.
+func (s Schema) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.ToMap())
 }
 
 func (s Schema) getRawAttributes() []map[string]interface{} {

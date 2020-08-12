@@ -3,12 +3,12 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 )
@@ -51,13 +51,20 @@ func unmarshal(data []byte, v interface{}) error {
 	return d.Decode(v)
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
+func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *errors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
 	}
 
-	attributes, scimErr := t.schemaWithCommon().Validate(m)
+	var attributes map[string]interface{}
+	var scimErr *errors.ScimError
+	switch method {
+	case http.MethodGet, http.MethodPut:
+		attributes, scimErr = t.schemaWithCommon().Validate(m)
+	default:
+		attributes, scimErr = t.schemaWithCommon().ValidateMutability(m)
+	}
 	if scimErr != nil {
 		return ResourceAttributes{}, scimErr
 	}
@@ -137,7 +144,7 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 	}
 
 	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
-	errorCauses := make([]string, 0)
+	errorCauses := make([]*errors.ScimError, 0)
 
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
@@ -152,64 +159,71 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 
 	// Denotes all of the errors that have occurred parsing the request.
 	if len(errorCauses) > 0 {
-		return req, &errors.ScimErrorInvalidSyntax
+		return req, errorCauses[0]
 	}
 
 	return req, nil
 }
 
-func (t ResourceType) validateOperation(op PatchOperation) []string {
-	errorCauses := make([]string, 0)
+func (t ResourceType) validateOperation(op PatchOperation) []*errors.ScimError {
+	errorCauses := make([]*errors.ScimError, 0)
 
 	// Ensure the operation is a valid one. "add", "replace", or "remove".
 	if !contains(validOps, op.Op) {
-		errorCauses = append(
-			errorCauses,
-			fmt.Sprintf(
-				"invalid operation type provided, got %s, expected %s",
-				op.Op,
-				strings.Join(validOps, ", "),
-			),
-		)
+		errorCauses = append(errorCauses, &errors.ScimErrorInvalidFilter)
 	}
 
 	// "add" and "replace" operations must have a value
 	if (op.Op == PatchOperationAdd || op.Op == PatchOperationReplace) && op.Value == nil {
-		errorCauses = append(
-			errorCauses,
-			"an add or replace patch operation must contain a value",
-		)
+		errorCauses = append(errorCauses, &errors.ScimErrorInvalidFilter)
 	}
 
 	// "remove" operations require a path.
 	// The "replace" and "add" operations can have implicit paths, which is part of the value.
-	if op.Op == PatchOperationRemove && op.Path == "" {
-		errorCauses = append(errorCauses, "path is required on a remove operation")
+	path, err := filter.GetPathFilter(op.Path)
+	if err != nil {
+		scimErr := errors.CheckScimError(err, http.MethodPatch)
+		errorCauses = append(errorCauses, &scimErr)
+	}
+	if op.Op == PatchOperationRemove && path.String() == "" {
+		errorCauses = append(errorCauses, &errors.ScimErrorNoTarget)
 	}
 
 	if err := t.validateOperationValue(op); err != nil {
-		return append(errorCauses, fmt.Sprintf("%s operation has an invalid value", op.Op))
+		return append(errorCauses, err)
 	}
 
 	return errorCauses
 }
 
 func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
-	// Not attempting to validate value or path if it is a filter based path.
-	// Perhaps we could at least validate the ComparePath
-	if op.GetPathFilter() != nil {
-		return nil
+	path, err := filter.GetPathFilter(op.Path)
+	if err != nil {
+		scimErr := errors.CheckScimError(err, http.MethodPatch)
+		return &scimErr
+	}
+
+	if path.String() != "" {
+		s := t.Schema
+		s.Attributes = append(s.Attributes, schema.CommonAttributes()...)
+		var extensions []schema.Schema
+		for _, e := range t.SchemaExtensions {
+			extensions = append(extensions, e.Schema)
+		}
+
+		if !filter.ValidatePath(path, s, extensions...) {
+			return &errors.ScimErrorInvalidPath
+		}
 	}
 
 	mapValue, ok := op.Value.(map[string]interface{})
 	if !ok {
-		mapValue = map[string]interface{}{op.Path: op.Value}
+		mapValue = map[string]interface{}{path.String(): op.Value}
 	}
 
 	// Check if it's a patch on a extension.
-	if op.Path != "" {
-		if i := strings.LastIndex(op.Path, ":"); i != -1 {
-			id := op.Path[:i]
+	if path.String() != "" {
+		if id := path.URIPrefix; id != "" {
 			for _, ext := range t.SchemaExtensions {
 				if strings.EqualFold(id, ext.Schema.ID) {
 					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)

@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/elimity-com/scim/errors"
+	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/elimity-com/scim/schema"
 )
 
 func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr *errors.ScimError) {
@@ -30,12 +32,25 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		errorHandler(w, r, paramsErr)
 		return
 	}
+	filter := f.NewFilter(params.Filter, schema.Definition())
 
 	schemas := s.getSchemas()
 	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
 	var resources []interface{}
 	for _, v := range schemas[start:end] {
-		resources = append(resources, v)
+		resource := v.ToMap()
+		if params.Filter != nil {
+			valid, err := filter.IsValid(resource)
+			if err != nil {
+				scimErr := errors.CheckScimError(err, http.MethodGet)
+				errorHandler(w, r, &scimErr)
+				return
+			}
+			if !valid {
+				continue
+			}
+		}
+		resources = append(resources, resource)
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -59,14 +74,14 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	schema := s.getSchema(id)
-	if schema.ID != id {
+	getSchema := s.getSchema(id)
+	if getSchema.ID != id {
 		scimErr := errors.ScimErrorResourceNotFound(id)
 		errorHandler(w, r, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(schema)
+	raw, err := json.Marshal(getSchema)
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling schema: %v", err)
@@ -199,7 +214,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(data)
+	attributes, scimErr := resourceType.validate(data, http.MethodPost)
 	if scimErr != nil {
 		errorHandler(w, r, scimErr)
 		return
@@ -303,7 +318,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(data)
+	attributes, scimErr := resourceType.validate(data, http.MethodPut)
 	if scimErr != nil {
 		errorHandler(w, r, scimErr)
 		return

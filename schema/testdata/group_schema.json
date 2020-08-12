@@ -59,6 +59,17 @@
           "returned": "default",
           "type": "string",
           "uniqueness": "none"
+        },
+        {
+          "caseExact": false,
+          "description": "A human-readable name for the group member, primarily used for display purposes.",
+          "multiValued": false,
+          "mutability": "readOnly",
+          "name": "display",
+          "required": false,
+          "returned": "default",
+          "type": "string",
+          "uniqueness": "none"
         }
       ],
       "type": "complex"

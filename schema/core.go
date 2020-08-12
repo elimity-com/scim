@@ -85,19 +85,94 @@ type CoreAttribute struct {
 	referenceTypes  []AttributeReferenceType
 	required        bool
 	returned        attributeReturned
-	subAttributes   []CoreAttribute
+	subAttributes   Attributes
 	typ             attributeType
 	uniqueness      attributeUniqueness
 }
 
+// CanonicalValues returns the canonical values of the attribute.
+func (a CoreAttribute) CanonicalValues() []string {
+	return a.canonicalValues
+}
+
+// CaseExact returns whether the attribute is case exact.
+func (a CoreAttribute) CaseExact() bool {
+	return a.caseExact
+}
+
+// Description returns whether the description of the attribute.
+func (a CoreAttribute) Description() string {
+	return a.description.Value()
+}
+
+// MultiValued returns whether the attribute is multi valued.
+func (a CoreAttribute) MultiValued() bool {
+	return a.multiValued
+}
+
+// Mutability returns the mutability of the attribute.
+func (a CoreAttribute) Mutability() string {
+	raw, _ := a.mutability.MarshalJSON()
+	return string(raw)
+}
+
+// Name returns the case insensitive name of the attribute.
+func (a CoreAttribute) Name() string {
+	return a.name
+}
+
+// ReferenceTypes returns the reference types of the attribute.
+func (a CoreAttribute) ReferenceTypes() []AttributeReferenceType {
+	return a.referenceTypes
+}
+
+// Required returns whether the attribute is required.
+func (a CoreAttribute) Required() bool {
+	return a.required
+}
+
+// Returned returns when the attribute need to be returned.
+func (a CoreAttribute) Returned() string {
+	raw, _ := a.returned.MarshalJSON()
+	return string(raw)
+}
+
+// SubAttributes returns the sub attributes.
+func (a CoreAttribute) SubAttributes() Attributes {
+	return a.subAttributes
+}
+
+// AttributeType returns the attribute type.
+func (a CoreAttribute) AttributeType() string {
+	return a.typ.String()
+}
+
+// Uniqueness returns the attributes uniqueness.
+func (a CoreAttribute) Uniqueness() string {
+	raw, _ := a.uniqueness.MarshalJSON()
+	return string(raw)
+}
+
+// HasSubAttributes returns whether the attribute is complex and has sub attributes.
+func (a CoreAttribute) HasSubAttributes() bool {
+	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
+}
+
 func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
-	// return false if the attribute is not present but required.
+	// whether or not the attribute is required.
 	if attribute == nil {
 		if !a.required {
 			return nil, nil
 		}
 
+		// the attribute is not present but required.
 		return nil, &errors.ScimErrorInvalidValue
+	}
+
+	// whether the value of the attribute can be (re)defined
+	// readOnly: the attribute SHALL NOT be modified.
+	if a.mutability == attributeMutabilityReadOnly {
+		return nil, nil
 	}
 
 	if a.multiValued {

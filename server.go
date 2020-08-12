@@ -170,8 +170,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 
 	filterExpr, filterExprErr := getFilter(r)
 	if filterExprErr != nil {
-		scimErr := errors.ScimErrorBadParams([]string{"filter"})
-		return ListRequestParams{}, &scimErr
+		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
 
 	return ListRequestParams{
@@ -183,8 +182,9 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 
 func getFilter(r *http.Request) (filter.Expression, error) {
 	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter != "" {
-		parser := filter.NewParser(strings.NewReader(rawFilter))
+	decodedFilter, _ := url.QueryUnescape(rawFilter)
+	if decodedFilter != "" {
+		parser := filter.NewParser(strings.NewReader(decodedFilter))
 		return parser.Parse()
 	}
 	return nil, nil
