@@ -34,13 +34,21 @@ func newTestServer() Server {
 			{
 				ID:          optional.NewString("EnterpriseUser"),
 				Name:        "EnterpriseUser",
-				Endpoint:    "/EnterpriseUser",
+				Endpoint:    "/EnterpriseUsers",
 				Description: optional.NewString("Enterprise User Account"),
 				Schema:      userSchema,
 				SchemaExtensions: []SchemaExtension{
 					{Schema: userSchemaExtension},
 				},
 				Handler: newTestResourceHandler(),
+			},
+			{
+				ID:          optional.NewString("Group"),
+				Name:        "Group",
+				Endpoint:    "/Groups",
+				Description: optional.NewString("Group"),
+				Schema:      schema.CoreGroupSchema(),
+				Handler:     newTestResourceHandler(),
 			},
 		},
 	}
@@ -171,12 +179,7 @@ func TestInvalidRequests(t *testing.T) {
 		}, {
 			name:           "invalid schema request",
 			method:         http.MethodGet,
-			target:         "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group",
-			expectedStatus: http.StatusNotFound,
-		}, {
-			name:           "invalid resource types request",
-			method:         http.MethodGet,
-			target:         "/ResourceTypes/Group",
+			target:         "/Schemas/urn:ietf:params:scim:schemas:core:2.0:Invalid",
 			expectedStatus: http.StatusNotFound,
 		}, {
 			name:           "invalid post request",
@@ -259,11 +262,11 @@ func TestServerSchemasEndpoint(t *testing.T) {
 			err := json.Unmarshal(rr.Body.Bytes(), &response)
 			assert.NoError(t, err, "json unmarshalling failed")
 
-			assert.Equal(t, 2, response.TotalResults)
+			assert.Equal(t, 3, response.TotalResults)
 
-			assert.Len(t, response.Resources, 2)
+			assert.Len(t, response.Resources, 3)
 
-			resourceIDs := make([]string, 2)
+			resourceIDs := make([]string, 3)
 			for i, resource := range response.Resources {
 				resourceType, ok := resource.(map[string]interface{})
 				assert.True(t, ok, "schema is not an object")
@@ -275,6 +278,7 @@ func TestServerSchemasEndpoint(t *testing.T) {
 				[]string{
 					"urn:ietf:params:scim:schemas:core:2.0:User",
 					"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+					"urn:ietf:params:scim:schemas:core:2.0:Group",
 				}, resourceIDs)
 		})
 	}
@@ -295,7 +299,7 @@ func TestServerSchemasEndpointFilter(t *testing.T) {
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.NoError(t, err, "json unmarshalling failed")
 	assert.Len(t, response.Resources, 1)
-	assert.Equal(t, 2, response.TotalResults)
+	assert.Equal(t, 3, response.TotalResults)
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -366,17 +370,17 @@ func TestServerResourceTypesHandler(t *testing.T) {
 			err := json.Unmarshal(rr.Body.Bytes(), &response)
 			assert.NoError(t, err, "json unmarshalling failed")
 
-			assert.Equal(t, 2, response.TotalResults)
-			assert.Len(t, response.Resources, 2, "unexpected or missing resources")
+			assert.Equal(t, 3, response.TotalResults)
+			assert.Len(t, response.Resources, 3, "unexpected or missing resources")
 
-			resourceTypes := make([]string, 2)
+			resourceTypes := make([]string, 3)
 			for i, resource := range response.Resources {
 				resourceType, ok := resource.(map[string]interface{})
 				assert.True(t, ok, "resource type is not an object")
 				resourceTypes[i] = resourceType["name"].(string)
 			}
 
-			assert.Equal(t, []string{"User", "EnterpriseUser"}, resourceTypes)
+			assert.Equal(t, []string{"User", "EnterpriseUser", "Group"}, resourceTypes)
 		})
 	}
 }
@@ -696,6 +700,38 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 	assert.NotEqual(t, "2020-02-01T16:05:04+07:00", meta["lastModified"])
 	assert.Equal(t, "Users/0001", meta["location"])
 	assert.Equal(t, expectedVersion, meta["version"])
+}
+
+func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"remove",
+		    "path":"members[value eq \"2819c223-7f76-...413861904646\"]"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+}
+
+func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"remove",
+		    "path":"members[invalid eq \"empty\"]"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
 }
 
 func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
