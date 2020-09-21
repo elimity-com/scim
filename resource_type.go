@@ -202,8 +202,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		scimErr := errors.CheckScimError(err, http.MethodPatch)
 		return &scimErr
 	}
-
-	if path.String() != "" {
+	if path.AttributeName != "" {
 		s := t.Schema
 		s.Attributes = append(s.Attributes, schema.CommonAttributes()...)
 		var extensions []schema.Schema
@@ -218,11 +217,11 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 
 	mapValue, ok := op.Value.(map[string]interface{})
 	if !ok {
-		mapValue = map[string]interface{}{path.String(): op.Value}
+		mapValue = map[string]interface{}{path.AttributeName: op.Value}
 	}
 
-	// Check if it's a patch on a extension.
-	if path.String() != "" {
+	// Check if it's a patch on an extension.
+	if path.AttributeName != "" {
 		if id := path.URIPrefix; id != "" {
 			for _, ext := range t.SchemaExtensions {
 				if strings.EqualFold(id, ext.Schema.ID) {
