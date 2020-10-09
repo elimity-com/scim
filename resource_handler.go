@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"time"
 
-	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
+	"github.com/scim2/filter-parser"
 )
 
 // ListRequestParams request parameters sent to the API via a "GetAll" route.
