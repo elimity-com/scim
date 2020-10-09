@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/schema"
+	"github.com/scim2/filter-parser"
 )
 
 func TestValidate(t *testing.T) {
