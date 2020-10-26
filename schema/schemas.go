@@ -29,7 +29,6 @@ func CommonAttributes() []CoreAttribute {
 			CaseExact:   true,
 			Description: optional.NewString("A String that is an identifier for the resource as defined by the\nprovisioning client."),
 			Name:        "externalId",
-			Returned:    AttributeReturned{},
 		})),
 		ComplexCoreAttribute(ComplexParams{
 			Description: optional.NewString("A complex attribute containing resource metadata."),
