@@ -360,3 +360,29 @@ func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
+	//
+	// bulkHandler will be the controller that assigns requests to Create, Update, and Delete.
+	//
+	// TODO
+	// - validate request body.
+	//		- circlar reference processing will be error here.
+	//			- https://tools.ietf.org/html/rfc7644#section-3.7.1
+	//		- if maxOperations or maxPayloadSize is over, return the error here.
+	//			- https://tools.ietf.org/html/rfc7644#section-3.7.4
+
+	// - assigns request to Create, Update, Delete handlers according to http Method.
+	// like below.
+	switch r.Method {
+	case http.MethodPost:
+		s.resourcePostHandler(w, r, resourceType)
+	case http.MethodPut:
+		s.resourcePutHandler(w, r, "id", resourceType)
+	case http.MethodDelete:
+		s.resourcePutHandler(w, r, "id", resourceType)
+	}
+
+	// - aggregate responses and errors and format them into a SCIM response.
+	//		- an example response is https://tools.ietf.org/html/rfc7644#section-3.7.3
+}

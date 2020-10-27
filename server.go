@@ -83,6 +83,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, resourceType := range s.ResourceTypes {
+		if path == "/Bulk" {
+			s.bulkHandler(w, r, resourceType)
+			return
+		}
+
 		if path == resourceType.Endpoint {
 			switch r.Method {
 			case http.MethodPost:
