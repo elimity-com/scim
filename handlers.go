@@ -373,6 +373,8 @@ func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceType
 	//			- https://tools.ietf.org/html/rfc7644#section-3.7.4
 
 	// - assigns request to Create, Update, Delete handlers according to http Method.
+	//		- don't make users aware of the bulkId
+	//			- details about bulkId is https://tools.ietf.org/html/rfc7644#section-3.7.2
 	// like below.
 	switch r.Method {
 	case http.MethodPost:
