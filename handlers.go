@@ -372,7 +372,36 @@ func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceType
 	//		- if maxOperations or maxPayloadSize is over, return the error here.
 	//			- https://tools.ietf.org/html/rfc7644#section-3.7.4
 
-	// - assigns request to Create, Update, Delete handlers according to http Method.
+	// - assigns request to Create, Update, Delete handlers according to http Method and Operations.path
+	// {
+	// 	"schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+	// 	"Operations": [
+	// 	  {
+	// 		"method": "POST",
+	// 		"path": "/Users", // this is will be ResourceType
+	// 		"bulkId": "qwerty",
+	// 		"data": {
+	// 		  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+	// 		  "userName": "Alice"
+	// 		}
+	// 	  },
+	// 	  {
+	// 		"method": "POST",
+	// 		"path": "/Groups",
+	// 		"bulkId": "ytrewq",
+	// 		"data": {
+	// 		  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+	// 		  "displayName": "Tour Guides",
+	// 		  "members": [
+	// 			{
+	// 			  "type": "User",
+	// 			  "value": "bulkId:qwerty"
+	// 			}
+	// 		  ]
+	// 		}
+	// 	  }
+	// 	]
+	//   }
 	//		- don't make users aware of the bulkId
 	//			- details about bulkId is https://tools.ietf.org/html/rfc7644#section-3.7.2
 	// like below.
