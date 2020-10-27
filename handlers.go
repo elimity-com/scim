@@ -361,7 +361,7 @@ func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
+func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceTypes []ResourceType) {
 	//
 	// bulkHandler will be the controller that assigns requests to Create, Update, and Delete.
 	//
@@ -378,11 +378,11 @@ func (s Server) bulkHandler(w http.ResponseWriter, r *http.Request, resourceType
 	// like below.
 	switch r.Method {
 	case http.MethodPost:
-		s.resourcePostHandler(w, r, resourceType)
+		// invoke Create()
 	case http.MethodPut:
-		s.resourcePutHandler(w, r, "id", resourceType)
+		// invoke Replace()
 	case http.MethodDelete:
-		s.resourcePutHandler(w, r, "id", resourceType)
+		// invoke Delete()
 	}
 
 	// - aggregate responses and errors and format them into a SCIM response.
