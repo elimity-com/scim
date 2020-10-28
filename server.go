@@ -82,7 +82,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/ServiceProviderConfig":
 		s.serviceProviderConfigHandler(w, r)
 		return
-	case path == "/Bulk":
+	case path == "/Bulk" && s.Config.SupportBulk:
 		s.bulkHandler(w, r, s.ResourceTypes)
 		return
 	}
