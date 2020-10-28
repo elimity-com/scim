@@ -13,8 +13,6 @@ import (
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func newTestServer() Server {
@@ -223,14 +221,13 @@ func TestInvalidRequests(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, tt.target, nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(test.method, test.target, nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, tt.expectedStatus, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, test.expectedStatus, rr.Code)
 		})
 	}
 }
@@ -249,37 +246,33 @@ func TestServerSchemasEndpoint(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, test.target, nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 			var response listResponse
-			err := json.Unmarshal(rr.Body.Bytes(), &response)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 
-			assert.Equal(t, 3, response.TotalResults)
-
-			assert.Len(t, response.Resources, 3)
+			expectedLen := 3
+			assertEqual(t, expectedLen, response.TotalResults)
+			assertLen(t, response.Resources, expectedLen)
 
 			resourceIDs := make([]string, 3)
 			for i, resource := range response.Resources {
 				resourceType, ok := resource.(map[string]interface{})
-				assert.True(t, ok, "schema is not an object")
+				assertTypeOk(t, ok, "object")
 				resourceIDs[i] = resourceType["id"].(string)
 			}
 
-			assert.Equal(
-				t,
-				[]string{
-					"urn:ietf:params:scim:schemas:core:2.0:User",
-					"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-					"urn:ietf:params:scim:schemas:core:2.0:Group",
-				}, resourceIDs)
+			assertEqualStrings(t, []string{
+				"urn:ietf:params:scim:schemas:core:2.0:User",
+				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+				"urn:ietf:params:scim:schemas:core:2.0:Group",
+			}, resourceIDs)
 		})
 	}
 }
@@ -289,17 +282,18 @@ func TestServerSchemasEndpointFilter(t *testing.T) {
 		"filter": []string{"id co \"extension\""},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Schemas?%s", params.Encode()), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+		"/Schemas?%s", params.Encode(),
+	), nil)
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 	var response listResponse
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	assert.NoError(t, err, "json unmarshalling failed")
-	assert.Len(t, response.Resources, 1)
-	assert.Equal(t, 3, response.TotalResults)
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertLen(t, response.Resources, 1)
+	assertEqual(t, 3, response.TotalResults)
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -325,20 +319,19 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/Schemas/%s", tt.versionPrefix, tt.schema), nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+				"%s/Schemas/%s", test.versionPrefix, test.schema,
+			), nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 			var s map[string]interface{}
-			err := json.Unmarshal(rr.Body.Bytes(), &s)
-			assert.NoError(t, err, "json unmarshalling failed")
-
-			assert.Equal(t, tt.schema, s["id"].(string))
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &s))
+			assertEqual(t, test.schema, s["id"].(string))
 		})
 	}
 }
@@ -357,30 +350,28 @@ func TestServerResourceTypesHandler(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, test.target, nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 			var response listResponse
-			err := json.Unmarshal(rr.Body.Bytes(), &response)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 
-			assert.Equal(t, 3, response.TotalResults)
-			assert.Len(t, response.Resources, 3, "unexpected or missing resources")
+			assertEqual(t, 3, response.TotalResults)
+			assertLen(t, response.Resources, 3)
 
 			resourceTypes := make([]string, 3)
 			for i, resource := range response.Resources {
 				resourceType, ok := resource.(map[string]interface{})
-				assert.True(t, ok, "resource type is not an object")
+				assertTypeOk(t, ok, "object")
 				resourceTypes[i] = resourceType["name"].(string)
 			}
 
-			assert.Equal(t, []string{"User", "EnterpriseUser", "Group"}, resourceTypes)
+			assertEqualStrings(t, []string{"User", "EnterpriseUser", "Group"}, resourceTypes)
 		})
 	}
 }
@@ -415,13 +406,12 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 			var resourceType map[string]interface{}
-			err := json.Unmarshal(rr.Body.Bytes(), &resourceType)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resourceType))
 
-			assert.Equal(t, tt.resourceType, resourceType["id"])
+			assertEqual(t, tt.resourceType, resourceType["id"])
 		})
 	}
 }
@@ -447,7 +437,7 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 		})
 	}
 }
@@ -481,34 +471,33 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, tt.target, tt.body)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, test.target, test.body)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusCreated, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusCreated, rr.Code)
 
-			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
+			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
 			var resource map[string]interface{}
-			err := json.Unmarshal(rr.Body.Bytes(), &resource)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-			assert.Equal(t, tt.expectedUserName, resource["userName"])
+			assertEqual(t, test.expectedUserName, resource["userName"])
 
-			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
+			assertEqual(t, test.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
-			assert.True(t, ok, "handler did not return the resource meta correctly")
+			assertTypeOk(t, ok, "object")
 
-			assert.Equal(t, "User", meta["resourceType"])
-			assert.NotEmpty(t, meta["created"], "missing meta created")
-			assert.NotEmpty(t, meta["lastModified"], "missing meta last modified")
-			assert.Equal(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
-			assert.Equal(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
-			assert.Equal(t, rr.Header().Get("Etag"), meta["version"], "ETag and version needs to be the same")
+			assertEqual(t, "User", meta["resourceType"])
+			assertNotNil(t, meta["created"], "created")
+			assertNotNil(t, meta["lastModified"], "last modified")
+			assertEqual(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
+			assertEqual(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
+			// ETag and version needs to be the same.
+			assertEqual(t, rr.Header().Get("Etag"), meta["version"])
 		})
 	}
 }
@@ -549,28 +538,26 @@ func TestServerResourceGetHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
+			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
-			assert.Equal(t, tt.expectedVersion, rr.Header().Get("Etag"))
+			assertEqual(t, tt.expectedVersion, rr.Header().Get("Etag"))
 
 			var resource map[string]interface{}
-			err := json.Unmarshal(rr.Body.Bytes(), &resource)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-			assert.Equal(t, tt.expectedUserName, resource["userName"])
-
-			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
+			assertEqual(t, tt.expectedUserName, resource["userName"])
+			assertEqual(t, tt.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
-			assert.True(t, ok, "handler did not return the resource meta correctly")
+			assertTypeOk(t, ok, "object")
 
-			assert.Equal(t, "User", meta["resourceType"])
-			assert.Equal(t, tt.expectedCreated, meta["created"])
-			assert.Equal(t, tt.expectedLastModified, meta["lastModified"])
-			assert.Equal(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
-			assert.Equal(t, tt.expectedVersion, meta["version"])
+			assertEqual(t, "User", meta["resourceType"])
+			assertEqual(t, tt.expectedCreated, meta["created"])
+			assertEqual(t, tt.expectedLastModified, meta["lastModified"])
+			assertEqual(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
+			assertEqual(t, tt.expectedVersion, meta["version"])
 		})
 	}
 }
@@ -580,17 +567,15 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
 	var scimErr *errors.ScimError
-	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
-	assert.NoError(t, err, "json unmarshalling failed")
-
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
 	expectedError := &errors.ScimError{
 		Status: http.StatusNotFound,
 		Detail: fmt.Sprintf("Resource %d not found.", 9999),
 	}
-	assert.Equal(t, expectedError, scimErr)
+	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
 
 func TestServerResourcesGetHandler(t *testing.T) {
@@ -598,13 +583,11 @@ func TestServerResourcesGetHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 	var response listResponse
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	assert.NoError(t, err, "json unmarshalling failed")
-
-	assert.Equal(t, 20, response.TotalResults)
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
 }
 
 func TestServerResourcesGetHandlerPagination(t *testing.T) {
@@ -612,13 +595,11 @@ func TestServerResourcesGetHandlerPagination(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 	var response listResponse
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	assert.NoError(t, err, "json unmarshalling failed")
-
-	assert.Equal(t, 20, response.TotalResults)
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
 }
 
 func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
@@ -626,13 +607,11 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
 	var response listResponse
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	assert.NoError(t, err, "json unmarshalling failed")
-
-	assert.Equal(t, 20, response.TotalResults)
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
 }
 
 // Tests valid add, replace, and remove operations
@@ -670,36 +649,35 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-	assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
+	assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
 	expectedVersion := "v1.patch"
 
-	assert.Equal(t, expectedVersion, rr.Header().Get("Etag"))
+	assertEqual(t, expectedVersion, rr.Header().Get("Etag"))
 
 	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-	assert.Nil(t, resource["displayName"], "handler did not remove the displayName attribute")
-	assert.False(t, resource["active"].(bool), "handler did not deactivate user")
-	assert.Equal(t, "external_test_replace", resource["externalId"])
+	assertNil(t, resource["displayName"], "displayName")
+	assertFalse(t, resource["active"].(bool))
+	assertEqual(t, "external_test_replace", resource["externalId"])
 
 	if resource["emails"] == nil || len(resource["emails"].([]interface{})) < 1 {
 		t.Errorf("handler did not add user's email address")
 	}
 
 	meta, ok := resource["meta"].(map[string]interface{})
-	assert.True(t, ok, "handler did not return the resource meta correctly")
+	assertTrue(t, ok)
 
-	assert.Equal(t, "User", meta["resourceType"])
-	assert.Equal(t, "2020-01-01T15:04:05+07:00", meta["created"])
-	assert.NotEqual(t, "2020-02-01T16:05:04+07:00", meta["lastModified"])
-	assert.Equal(t, "Users/0001", meta["location"])
-	assert.Equal(t, expectedVersion, meta["version"])
+	assertEqual(t, "User", meta["resourceType"])
+	assertEqual(t, "2020-01-01T15:04:05+07:00", meta["created"])
+	assertNotEqual(t, "2020-02-01T16:05:04+07:00", meta["lastModified"])
+	assertEqual(t, "Users/0001", meta["location"])
+	assertEqual(t, expectedVersion, meta["version"])
 }
 
 func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
@@ -715,7 +693,7 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 }
 
 func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
@@ -731,7 +709,7 @@ func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
@@ -749,12 +727,11 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	newTestServer().ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
-	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+	assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
 func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
@@ -772,13 +749,11 @@ func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
-
-	assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidValue, scimErr)
 }
 
 func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
@@ -795,14 +770,12 @@ func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
+	assertEqualStatusCode(t, expectedStatus, rr.Code)
+
 	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
-
-	assert.Equal(t, expectedStatus, rr.Code, "status code mismatch")
-
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 	if expectedStatus >= 400 {
-		assert.Equal(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+		assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 	}
 }
 
@@ -830,13 +803,11 @@ func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	var resource map[string]interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &resource)
-	assert.NoError(t, err, "json unmarshalling failed")
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
-	assert.Equal(t, http.StatusBadRequest, rr.Code, "status code mismatch")
-
-	assert.Equal(t, errors.ScimErrorInvalidPath.Detail, resource["detail"])
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidPath, scimErr)
 }
 
 func TestServerResourcePutHandlerValid(t *testing.T) {
@@ -862,29 +833,25 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt // scopelint
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPut, tt.target, tt.body)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPut, test.target, test.body)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
-			assert.Equal(t, http.StatusOK, rr.Code, "status code mismatch")
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-			assert.Equal(t, "application/scim+json", rr.Header().Get("Content-Type"))
+			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
 			var resource map[string]interface{}
-			err := json.Unmarshal(rr.Body.Bytes(), &resource)
-			assert.NoError(t, err, "json unmarshalling failed")
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-			assert.Equal(t, tt.expectedUserName, resource["userName"])
-
-			assert.Equal(t, tt.expectedExternalID, resource["externalId"])
+			assertEqual(t, test.expectedUserName, resource["userName"])
+			assertEqual(t, test.expectedExternalID, resource["externalId"])
 
 			meta, ok := resource["meta"].(map[string]interface{})
-			assert.True(t, ok, "handler did not return the resource meta correctly")
-
-			assert.Equal(t, "User", meta["resourceType"])
+			assertTypeOk(t, ok, "meta")
+			assertEqual(t, "User", meta["resourceType"])
 		})
 	}
 }
@@ -894,17 +861,15 @@ func TestServerResourcePutHandlerNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
 	var scimErr *errors.ScimError
-	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
-	assert.NoError(t, err, "json unmarshalling failed")
-
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
 	expectedError := &errors.ScimError{
 		Status: http.StatusNotFound,
 		Detail: fmt.Sprintf("Resource %d not found.", 9999),
 	}
-	assert.Equal(t, expectedError, scimErr)
+	assertEqualSCIMErrors(t, expectedError, scimErr)
 
 	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
 		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
@@ -917,7 +882,7 @@ func TestServerResourceDeleteHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusNoContent, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
 func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
@@ -925,15 +890,13 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assert.Equal(t, http.StatusNotFound, rr.Code, "status code mismatch")
+	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
 	var scimErr *errors.ScimError
-	err := json.Unmarshal(rr.Body.Bytes(), &scimErr)
-	assert.NoError(t, err, "json unmarshalling failed")
-
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
 	expectedError := &errors.ScimError{
 		Status: http.StatusNotFound,
 		Detail: fmt.Sprintf("Resource %d not found.", 9999),
 	}
-	assert.Equal(t, expectedError, scimErr, "wrong scim error")
+	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
