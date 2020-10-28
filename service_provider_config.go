@@ -59,12 +59,6 @@ const (
 	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
 )
 
-// These numbers are base on https://tools.ietf.org/html/rfc7644#section-3.12
-const (
-	DefaultMaxOperations  = 1000
-	DefaultMaxPayloadSize = 1048576 // 1 MB
-)
-
 func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
@@ -92,6 +86,24 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 		},
 		"authenticationSchemes": config.getRawAuthenticationSchemes(),
 	}
+}
+
+// getMaxOperations retrieves the configured default maxOperations.
+// It falls back to 1000 when not configured.
+func (config ServiceProviderConfig) getMaxOperations() int {
+	if config.MaxOperations < 1 {
+		return fallbackMaxOperations
+	}
+	return config.MaxOperations
+}
+
+// getMaxPayloadSize retrieves the configured default maxOperations.
+// It falls back to 1048576(1MB) when not configured.
+func (config ServiceProviderConfig) getMaxPayloadSize() int {
+	if config.MaxOperations < 1 {
+		return fallbackMaxPayloadSize
+	}
+	return config.MaxOperations
 }
 
 // getItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.

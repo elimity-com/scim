@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	defaultStartIndex = 1
-	fallbackCount     = 100
+	defaultStartIndex      = 1
+	fallbackCount          = 100
+	fallbackMaxOperations  = 1000
+	fallbackMaxPayloadSize = 1048576 // 1 MB
 )
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
