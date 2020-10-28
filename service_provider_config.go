@@ -20,9 +20,9 @@ type ServiceProviderConfig struct {
 	SupportPatch bool
 	// SupportBulk whether your SCIM implementation will support bulk requests.
 	SupportBulk bool
-	// MaxOperations specify the maximum number of operations
-	// and maximum payload size a client may send in a single request.
-	MaxOperations  int
+	// MaxOperations specifies the maximum number of operations in a single request.
+	MaxOperations int
+	// MaxPayloadSize specifies the maximum size of payload a single request.
 	MaxPayloadSize int
 }
 
