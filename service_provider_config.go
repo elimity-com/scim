@@ -19,7 +19,11 @@ type ServiceProviderConfig struct {
 	// SupportPatch whether your SCIM implementation will support patch requests.
 	SupportPatch bool
 	// SupportBulk whether your SCIM implementation will support bulk requests.
-	BulkSchema BulkSchema
+	SupportBulk bool
+	// MaxOperations specify the maximum number of operations
+	// and maximum payload size a client may send in a single request.
+	MaxOperations  int
+	MaxPayloadSize int
 }
 
 // AuthenticationScheme specifies a supported authentication scheme property.
@@ -55,42 +59,11 @@ const (
 	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
 )
 
-// BulkSchema specifies a supported bulk endpoint spec.
-type BulkSchema struct {
-	support        bool
-	maxOperations  int
-	maxPayloadSize int
-}
-
 // These numbers are base on https://tools.ietf.org/html/rfc7644#section-3.12
 const (
-	defaultMaxOperations  = 1000
-	defaultMaxPayloadSize = 1048576 // 1 MB
+	DefaultMaxOperations  = 1000
+	DefaultMaxPayloadSize = 1048576 // 1 MB
 )
-
-// SupportBulkSchema specifies service provider can support /Bulk endpoint.
-func SupportBulkSchema(maxOperations, maxPayloadSize int) BulkSchema {
-	if maxOperations > defaultMaxOperations {
-		maxOperations = defaultMaxOperations
-	}
-	if maxPayloadSize > defaultMaxPayloadSize {
-		maxOperations = defaultMaxPayloadSize
-	}
-	return BulkSchema{
-		support:        true,
-		maxOperations:  maxOperations,
-		maxPayloadSize: maxPayloadSize,
-	}
-}
-
-// UnsupportBulkSchema specifies service provider can NOT support /Bulk endpoint.
-func UnsupportBulkSchema() BulkSchema {
-	return BulkSchema{
-		support:        false,
-		maxOperations:  defaultMaxOperations,
-		maxPayloadSize: defaultMaxPayloadSize,
-	}
-}
 
 func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	return map[string]interface{}{
@@ -100,9 +73,9 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 			"supported": config.SupportPatch,
 		},
 		"bulk": map[string]interface{}{
-			"supported":      config.BulkSchema.support,
-			"maxOperations":  config.BulkSchema.maxOperations,
-			"maxPayloadSize": config.BulkSchema.maxPayloadSize,
+			"supported":      config.SupportBulk,
+			"maxOperations":  config.MaxOperations,
+			"maxPayloadSize": config.MaxPayloadSize,
 		},
 		"filter": map[string]interface{}{
 			"supported":  config.SupportFiltering,
