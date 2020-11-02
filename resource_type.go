@@ -215,7 +215,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		}
 	}
 
-	mapValue := make(map[string]interface{})
+	var mapValue map[string]interface{}
 	switch v := op.Value.(type) {
 	case map[string]interface{}:
 		mapValue = v
