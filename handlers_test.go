@@ -810,6 +810,28 @@ func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
 	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidPath, scimErr)
 }
 
+func TestServerResourcePatchHandlerValidPathHasSubAttributes(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"name.givenName",
+		    "value":"test"
+		  },
+		  {
+		    "op":"replace",
+		    "path":"name.familyName",
+		    "value":"test"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+}
+
 func TestServerResourcePutHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string

@@ -215,9 +215,19 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		}
 	}
 
-	mapValue, ok := op.Value.(map[string]interface{})
-	if !ok {
-		mapValue = map[string]interface{}{path.AttributeName: op.Value}
+	var mapValue map[string]interface{}
+	switch v := op.Value.(type) {
+	case map[string]interface{}:
+		mapValue = v
+
+	default:
+		if path.SubAttribute == "" {
+			mapValue = map[string]interface{}{path.AttributeName: v}
+			break
+		}
+		mapValue = map[string]interface{}{path.AttributeName: map[string]interface{}{
+			path.SubAttribute: v,
+		}}
 	}
 
 	// Check if it's a patch on an extension.
