@@ -101,5 +101,6 @@ type ResourceHandler interface {
 	Delete(r *http.Request, id string) error
 	// Patch update one or more attributes of a SCIM resource using a sequence of
 	// operations to "add", "remove", or "replace" values.
+	// If you return empty Resource.Attributes, 204 No Content will be response.
 	Patch(r *http.Request, id string, request PatchRequest) (Resource, error)
 }
