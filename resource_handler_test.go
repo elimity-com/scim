@@ -134,6 +134,9 @@ func (h testResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
+	if isRequestNoChange(r) {
+		return Resource{}, nil
+	}
 	for _, op := range req.Operations {
 		switch op.Op {
 		case PatchOperationAdd:

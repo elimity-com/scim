@@ -922,3 +922,24 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	}
 	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
+
+func TestServerResourcePatchGroupsHandlerNoContent(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op": "add",
+		    "path": "members",
+		    "value": [
+				{
+					"value": "0001"
+				}
+			]
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, tellRequestNoChange(req))
+
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+}
