@@ -27,6 +27,36 @@ type testResourceHandler struct {
 	data map[string]testData
 }
 
+func (h testResourceHandler) shouldReturnNoContent(id string, op PatchOperation) bool {
+	dataValue, ok := h.data[id]
+	if !ok {
+		return false
+	}
+	attrValue, ok := dataValue.resourceAttributes[op.Path]
+	if ok && attrValue == op.Value {
+		return true
+	}
+
+	switch opValue := op.Value.(type) {
+	case map[string]interface{}:
+		for k, v := range opValue {
+			if v == dataValue.resourceAttributes[k] {
+				return true
+			}
+		}
+
+	case []map[string]interface{}:
+		for _, m := range opValue {
+			for k, v := range m {
+				if v == dataValue.resourceAttributes[k] {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, error) {
 	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
@@ -134,10 +164,9 @@ func (h testResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
-	if isRequestNoChange(r) {
-		return Resource{}, nil
-	}
+	shouldReturnNoContent := true
 	for _, op := range req.Operations {
+		shouldReturnNoContent = h.shouldReturnNoContent(id, op)
 		switch op.Op {
 		case PatchOperationAdd:
 			if op.Path != "" {
@@ -165,6 +194,9 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 		case PatchOperationRemove:
 			h.data[id].resourceAttributes[op.Path] = nil
 		}
+	}
+	if shouldReturnNoContent {
+		return Resource{}, nil
 	}
 
 	created, _ := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%v", h.data[id].meta["created"]), time.UTC)

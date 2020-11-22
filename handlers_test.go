@@ -923,23 +923,33 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
 
-func TestServerResourcePatchGroupsHandlerNoContent(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op": "add",
-		    "path": "members",
-		    "value": [
-				{
-					"value": "0001"
-				}
+func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
+	reqs := []*http.Request{
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "add",
+				"path": "userName",
+				"value": "test01"
+			  }
 			]
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, tellRequestNoChange(req))
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0002", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "userName",
+				"value": "test02"
+			  }
+			]
+		}`)),
+	}
+	for _, req := range reqs {
+		rr := httptest.NewRecorder()
+		newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+	}
 }
