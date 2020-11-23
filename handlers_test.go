@@ -693,7 +693,7 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
 func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
@@ -942,6 +942,15 @@ func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
 				"op": "replace",
 				"path": "userName",
 				"value": "test02"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0003", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "remove",
+				"path": "name.givenName"
 			  }
 			]
 		}`)),

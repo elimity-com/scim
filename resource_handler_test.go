@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/elimity-com/scim/errors"
@@ -27,13 +28,28 @@ type testResourceHandler struct {
 	data map[string]testData
 }
 
-func (h testResourceHandler) shouldReturnNoContent(id string, op PatchOperation) bool {
+func (h testResourceHandler) shouldReturnNoContent(id string, ops []PatchOperation) bool {
+	for _, op := range ops {
+		if h.noContentOperation(id, op) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func (h testResourceHandler) noContentOperation(id string, op PatchOperation) bool {
+	isRemoveOp := strings.EqualFold(op.Op, PatchOperationRemove)
+
 	dataValue, ok := h.data[id]
 	if !ok {
-		return false
+		return isRemoveOp
 	}
 	attrValue, ok := dataValue.resourceAttributes[op.Path]
 	if ok && attrValue == op.Value {
+		return true
+	}
+	if !ok && isRemoveOp {
 		return true
 	}
 
@@ -164,9 +180,11 @@ func (h testResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
-	shouldReturnNoContent := true
+	if h.shouldReturnNoContent(id, req.Operations) {
+		return Resource{}, nil
+	}
+
 	for _, op := range req.Operations {
-		shouldReturnNoContent = h.shouldReturnNoContent(id, op)
 		switch op.Op {
 		case PatchOperationAdd:
 			if op.Path != "" {
@@ -194,9 +212,6 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 		case PatchOperationRemove:
 			h.data[id].resourceAttributes[op.Path] = nil
 		}
-	}
-	if shouldReturnNoContent {
-		return Resource{}, nil
 	}
 
 	created, _ := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%v", h.data[id].meta["created"]), time.UTC)
