@@ -190,7 +190,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	if resource.Attributes == nil {
+	if len(resource.Attributes) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
