@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	datetime "github.com/di-wu/xsd-datetime"
@@ -222,12 +223,18 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *er
 
 		return bin, nil
 	case attributeDataTypeBoolean:
-		b, ok := attribute.(bool)
-		if !ok {
+		switch b := attribute.(type) {
+		case string:
+			boolean, err := strconv.ParseBool(b)
+			if err != nil {
+				return nil, &errors.ScimErrorInvalidValue
+			}
+			return boolean, nil
+		case bool:
+			return b, nil
+		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}
-
-		return b, nil
 	case attributeDataTypeComplex:
 		complex, ok := attribute.(map[string]interface{})
 		if !ok {

@@ -832,6 +832,77 @@ func TestServerResourcePatchHandlerValidPathHasSubAttributes(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 }
 
+func TestServerResourcePatchHandlerAcceptsStringBoolean(t *testing.T) {
+	reqs := []*http.Request{
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"False"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"false"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"FALSE"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"True"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"true"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op":"replace",
+				"path":"active",
+				"value":"TRUE"
+			  }
+			]
+		}`)),
+	}
+	for _, req := range reqs {
+		rr := httptest.NewRecorder()
+		newTestServer().ServeHTTP(rr, req)
+
+		assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	}
+}
+
 func TestServerResourcePutHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string
