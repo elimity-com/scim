@@ -693,7 +693,7 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
 func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
@@ -921,4 +921,44 @@ func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 		Detail: fmt.Sprintf("Resource %d not found.", 9999),
 	}
 	assertEqualSCIMErrors(t, expectedError, scimErr)
+}
+
+func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
+	reqs := []*http.Request{
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "add",
+				"path": "userName",
+				"value": "test01"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0002", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "userName",
+				"value": "test02"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0003", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "remove",
+				"path": "name.givenName"
+			  }
+			]
+		}`)),
+	}
+	for _, req := range reqs {
+		rr := httptest.NewRecorder()
+		newTestServer().ServeHTTP(rr, req)
+
+		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+	}
 }

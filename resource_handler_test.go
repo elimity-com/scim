@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/elimity-com/scim/errors"
@@ -25,6 +26,51 @@ type testData struct {
 // simple in-memory resource database
 type testResourceHandler struct {
 	data map[string]testData
+}
+
+func (h testResourceHandler) shouldReturnNoContent(id string, ops []PatchOperation) bool {
+	for _, op := range ops {
+		if h.noContentOperation(id, op) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func (h testResourceHandler) noContentOperation(id string, op PatchOperation) bool {
+	isRemoveOp := strings.EqualFold(op.Op, PatchOperationRemove)
+
+	dataValue, ok := h.data[id]
+	if !ok {
+		return isRemoveOp
+	}
+	attrValue, ok := dataValue.resourceAttributes[op.Path]
+	if ok && attrValue == op.Value {
+		return true
+	}
+	if !ok && isRemoveOp {
+		return true
+	}
+
+	switch opValue := op.Value.(type) {
+	case map[string]interface{}:
+		for k, v := range opValue {
+			if v == dataValue.resourceAttributes[k] {
+				return true
+			}
+		}
+
+	case []map[string]interface{}:
+		for _, m := range opValue {
+			for k, v := range m {
+				if v == dataValue.resourceAttributes[k] {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, error) {
@@ -134,6 +180,10 @@ func (h testResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
+	if h.shouldReturnNoContent(id, req.Operations) {
+		return Resource{}, nil
+	}
+
 	for _, op := range req.Operations {
 		switch op.Op {
 		case PatchOperationAdd:

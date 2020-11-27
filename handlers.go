@@ -190,6 +190,11 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
+	if len(resource.Attributes) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
