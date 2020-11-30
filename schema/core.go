@@ -188,6 +188,10 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 
 		for _, subArr := range a.subAttributes {
 			if v, ok := arr[subArr.name]; ok {
+				fmt.Println(v)
+				fmt.Printf("v.Type=%T\n", v)
+				fmt.Printf("subArr.typ=%+v\n", subArr.typ)
+
 				_, scimErr := subArr.validateSingular(v)
 				if scimErr != nil {
 					return nil, scimErr
