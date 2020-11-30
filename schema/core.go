@@ -192,11 +192,10 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 				if scimErr != nil {
 					return nil, scimErr
 				}
-				break
+				return attribute, nil
 			}
-			return nil, &errors.ScimErrorInvalidValue
 		}
-		return attribute, nil
+		return nil, &errors.ScimErrorInvalidValue
 
 	case []interface{}:
 		// return false if the multivalued attribute is empty.
