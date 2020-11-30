@@ -175,32 +175,49 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 		return nil, nil
 	}
 
-	if a.multiValued {
-		// return false if the multivalued attribute is not a slice.
-		arr, ok := attribute.([]interface{})
-		if !ok {
-			return nil, &errors.ScimErrorInvalidSyntax
-		}
+	if !a.multiValued {
+		return a.validateSingular(attribute)
+	}
 
+	switch arr := attribute.(type) {
+	case map[string]interface{}:
 		// return false if the multivalued attribute is empty.
 		if a.required && len(arr) == 0 {
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		attributes := make([]interface{}, 0)
-		for _, ele := range arr {
+		for _, subArr := range a.subAttributes {
+			if v, ok := arr[subArr.name]; ok {
+				_, scimErr := subArr.validateSingular(v)
+				if scimErr != nil {
+					return nil, scimErr
+				}
+				break
+			}
+			return nil, &errors.ScimErrorInvalidValue
+		}
+		return attribute, nil
+
+	case []interface{}:
+		// return false if the multivalued attribute is empty.
+		if a.required && len(arr) == 0 {
+			return nil, &errors.ScimErrorInvalidValue
+		}
+
+		attributes := make([]interface{}, len(arr))
+		for i, ele := range arr {
 			attr, scimErr := a.validateSingular(ele)
 			if scimErr != nil {
 				return nil, scimErr
 			}
-
-			attributes = append(attributes, attr)
+			attributes[i] = attr
 		}
-
 		return attributes, nil
-	}
 
-	return a.validateSingular(attribute)
+	default:
+		// return false if the multivalued attribute is not a slice.
+		return nil, &errors.ScimErrorInvalidSyntax
+	}
 }
 
 func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *errors.ScimError) {
