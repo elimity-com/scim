@@ -186,16 +186,22 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		for _, subArr := range a.subAttributes {
-			if v, ok := arr[subArr.name]; ok {
-				_, scimErr := subArr.validateSingular(v)
-				if scimErr != nil {
-					return nil, scimErr
+		validMap := make(map[string]interface{}, len(arr))
+		for k, v := range arr {
+			for _, sub := range a.subAttributes {
+				if strings.EqualFold(sub.name, k) {
+					_, scimErr := sub.validate(v)
+					if scimErr != nil {
+						return nil, scimErr
+					}
+					validMap[sub.name] = v
 				}
-				return attribute, nil
 			}
 		}
-		return nil, &errors.ScimErrorInvalidValue
+		if len(validMap) != len(arr) {
+			return nil, &errors.ScimErrorInvalidValue
+		}
+		return validMap, nil
 
 	case []interface{}:
 		// return false if the multivalued attribute is empty.
