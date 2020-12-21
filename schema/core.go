@@ -198,9 +198,6 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 				}
 			}
 		}
-		if len(validMap) != len(arr) {
-			return nil, &errors.ScimErrorInvalidValue
-		}
 		return validMap, nil
 
 	case []interface{}:
