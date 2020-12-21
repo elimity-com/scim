@@ -189,13 +189,14 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 		validMap := make(map[string]interface{}, len(arr))
 		for k, v := range arr {
 			for _, sub := range a.subAttributes {
-				if strings.EqualFold(sub.name, k) {
-					_, scimErr := sub.validate(v)
-					if scimErr != nil {
-						return nil, scimErr
-					}
-					validMap[sub.name] = v
+				if !strings.EqualFold(sub.name, k) {
+					continue
 				}
+				_, scimErr := sub.validate(v)
+				if scimErr != nil {
+					return nil, scimErr
+				}
+				validMap[sub.name] = v
 			}
 		}
 		return validMap, nil
