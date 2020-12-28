@@ -962,3 +962,31 @@ func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
 		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 	}
 }
+
+func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	newTestServer().ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "emails[type eq \"work\"].value",
+				"value": "hoge@example.com"
+			  }
+			]
+		}`)))
+	assertEqualStatusCode(t, http.StatusOK, recorder.Code)
+
+	recorder2 := httptest.NewRecorder()
+	newTestServer().ServeHTTP(recorder2, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "emails[type eq \"work\"].value",
+				"value": 10000
+			  }
+			]
+		}`)))
+	assertEqualStatusCode(t, http.StatusBadRequest, recorder2.Code)
+}
