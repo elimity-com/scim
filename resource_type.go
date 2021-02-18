@@ -60,7 +60,7 @@ func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *
 	var attributes map[string]interface{}
 	var scimErr *errors.ScimError
 	switch method {
-	case http.MethodGet, http.MethodPut:
+	case http.MethodPost, http.MethodPut:
 		attributes, scimErr = t.schemaWithCommon().Validate(m)
 	default:
 		attributes, scimErr = t.schemaWithCommon().ValidateMutability(m)
