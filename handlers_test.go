@@ -468,6 +468,12 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
+		},{
+			name:               "Users post request with immutable attribute",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
 		},
 	}
 
@@ -850,6 +856,12 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 			name:               "Users put request without externalId",
 			target:             "/Users/0003",
 			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
+		}, {
+			name:               "Users put request with immutable attribute",
+			target:             "/Users/0003",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
 		},
