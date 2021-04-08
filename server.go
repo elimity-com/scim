@@ -149,7 +149,7 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 	if countErr != nil {
 		invalidParams = append(invalidParams, "count")
 	}
-	if defaultCount < count {
+	if count > defaultCount {
 		// Ensure the count isn't more then the allowable max.
 		count = defaultCount
 	}
