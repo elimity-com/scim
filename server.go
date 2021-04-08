@@ -149,23 +149,26 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 	if countErr != nil {
 		invalidParams = append(invalidParams, "count")
 	}
+	if defaultCount < count {
+		// Ensure the count isn't more then the allowable max.
+		count = defaultCount
+	}
+	if count < 0 {
+		// A negative value shall be interpreted as 0.
+		count = 0
+	}
+
 	startIndex, indexErr := getIntQueryParam(r, "startIndex", defaultStartIndex)
 	if indexErr != nil {
 		invalidParams = append(invalidParams, "startIndex")
+	}
+	if startIndex < 1 {
+		startIndex = defaultStartIndex
 	}
 
 	if len(invalidParams) > 1 {
 		scimErr := errors.ScimErrorBadParams(invalidParams)
 		return ListRequestParams{}, &scimErr
-	}
-
-	// Ensure the count isn't more then the allowable max and not less then 1.
-	if count > defaultCount || count < 1 {
-		count = defaultCount
-	}
-
-	if startIndex < 1 {
-		startIndex = defaultStartIndex
 	}
 
 	filterExpr, filterExprErr := getFilter(r)
