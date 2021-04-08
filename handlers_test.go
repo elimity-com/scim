@@ -400,7 +400,6 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // scopelint
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
 			rr := httptest.NewRecorder()
@@ -431,7 +430,6 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // scopelint
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
@@ -468,7 +466,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
-		},{
+		}, {
 			name:               "Users post request with immutable attribute",
 			target:             "/v2/Users",
 			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
@@ -538,7 +536,6 @@ func TestServerResourceGetHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt // scopelint
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
@@ -594,6 +591,20 @@ func TestServerResourcesGetHandler(t *testing.T) {
 	var response listResponse
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	assertEqual(t, 20, response.TotalResults)
+	assertEqual(t, 20, len(response.Resources))
+}
+
+func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=-1", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
+	assertEqual(t, 0, len(response.Resources))
 }
 
 func TestServerResourcesGetHandlerPagination(t *testing.T) {

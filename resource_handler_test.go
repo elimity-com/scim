@@ -122,6 +122,12 @@ func (h testResourceHandler) Get(r *http.Request, id string) (Resource, error) {
 }
 
 func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	if params.Count == 0 {
+		return Page{
+			TotalResults: len(h.data),
+		}, nil
+	}
+
 	resources := make([]Resource, 0)
 	i := 1
 
