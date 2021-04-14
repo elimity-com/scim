@@ -90,6 +90,10 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 		var attr *CoreAttribute
 		var scimErr *errors.ScimError
 
+		if k == CommonAttributeID {
+			continue
+		}
+
 		for _, attribute := range s.Attributes {
 			if strings.EqualFold(attribute.name, k) {
 				attr = &attribute
