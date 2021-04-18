@@ -41,12 +41,12 @@ func TestValidatorBoolean(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			exp, err := filter.ParseFilter([]byte(f))
+			validator, err := internal.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if actual := internal.NewValidator(exp, ref).PassesFilter(attr); actual != test.valid {
-				t.Errorf("%s %s | actual %v, expected %v", f, attr, actual, test.valid)
+			if err := validator.PassesFilter(attr); (err == nil) != test.valid {
+				t.Errorf("%s %s | actual %v, expected %v", f, attr, err, test.valid)
 			}
 		})
 	}
@@ -87,13 +87,13 @@ func TestValidatorDateTime(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			exp, err := filter.ParseFilter([]byte(f))
+			validator, err := internal.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for i, attr := range attrs {
-				if actual := internal.NewValidator(exp, ref).PassesFilter(attr); actual != test.valid[i] {
-					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, actual, test.valid[i])
+				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
+					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, err, test.valid[i])
 				}
 			}
 		})
@@ -114,7 +114,7 @@ func TestValidatorDecimal(t *testing.T) {
 			},
 		}
 		attrs = [4]map[string]interface{}{
-			{"dec": -0.1},      // less
+			{"dec": -0.1},       // less
 			{"dec": float64(1)}, // equal
 			{"dec": float32(1)}, // equal f32
 			{"dec": 1.1},        // greater
@@ -137,13 +137,13 @@ func TestValidatorDecimal(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			exp, err := filter.ParseFilter([]byte(f))
+			validator, err := internal.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for i, attr := range attrs {
-				if actual := internal.NewValidator(exp, ref).PassesFilter(attr); actual != test.valid[i] {
-					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, actual, test.valid[i])
+				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
+					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, err, test.valid[i])
 				}
 			}
 		})
@@ -188,13 +188,13 @@ func TestValidatorInteger(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			exp, err := filter.ParseFilter([]byte(f))
+			validator, err := internal.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for i, attr := range attrs {
-				if actual := internal.NewValidator(exp, ref).PassesFilter(attr); actual != test.valid[i] {
-					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, actual, test.valid[i])
+				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
+					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, err, test.valid[i])
 				}
 			}
 		})
@@ -230,28 +230,32 @@ func TestValidatorString(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			exp, err := filter.ParseFilter([]byte(f))
-			if err != nil {
-				t.Fatal(err)
-			}
 			for i, attr := range attrs {
-				if actual := internal.NewValidator(exp, schema.Schema{
+				validator, err := internal.NewValidator(f, schema.Schema{
 					Attributes: []schema.CoreAttribute{
 						schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 							Name: "str",
 						})),
 					},
-				}).PassesFilter(attr); actual != test.valid[i] {
-					t.Errorf("(0.%d) %s %s | actual %v, expected %v", i, f, attr, actual, test.valid[i])
+				})
+				if err != nil {
+					t.Fatal(err)
 				}
-				if actual := internal.NewValidator(exp, schema.Schema{
+				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
+					t.Errorf("(0.%d) %s %s | actual %v, expected %v", i, f, attr, err, test.valid[i])
+				}
+				validatorCE, err := internal.NewValidator(f, schema.Schema{
 					Attributes: []schema.CoreAttribute{
 						schema.SimpleCoreAttribute(schema.SimpleReferenceParams(schema.ReferenceParams{
 							Name: "str",
 						})),
 					},
-				}).PassesFilter(attr); actual != test.validCE[i] {
-					t.Errorf("(1.%d) %s %s | actual %v, expected %v", i, f, attr, actual, test.validCE[i])
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := validatorCE.PassesFilter(attr); (err == nil) != test.validCE[i] {
+					t.Errorf("(1.%d) %s %s | actual %v, expected %v", i, f, attr, err, test.validCE[i])
 				}
 			}
 		})

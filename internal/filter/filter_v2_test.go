@@ -3,7 +3,6 @@ package filter_test
 import (
 	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser/v2"
 	"testing"
 )
 
@@ -26,11 +25,11 @@ func TestPathValidator_Validate(t *testing.T) {
 			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber",
 			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
 		} {
-			path, err := filter.ParsePath([]byte(f))
+			validator, err := internal.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := internal.NewPathValidator(path, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser()).Validate(); err != nil {
+			if err := validator.Validate(); err != nil {
 				t.Errorf("(%s) %v", f, err)
 			}
 		}
@@ -48,11 +47,11 @@ func TestPathValidator_Validate(t *testing.T) {
 			"urn:ietf:params:scim:schemas:core:2.0:User:employeeNumber",
 			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userName",
 		} {
-			path, err := filter.ParsePath([]byte(f))
+			validator, err := internal.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := internal.NewPathValidator(path, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser()).Validate(); err == nil {
+			if err := validator.Validate(); err == nil {
 				t.Errorf("(%s) should not be valid", f)
 			}
 		}
@@ -93,18 +92,17 @@ func TestValidator_PassesFilter(t *testing.T) {
 				},
 			},
 		} {
-			exp, err := filter.ParseFilter([]byte(test.filter))
+			validator,err := internal.NewValidator(test.filter, schema.CoreUserSchema())
 			if err != nil {
 				t.Fatal(err)
 			}
-			validator := internal.NewValidator(exp, schema.CoreUserSchema())
 			if resource := test.valid; resource != nil {
-				if !validator.PassesFilter(resource) {
-					t.Errorf("(%v) should be valid", resource)
+				if err := validator.PassesFilter(resource); err != nil {
+					t.Errorf("(%v) should be valid: %v", resource, err)
 				}
 			}
 			if resource := test.invalid; resource != nil {
-				if validator.PassesFilter(resource) {
+				if err := validator.PassesFilter(resource); err == nil {
 					t.Errorf("(%v) should not be valid", resource)
 				}
 			}
@@ -136,17 +134,16 @@ func TestValidator_PassesFilter(t *testing.T) {
 		{name: "schemas", amount: 2, filter: "schemas eq \"urn:ietf:params:scim:schemas:core:2.0:User\""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := filter.ParseFilter([]byte(test.filter))
+			userSchema :=  schema.CoreUserSchema()
+			userSchema.Attributes =append(userSchema.Attributes, schema.CommonAttributes()...)
+			validator, err := internal.NewValidator(test.filter, userSchema)
 			if err != nil {
 				t.Fatal(err)
 			}
-			userSchema :=  schema.CoreUserSchema()
-			userSchema.Attributes =append(userSchema.Attributes, schema.CommonAttributes()...)
-			validator := internal.NewValidator(f, userSchema)
 
 			var amount int
 			for _, resource := range testResources() {
-				if validator.PassesFilter(resource) {
+				if err := validator.PassesFilter(resource); err == nil {
 					amount++
 				}
 			}
@@ -170,15 +167,13 @@ func TestValidator_PassesFilter(t *testing.T) {
 				filter: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization eq \"Elimity\"",
 			},
 		} {
-			f, err := filter.ParseFilter([]byte(test.filter))
+			validator, err := internal.NewValidator(test.filter, schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
-			validator := internal.NewValidator(f, schema.ExtensionEnterpriseUser())
-
 			var amount int
 			for _, resource := range testResources() {
-				if validator.PassesFilter(resource) {
+				if err := validator.PassesFilter(resource); err == nil {
 					amount++
 				}
 			}
@@ -275,11 +270,11 @@ func TestValidator_Validate(t *testing.T) {
 		"userType eq \"Employee\" and emails[type eq \"work\" and value co \"@example.com\"]",
 		"emails[type eq \"work\" and value co \"@example.com\"] or ims[type eq \"xmpp\" and value co \"@foo.com\"]",
 	} {
-		exp, err := filter.ParseFilter([]byte(f))
+		validator, err := internal.NewValidator(f, userSchema)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := internal.NewValidator(exp, userSchema).Validate(); err != nil {
+		if err := validator.Validate(); err != nil {
 			t.Errorf("(%s) %v", f, err)
 		}
 	}

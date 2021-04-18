@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"log"
 )
 
 // validateAttributePath checks whether the given attribute path is a valid path within the given reference schema.
@@ -88,12 +87,16 @@ type PathValidator struct {
 }
 
 // NewPathValidator constructs a new path validator.
-func NewPathValidator(p filter.Path, s schema.Schema, exts ...schema.Schema) PathValidator {
+func NewPathValidator(pathFilter string, s schema.Schema, exts ...schema.Schema) (PathValidator, error) {
+	f, err := filter.ParsePath([]byte(pathFilter))
+	if err != nil {
+		return PathValidator{}, err
+	}
 	return PathValidator{
-		path:       p,
+		path:       f,
 		schema:     s,
 		extensions: exts,
-	}
+	}, nil
 }
 
 // Validate checks whether the path is a valid path within the given reference schemas.
@@ -151,26 +154,28 @@ type Validator struct {
 }
 
 // NewValidator constructs a new path validator.
-func NewValidator(e filter.Expression, s schema.Schema, exts ...schema.Schema) Validator {
+func NewValidator(exp string, s schema.Schema, exts ...schema.Schema) (Validator, error) {
+	e, err := filter.ParseFilter([]byte(exp))
+	if err != nil {
+		return Validator{}, err
+	}
 	return Validator{
 		filter:     e,
 		schema:     s,
 		extensions: exts,
-	}
+	}, nil
 }
 
 // PassesFilter checks whether given resources passes the filter.
-func (v Validator) PassesFilter(resource map[string]interface{}) bool {
+func (v Validator) PassesFilter(resource map[string]interface{}) error {
 	switch e := v.filter.(type) {
 	case *filter.ValuePath:
 		ref, attr, ok := v.referenceContains(e.AttributePath)
 		if !ok {
-			// Could not find an attribute that matches the attribute path.
-			return false
+			return fmt.Errorf("could not find an attribute that matches the attribute path: %s", e.AttributePath)
 		}
 		if !attr.MultiValued() {
-			// Value path filters can only be applied to multi-valued attributes.
-			return false
+			return fmt.Errorf("value path filters can only be applied to multi-valued attributes")
 		}
 
 		value, ok := resource[attr.Name()]
@@ -178,35 +183,33 @@ func (v Validator) PassesFilter(resource map[string]interface{}) bool {
 			// Also try with the id as prefix.
 			value, ok = resource[fmt.Sprintf("%s:%s", ref.ID, attr.Name())]
 			if !ok {
-				// The give resource does not have the wanted attribute.
-				return false
+				return fmt.Errorf("the resource does contain the attribute specified in the filter")
 			}
 		}
-		valueFilter := NewValidator(
-			e.ValueFilter,
-			schema.Schema{
+		valueFilter := Validator{
+			filter: e.ValueFilter,
+			schema: schema.Schema{
 				ID:         ref.ID,
 				Attributes: attr.SubAttributes(),
 			},
-		)
+		}
 		switch value := value.(type) {
 		case []interface{}:
 			for _, a := range value {
 				attr, ok := a.(map[string]interface{})
 				if !ok {
-					return false
+					return fmt.Errorf("the target is not a complex attribute")
 				}
-				if valueFilter.PassesFilter(attr) {
-					return true
+				if err := valueFilter.PassesFilter(attr); err == nil {
+					// Found an attribute that passed the value filter.
+					return nil
 				}
 			}
 		}
-		return false
 	case *filter.AttributeExpression:
 		ref, attr, ok := v.referenceContains(e.AttributePath)
 		if !ok {
-			// Could not find an attribute that matches the attribute path.
-			return false
+			return fmt.Errorf("could not find an attribute that matches the attribute path: %s", e.AttributePath)
 		}
 
 		value, ok := resource[attr.Name()]
@@ -214,8 +217,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) bool {
 			// Also try with the id as prefix.
 			value, ok = resource[fmt.Sprintf("%s:%s", ref.ID, attr.Name())]
 			if !ok {
-				// The give resource does not have the wanted attribute.
-				return false
+				return fmt.Errorf("the resource does contain the attribute specified in the filter")
 			}
 		}
 
@@ -230,20 +232,20 @@ func (v Validator) PassesFilter(resource map[string]interface{}) bool {
 		if subAttrName != "" {
 			if !attr.HasSubAttributes() {
 				// The attribute has no sub-attributes.
-				return false
+				return fmt.Errorf("the specified attribute has no sub-attributes")
 			}
 			subAttr, ok = attr.SubAttributes().ContainsAttribute(subAttrName)
 			if !ok {
-				return false
+				return fmt.Errorf("the resource has no sub-attribute named: %s", subAttrName)
 			}
 
 			attr, ok := value.(map[string]interface{})
 			if !ok {
-				return false
+				return fmt.Errorf("the target is not a complex attribute")
 			}
 			value, ok = attr[subAttr.Name()]
 			if !ok {
-				return false
+				return fmt.Errorf("the resource does contain the attribute specified in the filter")
 			}
 
 			cmpAttr = subAttr
@@ -252,67 +254,73 @@ func (v Validator) PassesFilter(resource map[string]interface{}) bool {
 		// If the attribute has a non-empty or non-null value or if it contains a non-empty node for complex attributes, there is a match.
 		if e.Operator == filter.PR {
 			// We already found a value.
-			return true
+			return nil
 		}
 
 		cmp, err := createCompareFunction(e, cmpAttr)
 		if err != nil {
-			// TODO replace booleans w/ errors.
-			log.Println(err)
-			return false
+			return err
 		}
 
 		if !attr.MultiValued() {
-			return cmp(value)
+			if cmp(value) {
+				return nil
+			}
+			return fmt.Errorf("the resource does not pass the filter")
 		}
 
 		switch value := value.(type) {
 		case []interface{}:
 			for _, v := range value {
 				if cmp(v) {
-					return true
+					return nil
 				}
 			}
 		}
 	case *filter.LogicalExpression:
 		switch e.Operator {
 		case filter.AND:
-			if !NewValidator(
+			leftValidator := Validator{
 				e.Left,
 				v.schema,
-				v.extensions...,
-			).PassesFilter(resource) {
-				return false
+				v.extensions,
 			}
-			return NewValidator(
+			if err := leftValidator.PassesFilter(resource); err != nil {
+				return err
+			}
+			rightValidator := Validator{
 				e.Right,
 				v.schema,
-				v.extensions...,
-			).PassesFilter(resource)
+				v.extensions,
+			}
+			return rightValidator.PassesFilter(resource)
 		case filter.OR:
-			if NewValidator(
+			leftValidator := Validator{
 				e.Left,
 				v.schema,
-				v.extensions...,
-			).PassesFilter(resource) {
-				return true
+				v.extensions,
 			}
-			return NewValidator(
+			if err := leftValidator.PassesFilter(resource); err == nil {
+				return nil
+			}
+			rightValidator := Validator{
 				e.Right,
 				v.schema,
-				v.extensions...,
-			).PassesFilter(resource)
+				v.extensions,
+			}
+			return rightValidator.PassesFilter(resource)
 		}
 	case *filter.NotExpression:
-		if !NewValidator(
+		validator := Validator{
 			e.Expression,
 			v.schema,
-			v.extensions...,
-		).PassesFilter(resource) {
-			return true
+			v.extensions,
+		}
+		if err := validator.PassesFilter(resource); err != nil {
+			return nil
 		}
 	}
-	return false
+	return fmt.Errorf("the resource does not pass the filter")
 }
 
 // Validate checks whether the expression is a valid path within the given reference schemas.
