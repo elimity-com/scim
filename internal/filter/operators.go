@@ -84,7 +84,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 	case "reference", "string":
 		ref, ok := e.CompareValue.(string)
 		if !ok {
-			return nil, fmt.Errorf("a dateTime attribute needs to be compared to a string")
+			return nil, fmt.Errorf("a %s attribute needs to be compared to a string", typ)
 		}
 		switch e.Operator {
 		case filter.EQ:
@@ -136,7 +136,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 	case "decimal":
 		ref, ok := toFloat(e.CompareValue)
 		if !ok {
-			return nil, fmt.Errorf("a dateTime attribute needs to be compared to a string")
+			return nil,  fmt.Errorf("a decimal attribute needs to be compared to a float/int")
 		}
 		switch e.Operator {
 		case filter.EQ:
@@ -165,7 +165,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 	case "integer":
 		ref, ok := toInt(e.CompareValue)
 		if !ok {
-			return nil, fmt.Errorf("a dateTime attribute needs to be compared to a string")
+			return nil, fmt.Errorf("a integer attribute needs to be compared to a int")
 		}
 		switch e.Operator {
 		case filter.EQ:

@@ -249,6 +249,12 @@ func (v Validator) PassesFilter(resource map[string]interface{}) bool {
 			cmpAttr = subAttr
 		}
 
+		// If the attribute has a non-empty or non-null value or if it contains a non-empty node for complex attributes, there is a match.
+		if e.Operator == filter.PR {
+			// We already found a value.
+			return true
+		}
+
 		cmp, err := createCompareFunction(e, cmpAttr)
 		if err != nil {
 			// TODO replace booleans w/ errors.
