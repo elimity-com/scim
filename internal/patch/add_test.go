@@ -1,6 +1,7 @@
 package patch_test
 
 import (
+	"fmt"
 	"github.com/elimity-com/scim/internal/patch"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
@@ -44,7 +45,7 @@ var (
 	}
 )
 
-func TestAddPatchRequests(t *testing.T) {
+func TestOperationValidator_ValidateAdd(t *testing.T) {
 	// The goal this test is to cover Section 3.5.2.1 of RFC7644.
 	// More info: https://tools.ietf.org/html/rfc7644#section-3.5.2.1
 
@@ -96,20 +97,8 @@ func TestAddPatchRequests(t *testing.T) {
 			valid: `{"op":"add","value":{"multiValued":"value"}}`,
 		},
 		{
-			// Check whether two consecutive add operations are applied correctly.
-			valid: `{"op":"add","value":{"multiValued":"value"}},{"op":"add","value":{"multiValued":"value"}}`,
-		},
-		{
-			// If the target location specifies a single-valued attribute, the existing value is replaced.
-			valid: `{"op":"add","path":"attr1","value":"value"},{"op":"add","path":"attr1","value":"replaced"}`,
-		},
-		{
 			// Example on page 36 (RFC7644, Section 3.5.2.1).
 			valid: `{"op":"add","path":"complexMultiValued","value":[{"attr1":"value"}]}`,
-		},
-		{
-			// Check whether two consecutive add operations are applied correctly.
-			valid: `{"op":"add","path":"complexMultiValued","value":[{"attr1":"value"}]},{"op":"add","path":"complexMultiValued","value":[{"attr1":"value"}]}`,
 		},
 		{
 			// Example on page 37 (RFC7644, Section 3.5.2.1).
@@ -117,21 +106,31 @@ func TestAddPatchRequests(t *testing.T) {
 		},
 
 		// Invalid types.
-		{invalid: `{"op":"add","path":"attr1","value":1`},
-		{invalid: `{"op":"add","path":"multiValued","value":1`},
-		{invalid: `{"op":"add","path":"complex.attr1","value":1`},
+		{invalid: `{"op":"add","path":"attr1","value":1}`},
+		{invalid: `{"op":"add","path":"multiValued","value":1}`},
+		{invalid: `{"op":"add","path":"complex.attr1","value":1}`},
 	} {
-		// valid
-		if op := test.valid; op != "" {
-			if err := patch.ValidateAdd(op, patchSchema); err != nil {
-				t.Errorf("The following operatation should be an VALID add operation:\n(case %d): %s\n%v", i, op, err)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			// valid
+			if op := test.valid; op != "" {
+				validator, err := patch.NewPathValidator(op, patchSchema)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := validator.Validate(); err != nil {
+					t.Errorf("The following operatation should be an VALID add operation:\n(case %d): %s\n%v", i, op, err)
+				}
 			}
-		}
-		// invalid
-		if op := test.invalid; op != "" {
-			if err := patch.ValidateAdd(op, patchSchema); err == nil {
-				t.Errorf("The following operatation should be an INVALID add operation:\n(case %d): %s", i, op)
+			// invalid
+			if op := test.invalid; op != "" {
+				validator, err := patch.NewPathValidator(op, patchSchema)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := validator.Validate(); err == nil {
+					t.Errorf("The following operatation should be an INVALID add operation:\n(case %d): %s", i, op)
+				}
 			}
-		}
+		})
 	}
 }
