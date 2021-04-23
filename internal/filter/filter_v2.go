@@ -86,6 +86,10 @@ type PathValidator struct {
 	extensions []schema.Schema
 }
 
+func (v PathValidator) Path() filter.Path {
+	return v.path
+}
+
 // NewPathValidator constructs a new path validator.
 func NewPathValidator(pathFilter string, s schema.Schema, exts ...schema.Schema) (PathValidator, error) {
 	f, err := filter.ParsePath([]byte(pathFilter))
@@ -153,7 +157,7 @@ type Validator struct {
 	extensions []schema.Schema
 }
 
-// NewValidator constructs a new path validator.
+// NewValidator constructs a new filter validator.
 func NewValidator(exp string, s schema.Schema, exts ...schema.Schema) (Validator, error) {
 	e, err := filter.ParseFilter([]byte(exp))
 	if err != nil {
@@ -164,6 +168,15 @@ func NewValidator(exp string, s schema.Schema, exts ...schema.Schema) (Validator
 		schema:     s,
 		extensions: exts,
 	}, nil
+}
+
+// NewFilterValidator constructs a new filter validator.
+func NewFilterValidator(exp filter.Expression, s schema.Schema, exts ...schema.Schema) Validator {
+	return Validator{
+		filter:     exp,
+		schema:     s,
+		extensions: exts,
+	}
 }
 
 // PassesFilter checks whether given resources passes the filter.

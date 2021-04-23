@@ -311,21 +311,17 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		errorHandler(w, r, paramsErr)
 		return
 	}
-	filter := f.NewFilter(params.Filter, schema.Definition())
 
-	schemas := s.getSchemas()
-	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
-	var resources []interface{}
+	var (
+		validator  = f.NewFilterValidator(params.Filter, schema.Definition())
+		schemas    = s.getSchemas()
+		start, end = clamp(params.StartIndex-1, params.Count, len(schemas))
+		resources  []interface{}
+	)
 	for _, v := range schemas[start:end] {
 		resource := v.ToMap()
 		if params.Filter != nil {
-			valid, err := filter.IsValid(resource)
-			if err != nil {
-				scimErr := errors.CheckScimError(err, http.MethodGet)
-				errorHandler(w, r, &scimErr)
-				return
-			}
-			if !valid {
+			if err := validator.PassesFilter(resource); err != nil {
 				continue
 			}
 		}

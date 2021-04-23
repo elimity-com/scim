@@ -9,7 +9,7 @@ import (
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser"
+	"github.com/scim2/filter-parser/v2"
 )
 
 const (
@@ -21,8 +21,7 @@ func getFilter(r *http.Request) (filter.Expression, error) {
 	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
 	decodedFilter, _ := url.QueryUnescape(rawFilter)
 	if decodedFilter != "" {
-		parser := filter.NewParser(strings.NewReader(decodedFilter))
-		return parser.Parse()
+		return filter.ParseFilter([]byte(decodedFilter))
 	}
 	return nil, nil
 }

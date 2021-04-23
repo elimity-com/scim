@@ -8,7 +8,7 @@ import (
 
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser"
+	"github.com/scim2/filter-parser/v2"
 )
 
 // ListRequestParams request parameters sent to the API via a "GetAll" route.
