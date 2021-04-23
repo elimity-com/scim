@@ -32,9 +32,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		case filter.GT, filter.LT, filter.GE, filter.LE:
 			return nil, fmt.Errorf("invalid attribute type %q", typ)
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	case "dateTime":
 		date, ok := e.CompareValue.(string)
@@ -77,9 +75,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 				return v.Before(ref) || v.Equal(ref)
 			}), nil
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	case "reference", "string":
 		ref, ok := e.CompareValue.(string)
@@ -106,9 +102,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		case filter.LE:
 			return strComp(ref, attr, func(v, ref string) bool { return strings.Compare(v, ref) <= 0 })
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	case "boolean":
 		ref, ok := e.CompareValue.(bool)
@@ -129,9 +123,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		case filter.GT, filter.LT, filter.GE, filter.LE:
 			return nil, fmt.Errorf("invalid attribute type %q", typ)
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	case "decimal":
 		ref, ok := toFloat(e.CompareValue)
@@ -158,9 +150,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		case filter.LE:
 			return cmpDecimal(ref, func(v, ref float64) bool { return v <= ref }), nil
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	case "integer":
 		ref, ok := toInt(e.CompareValue)
@@ -187,9 +177,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		case filter.LE:
 			return cmpInteger(ref, func(v, ref int) bool { return v <= ref }), nil
 		default:
-			return func(value interface{}) bool {
-				return false
-			}, fmt.Errorf("unknown operator in expression: %s", e)
+			return nil, fmt.Errorf("unknown operator in expression: %s", e)
 		}
 	default:
 		panic(fmt.Sprintf("unknown attribute type: %s", typ))

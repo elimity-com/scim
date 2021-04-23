@@ -127,7 +127,7 @@ func (v PathValidator) validatePath(ref schema.Schema) error {
 	}
 
 	// e.g. members[value eq "0"]
-	//			   ^_____________
+	//             ^_____________
 	if v.path.ValueExpression != nil {
 		if err := validateExpression(
 			schema.Schema{
@@ -141,7 +141,7 @@ func (v PathValidator) validatePath(ref schema.Schema) error {
 	}
 
 	// e.g. members[value eq "0"].displayName
-	//			                  ^__________
+	//                            ^__________
 	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
 		if err := validateSubAttribute(attr, subAttrName); err != nil {
 			return err
