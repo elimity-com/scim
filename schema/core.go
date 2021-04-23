@@ -212,7 +212,7 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 	}
 
 	if !a.multiValued {
-		return a.validateSingular(attribute)
+		return a.ValidateSingular(attribute)
 	}
 
 	switch arr := attribute.(type) {
@@ -245,7 +245,7 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 
 		attributes := make([]interface{}, len(arr))
 		for i, ele := range arr {
-			attr, scimErr := a.validateSingular(ele)
+			attr, scimErr := a.ValidateSingular(ele)
 			if scimErr != nil {
 				return nil, scimErr
 			}
@@ -259,7 +259,9 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 	}
 }
 
-func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *errors.ScimError) {
+// ValidateSingular checks whether the given singular value matches the attribute data type. Unknown attributes in
+// given complex value are ignored. The returned interface contains a (sanitised) version of the given attribute.
+func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *errors.ScimError) {
 	switch a.typ {
 	case attributeDataTypeBinary:
 		bin, ok := attribute.(string)
@@ -285,7 +287,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *er
 
 		return b, nil
 	case attributeDataTypeComplex:
-		complex, ok := attribute.(map[string]interface{})
+		obj, ok := attribute.(map[string]interface{})
 		if !ok {
 			return nil, &errors.ScimErrorInvalidValue
 		}
@@ -296,7 +298,7 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *er
 			var hit interface{}
 			var found bool
 
-			for k, v := range complex {
+			for k, v := range obj {
 				if strings.EqualFold(sub.name, k) {
 					if found {
 						return nil, &errors.ScimErrorInvalidSyntax
