@@ -222,28 +222,6 @@ func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
 	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 }
 
-func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"add",
-		    "value":{
-		      "notActuallyAThing": "adfad"
-		    }
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
-
-	var scimErr *errors.ScimError
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
-	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidValue, scimErr)
-}
-
 func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],

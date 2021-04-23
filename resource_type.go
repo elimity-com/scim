@@ -63,6 +63,14 @@ func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
 	return schemas
 }
 
+func (t ResourceType) getSchemaExtensions() []schema.Schema {
+	var extensions []schema.Schema
+	for _, e := range t.SchemaExtensions {
+		extensions = append(extensions, e.Schema)
+	}
+	return extensions
+}
+
 func (t ResourceType) schemaWithCommon() schema.Schema {
 	s := t.Schema
 
@@ -111,52 +119,64 @@ func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *
 	return attributes, nil
 }
 
-func (t ResourceType) validateOperation(op PatchOperation) []*errors.ScimError {
-	errorCauses := make([]*errors.ScimError, 0)
-
+func (t ResourceType) validateOperation(op PatchOperation) *errors.ScimError {
 	// Ensure the operation is a valid one. "add", "replace", or "remove".
 	if !contains(validOps, op.Op) {
-		errorCauses = append(errorCauses, &errors.ScimErrorInvalidFilter)
+		return &errors.ScimErrorInvalidFilter
 	}
 
-	// "add" and "replace" operations must have a value
+	// "add" and "replace" operations must have a value.
 	if (op.Op == PatchOperationAdd || op.Op == PatchOperationReplace) && op.Value == nil {
-		errorCauses = append(errorCauses, &errors.ScimErrorInvalidFilter)
+		return &errors.ScimErrorInvalidFilter
 	}
 
-	// "remove" operations require a path.
-	// The "replace" and "add" operations can have implicit paths, which is part of the value.
-	path, err := filter.GetPathFilter(op.Path)
-	if err != nil {
-		scimErr := errors.CheckScimError(err, http.MethodPatch)
-		errorCauses = append(errorCauses, &scimErr)
-	}
-	if op.Op == PatchOperationRemove && path.String() == "" {
-		errorCauses = append(errorCauses, &errors.ScimErrorNoTarget)
+	var (
+		validator filter.PathValidator
+		err       error
+	)
+	if op.Op == PatchOperationRemove {
+		// "remove" operations require a path.
+		validator, err = filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
+		if err != nil {
+			return &errors.ScimErrorInvalidPath
+		}
+	} else {
+		// "replace" and "add" can have implicit paths, which is part of the value.
+		validator, err = filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
 	}
 
-	if err := t.validateOperationValue(op); err != nil {
-		return append(errorCauses, err)
+	if err == nil {
+		// Checks whether the path is a valid path within the given reference schemas.
+		if err := validator.Validate(); err != nil {
+			return &errors.ScimErrorInvalidPath
+		}
+		// Validates the operation value itself.
+		if err := t.validateOperationValue(op); err != nil {
+			return err
+		}
 	}
-
-	return errorCauses
+	return nil
 }
 
 func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
-	path, err := filter.GetPathFilter(op.Path)
+	validator, err := filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
 	if err != nil {
 		scimErr := errors.CheckScimError(err, http.MethodPatch)
 		return &scimErr
 	}
-	if path.AttributeName != "" {
-		s := t.Schema
-		s.Attributes = append(s.Attributes, schema.CommonAttributes()...)
-		var extensions []schema.Schema
-		for _, e := range t.SchemaExtensions {
-			extensions = append(extensions, e.Schema)
-		}
+	var (
+		path             = validator.Path()
+		attributeName    = path.AttributePath.AttributeName
+		subAttributeName = path.AttributePath.SubAttributeName()
+	)
+	// The sub attribute can come from: `emails.value` or `emails[type eq "work"].value`.
+	// The path filter `x.y[].z` is impossible
+	if subAttributeName == "" {
+		subAttributeName = path.SubAttributeName()
+	}
 
-		if !filter.ValidatePath(path, s, extensions...) {
+	if attributeName != "" {
+		if err := validator.Validate(); err != nil {
 			return &errors.ScimErrorInvalidPath
 		}
 	}
@@ -167,18 +187,18 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 		mapValue = v
 
 	default:
-		if path.SubAttribute == "" {
-			mapValue = map[string]interface{}{path.AttributeName: v}
+		if subAttributeName == "" {
+			mapValue = map[string]interface{}{attributeName: v}
 			break
 		}
-		mapValue = map[string]interface{}{path.AttributeName: map[string]interface{}{
-			path.SubAttribute: v,
+		mapValue = map[string]interface{}{attributeName: map[string]interface{}{
+			subAttributeName: v,
 		}}
 	}
 
 	// Check if it's a patch on an extension.
-	if path.AttributeName != "" {
-		if id := path.URIPrefix; id != "" {
+	if attributeName != "" {
+		if id := path.AttributePath.URI(); id != "" {
 			for _, ext := range t.SchemaExtensions {
 				if strings.EqualFold(id, ext.Schema.ID) {
 					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
@@ -203,23 +223,18 @@ func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.Scim
 		return req, &errors.ScimErrorInvalidSyntax
 	}
 
-	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
-	errorCauses := make([]*errors.ScimError, 0)
-
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
 	if len(req.Operations) < 1 {
 		return req, &errors.ScimErrorInvalidValue
 	}
 
+	// Evaluation continues until all operations are successfully applied or until an error condition is encountered.
 	for i := range req.Operations {
 		req.Operations[i].Op = strings.ToLower(req.Operations[i].Op)
-		errorCauses = append(errorCauses, t.validateOperation(req.Operations[i])...)
-	}
-
-	// Denotes all of the errors that have occurred parsing the request.
-	if len(errorCauses) > 0 {
-		return req, errorCauses[0]
+		if err := t.validateOperation(req.Operations[i]); err != nil {
+			return req, err
+		}
 	}
 
 	return req, nil
