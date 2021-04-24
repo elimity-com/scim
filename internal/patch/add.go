@@ -19,6 +19,7 @@ func (v OperationValidator) ValidateAdd() error {
 	}
 
 	if v.path.ValueExpression != nil || v.path.SubAttribute != nil {
+		// TODO: fix this! You should be able to filter on complex attributes to assign values to them.
 		return fmt.Errorf("an add operation does not support value expressions")
 	}
 
@@ -43,6 +44,7 @@ func (v OperationValidator) ValidateAdd() error {
 		}
 	}
 	if refAttr == nil {
+		// This should not occur since the filter parser will validate this.
 		return fmt.Errorf("could not find attribute %s", v.path)
 	}
 	if subAttrName := attrPath.SubAttributeName(); subAttrName != "" {
