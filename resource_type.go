@@ -3,7 +3,7 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -194,7 +194,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
 	var req PatchRequest
 
-	data, err := io.ReadAll(r.Body)
+	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return req, &errors.ScimErrorInvalidSyntax
 	}
