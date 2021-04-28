@@ -177,7 +177,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 }
 
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
-// resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
+// resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User".
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
 	var resourceType ResourceType
 	for _, r := range s.ResourceTypes {
@@ -281,7 +281,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 }
 
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
-// schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
+// schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User".
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	getSchema := s.getSchema(id)
 	if getSchema.ID != id {

@@ -78,7 +78,6 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 	s.Attributes = append(s.Attributes, externalID)
 
 	return s
-
 }
 
 func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *errors.ScimError) {
@@ -191,7 +190,7 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 	return t.schemaWithCommon().ValidatePatchOperationValue(op.Op, mapValue)
 }
 
-// validatePatch parse and validate PATCH request
+// validatePatch parse and validate PATCH request.
 func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
 	var req PatchRequest
 

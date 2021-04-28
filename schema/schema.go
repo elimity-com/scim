@@ -28,7 +28,7 @@ func isReadOnly(attr CoreAttribute) bool {
 	return attr.mutability == attributeMutabilityReadOnly
 }
 
-// Attributes represent a list of Core Attributes
+// Attributes represent a list of Core Attributes.
 type Attributes []CoreAttribute
 
 // ContainsAttribute checks whether the list of Core Attributes contains an attribute with the given name.
@@ -111,7 +111,7 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 	return nil
 }
 
-// ValidatePatchOperationValue validates an individual operation and its related value
+// ValidatePatchOperationValue validates an individual operation and its related value.
 func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) *errors.ScimError {
 	return s.ValidatePatchOperation(operation, operationValue, false)
 }
