@@ -18,14 +18,21 @@ func (v OperationValidator) ValidateAdd() error {
 		return v.validateAddEmptyPath()
 	}
 
-	if v.path.ValueExpression != nil || v.path.SubAttribute != nil {
-		// TODO: fix this! You should be able to filter on complex attributes to assign values to them.
-		return fmt.Errorf("an add operation does not support value expressions")
-	}
-
 	refAttr, err := v.getRefAttribute(v.path.AttributePath)
 	if err != nil {
 		return err
+	}
+	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
+		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
+		if err != nil {
+			return err
+		}
+		refAttr = refSubAttr
+	}
+
+	if v.path.ValueExpression != nil {
+		// TODO: fix this! We should validate the expression.
+		// return fmt.Errorf("an add operation does not support value expressions")
 	}
 
 	if refAttr.MultiValued() {
@@ -63,40 +70,19 @@ func (v OperationValidator) validateAddEmptyPath() error {
 	}
 
 	for p, value := range attributes {
-		path, err := filter.ParseAttrPath([]byte(p))
+		path, err := filter.ParsePath([]byte(p))
 		if err != nil {
 			return fmt.Errorf("invalid attribute path: %s", p)
 		}
-
-		refAttr, err := v.getRefAttribute(path)
-		if err != nil {
-			return err
+		validator := OperationValidator{
+			op:      v.op,
+			path:    &path,
+			value:   value,
+			schema:  v.schema,
+			schemas: v.schemas,
 		}
-
-		if refAttr.MultiValued() {
-			if list, ok := value.([]interface{}); !ok {
-				attr, err := refAttr.ValidateSingular(value)
-				if err != nil {
-					return err
-				}
-				v.value = []interface{}{attr}
-			} else {
-				var attrs []interface{}
-				for _, value := range list {
-					attr, err := refAttr.ValidateSingular(value)
-					if err != nil {
-						return err
-					}
-					attrs = append(attrs, attr)
-				}
-				v.value = attrs
-			}
-		} else {
-			attr, err := refAttr.ValidateSingular(value)
-			if err != nil {
-				return err
-			}
-			v.value = attr
+		if err := validator.ValidateAdd(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -135,21 +121,30 @@ func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*sch
 		return nil, fmt.Errorf("could not find attribute %s", v.path)
 	}
 	if subAttrName := attrPath.SubAttributeName(); subAttrName != "" {
-		if !refAttr.HasSubAttributes() {
-			return nil, fmt.Errorf("the referred attribute has no sub-attributes: %s", v.path)
-		}
-
-		var refSubAttr *schema.CoreAttribute
-		for _, attr := range refAttr.SubAttributes() {
-			if strings.EqualFold(attr.Name(), subAttrName) {
-				refSubAttr = &attr
-				break
-			}
-		}
-		if refSubAttr == nil {
-			return nil, fmt.Errorf("could not find attribute %s", v.path)
+		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
+		if err != nil {
+			return nil, err
 		}
 		refAttr = refSubAttr
 	}
 	return refAttr, nil
+}
+
+// getRefSubAttribute returns the sub-attribute of the reference attribute that matches the given subAttrName, if none
+// are found it will return an error.
+func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, subAttrName string) (*schema.CoreAttribute, error) {
+	if !refAttr.HasSubAttributes() {
+		return nil, fmt.Errorf("the referred attribute has no sub-attributes: %s", v.path)
+	}
+	var refSubAttr *schema.CoreAttribute
+	for _, attr := range refAttr.SubAttributes() {
+		if strings.EqualFold(attr.Name(), subAttrName) {
+			refSubAttr = &attr
+			break
+		}
+	}
+	if refSubAttr == nil {
+		return nil, fmt.Errorf("could not find attribute %s", v.path)
+	}
+	return refSubAttr, nil
 }
