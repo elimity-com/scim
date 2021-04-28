@@ -27,7 +27,7 @@ type OperationValidator struct {
 	schemas map[string]schema.Schema
 }
 
-func NewPathValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (OperationValidator, error) {
+func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (OperationValidator, error) {
 	var operation struct {
 		Op    string
 		Path  string

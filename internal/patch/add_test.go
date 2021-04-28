@@ -2,6 +2,7 @@ package patch
 
 import (
 	"fmt"
+	"github.com/elimity-com/scim/schema"
 	"testing"
 )
 
@@ -82,8 +83,8 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 		{invalid: `{"op":"add","path":"invalid","value":"value"}`},
 		{invalid: `{"op":"add","path":"complex.invalid","value":"value"}`},
 
-		// TODO: support sub-attributes in complex assignments?
-		// {valid: `{"op":"add","value":{"complex.attr1":"value"}}`},
+		// Sub-attributes in complex assignments.
+		{valid: `{"op":"add","value":{"complex.attr1":"value"}}`},
 
 		// Has no sub-attributes.
 		{invalid: `{"op":"add","path":"attr1.invalid","value":"value"}`},
@@ -100,7 +101,7 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			// valid
 			if op := test.valid; op != "" {
-				validator, err := NewPathValidator(op, patchSchema, patchSchemaExtension)
+				validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -110,7 +111,7 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 			}
 			// invalid
 			if op := test.invalid; op != "" {
-				validator, err := NewPathValidator(op, patchSchema, patchSchemaExtension)
+				validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -119,5 +120,31 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestOperationValidator_getRefAttribute(t *testing.T) {
+	for _, test := range []struct {
+		pathFilter       string
+		expectedAttrName string
+	}{
+		{`userName`, `userName`},
+		{`name.givenName`, `givenName`},
+		{`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber`, `employeeNumber`},
+	} {
+		validator, err := NewValidator(
+			fmt.Sprintf(`{"op":"invalid","path":"%s","value":"value"}`, test.pathFilter),
+			schema.CoreUserSchema(), schema.ExtensionEnterpriseUser(),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		attr, err := validator.getRefAttribute(validator.path.AttributePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if name := attr.Name(); name != test.expectedAttrName {
+			t.Errorf("expected %s, got %s", test.expectedAttrName, name)
+		}
 	}
 }
