@@ -2,7 +2,7 @@ package scim
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -217,7 +217,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 // resourcePostHandler receives an HTTP POST request to the resource endpoint, such as "/Users" or "/Groups", as
 // defined by the associated resource type endpoint discovery to create new resources.
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
-	data, _ := ioutil.ReadAll(r.Body)
+	data, _ := io.ReadAll(r.Body)
 
 	attributes, scimErr := resourceType.validate(data, http.MethodPost)
 	if scimErr != nil {
@@ -321,7 +321,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 // resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
 // "{id}" is a resource identifier to replace a resource's attributes.
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	data, _ := ioutil.ReadAll(r.Body)
+	data, _ := io.ReadAll(r.Body)
 
 	attributes, scimErr := resourceType.validate(data, http.MethodPut)
 	if scimErr != nil {

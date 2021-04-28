@@ -3,7 +3,7 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -127,7 +127,7 @@ func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
 func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
 	var req PatchRequest
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return req, &errors.ScimErrorInvalidSyntax
 	}
