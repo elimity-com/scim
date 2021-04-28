@@ -75,9 +75,11 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 		{valid: `{"op":"add","value":{"attr1":"value","complexMultiValued":[{"attr1":"value"}]}}`},
 		{valid: `{"op":"add","value":{"attr1":"value","complexMultiValued":[{"attr1":"value"}]}}`},
 
-		// TODO: support value filters.
-		// {valid: `{"op":"add","path":"complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`},
-		// {valid: `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`},
+		{
+			valid:   `{"op":"add","path":"complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`,
+			invalid: `{"op":"add","path":"complexMultiValued[attr1 eq \"value\"].attr2","value":"value"}`,
+		},
+		{valid: `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`},
 
 		// Valid path, attribute not found.
 		{invalid: `{"op":"add","path":"invalid","value":"value"}`},
@@ -133,7 +135,7 @@ func TestOperationValidator_getRefAttribute(t *testing.T) {
 		{`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber`, `employeeNumber`},
 	} {
 		validator, err := NewValidator(
-			fmt.Sprintf(`{"op":"invalid","path":"%s","value":"value"}`, test.pathFilter),
+			fmt.Sprintf(`{"op":"invalid","path":%q,"value":"value"}`, test.pathFilter),
 			schema.CoreUserSchema(), schema.ExtensionEnterpriseUser(),
 		)
 		if err != nil {
