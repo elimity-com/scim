@@ -234,7 +234,7 @@ func (e *ScimError) UnmarshalJSON(data []byte) error {
 }
 
 // ScimType is A SCIM detail error keyword.
-// Source: RFC7644.3.12.Table9
+// Source: RFC7644.3.12 Table9.
 type ScimType string
 
 const (

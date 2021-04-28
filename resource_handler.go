@@ -25,7 +25,7 @@ type ListRequestParams struct {
 	StartIndex int
 }
 
-// Meta represents the metadata of a resource
+// Meta represents the metadata of a resource.
 type Meta struct {
 	// Created is the time that the resource was added to the service provider.
 	Created *time.Time

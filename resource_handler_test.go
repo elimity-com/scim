@@ -23,7 +23,7 @@ type testData struct {
 	meta               map[string]string
 }
 
-// simple in-memory resource database
+// simple in-memory resource database.
 type testResourceHandler struct {
 	data map[string]testData
 }

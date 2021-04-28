@@ -349,7 +349,7 @@ func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
 	}
 }
 
-// Tests valid add, replace, and remove operations
+// Tests valid add, replace, and remove operations.
 func TestServerResourcePatchHandlerValid(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -602,14 +602,14 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 			name:         "User schema",
 			resourceType: "User",
 		}, {
-			name:         "Enterprice user schema",
+			name:         "Enterprise user schema",
 			resourceType: "EnterpriseUser",
 		}, {
 			name:          "User schema, with base path",
 			resourceType:  "User",
 			versionPrefix: "/v2",
 		}, {
-			name:          "Enterprice user schema, with base path",
+			name:          "Enterprise user schema, with base path",
 			resourceType:  "EnterpriseUser",
 			versionPrefix: "/v2",
 		},
@@ -731,14 +731,14 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 			name:   "User schema",
 			schema: "urn:ietf:params:scim:schemas:core:2.0:User",
 		}, {
-			name:   "Enterprice user schema",
+			name:   "Enterprise user schema",
 			schema: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 		}, {
 			name:          "User schema, with base path",
 			schema:        "urn:ietf:params:scim:schemas:core:2.0:User",
 			versionPrefix: "/v2",
 		}, {
-			name:          "Enterprice user schema, with base path",
+			name:          "Enterprise user schema, with base path",
 			schema:        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 			versionPrefix: "/v2",
 		},
