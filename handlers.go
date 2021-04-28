@@ -24,148 +24,38 @@ func errorHandler(w http.ResponseWriter, _ *http.Request, scimErr *errors.ScimEr
 	}
 }
 
-// schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
-// provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
-func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
-	if paramsErr != nil {
-		errorHandler(w, r, paramsErr)
-		return
-	}
-	filter := f.NewFilter(params.Filter, schema.Definition())
-
-	schemas := s.getSchemas()
-	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
-	var resources []interface{}
-	for _, v := range schemas[start:end] {
-		resource := v.ToMap()
-		if params.Filter != nil {
-			valid, err := filter.IsValid(resource)
-			if err != nil {
-				scimErr := errors.CheckScimError(err, http.MethodGet)
-				errorHandler(w, r, &scimErr)
-				return
-			}
-			if !valid {
-				continue
-			}
-		}
-		resources = append(resources, resource)
-	}
-
-	raw, err := json.Marshal(listResponse{
-		TotalResults: len(schemas),
-		ItemsPerPage: params.Count,
-		StartIndex:   params.StartIndex,
-		Resources:    resources,
-	})
-	if err != nil {
-		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling list response: %v", err)
-		return
-	}
-
-	_, err = w.Write(raw)
-	if err != nil {
-		log.Printf("failed writing response: %v", err)
-	}
-}
-
-// schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
-// schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
-func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
-	getSchema := s.getSchema(id)
-	if getSchema.ID != id {
-		scimErr := errors.ScimErrorResourceNotFound(id)
+// resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
+// where "{id}" is a resource identifier to delete a known resource.
+func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	deleteErr := resourceType.Handler.Delete(r, id)
+	if deleteErr != nil {
+		scimErr := errors.CheckScimError(deleteErr, http.MethodDelete)
 		errorHandler(w, r, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(getSchema)
-	if err != nil {
-		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling schema: %v", err)
-		return
-	}
-
-	_, err = w.Write(raw)
-	if err != nil {
-		log.Printf("failed writing response: %v", err)
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// resourceTypesHandler receives an HTTP GET to this endpoint, "/ResourceTypes", which is used to discover the types of
-// resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
-// the core schema URI that defines the resource, and any supported schema extensions.
-func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
-	if paramsErr != nil {
-		errorHandler(w, r, paramsErr)
-		return
-	}
-
-	start, end := clamp(params.StartIndex-1, params.Count, len(s.ResourceTypes))
-	var resources []interface{}
-	for _, v := range s.ResourceTypes[start:end] {
-		resources = append(resources, v.getRaw())
-	}
-
-	raw, err := json.Marshal(listResponse{
-		TotalResults: len(s.ResourceTypes),
-		ItemsPerPage: params.Count,
-		StartIndex:   params.StartIndex,
-		Resources:    resources,
-	})
-	if err != nil {
-		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling list response: %v", err)
-		return
-	}
-
-	_, err = w.Write(raw)
-	if err != nil {
-		log.Printf("failed writing response: %v", err)
-	}
-}
-
-// resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
-// resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
-func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	var resourceType ResourceType
-	for _, r := range s.ResourceTypes {
-		if r.Name == name {
-			resourceType = r
-			break
-		}
-	}
-
-	if resourceType.Name != name {
-		scimErr := errors.ScimErrorResourceNotFound(name)
+// resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
+// where "{id}" is a resource identifier to retrieve a known resource.
+func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	resource, getErr := resourceType.Handler.Get(r, id)
+	if getErr != nil {
+		scimErr := errors.CheckScimError(getErr, http.MethodGet)
 		errorHandler(w, r, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(resourceType.getRaw())
+	raw, err := json.Marshal(resource.response(resourceType))
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling resource type: %v", err)
+		log.Fatalf("failed marshaling resource: %v", err)
 		return
 	}
 
-	_, err = w.Write(raw)
-	if err != nil {
-		log.Printf("failed writing response: %v", err)
-	}
-}
-
-// serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
-// SCIM specification features available on a service provider.
-func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := json.Marshal(s.Config.getRaw())
-	if err != nil {
-		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling service provider config: %v", err)
-		return
+	if resource.Meta.Version != "" {
+		w.Header().Set("Etag", resource.Meta.Version)
 	}
 
 	_, err = w.Write(raw)
@@ -251,12 +141,20 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 }
 
-// resourceGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
-// where "{id}" is a resource identifier to retrieve a known resource.
-func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	resource, getErr := resourceType.Handler.Get(r, id)
-	if getErr != nil {
-		scimErr := errors.CheckScimError(getErr, http.MethodGet)
+// resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
+// "{id}" is a resource identifier to replace a resource's attributes.
+func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
+	data, _ := io.ReadAll(r.Body)
+
+	attributes, scimErr := resourceType.validate(data, http.MethodPut)
+	if scimErr != nil {
+		errorHandler(w, r, scimErr)
+		return
+	}
+
+	resource, putError := resourceType.Handler.Replace(r, id, attributes)
+	if putError != nil {
+		scimErr := errors.CheckScimError(putError, http.MethodPut)
 		errorHandler(w, r, &scimErr)
 		return
 	}
@@ -270,6 +168,70 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
+}
+
+// resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
+// resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User"
+func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
+	var resourceType ResourceType
+	for _, r := range s.ResourceTypes {
+		if r.Name == name {
+			resourceType = r
+			break
+		}
+	}
+
+	if resourceType.Name != name {
+		scimErr := errors.ScimErrorResourceNotFound(name)
+		errorHandler(w, r, &scimErr)
+		return
+	}
+
+	raw, err := json.Marshal(resourceType.getRaw())
+	if err != nil {
+		errorHandler(w, r, &errors.ScimErrorInternal)
+		log.Fatalf("failed marshaling resource type: %v", err)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
+}
+
+// resourceTypesHandler receives an HTTP GET to this endpoint, "/ResourceTypes", which is used to discover the types of
+// resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
+// the core schema URI that defines the resource, and any supported schema extensions.
+func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
+	params, paramsErr := s.parseRequestParams(r)
+	if paramsErr != nil {
+		errorHandler(w, r, paramsErr)
+		return
+	}
+
+	start, end := clamp(params.StartIndex-1, params.Count, len(s.ResourceTypes))
+	var resources []interface{}
+	for _, v := range s.ResourceTypes[start:end] {
+		resources = append(resources, v.getRaw())
+	}
+
+	raw, err := json.Marshal(listResponse{
+		TotalResults: len(s.ResourceTypes),
+		ItemsPerPage: params.Count,
+		StartIndex:   params.StartIndex,
+		Resources:    resources,
+	})
+	if err != nil {
+		errorHandler(w, r, &errors.ScimErrorInternal)
+		log.Fatalf("failed marshaling list response: %v", err)
+		return
 	}
 
 	_, err = w.Write(raw)
@@ -318,33 +280,21 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 }
 
-// resourcePutHandler receives an HTTP PUT to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}", where
-// "{id}" is a resource identifier to replace a resource's attributes.
-func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	data, _ := io.ReadAll(r.Body)
-
-	attributes, scimErr := resourceType.validate(data, http.MethodPut)
-	if scimErr != nil {
-		errorHandler(w, r, scimErr)
-		return
-	}
-
-	resource, putError := resourceType.Handler.Replace(r, id, attributes)
-	if putError != nil {
-		scimErr := errors.CheckScimError(putError, http.MethodPut)
+// schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
+// schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
+func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
+	getSchema := s.getSchema(id)
+	if getSchema.ID != id {
+		scimErr := errors.ScimErrorResourceNotFound(id)
 		errorHandler(w, r, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType))
+	raw, err := json.Marshal(getSchema)
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
-		log.Fatalf("failed marshaling resource: %v", err)
+		log.Fatalf("failed marshaling schema: %v", err)
 		return
-	}
-
-	if resource.Meta.Version != "" {
-		w.Header().Set("Etag", resource.Meta.Version)
 	}
 
 	_, err = w.Write(raw)
@@ -353,15 +303,65 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 	}
 }
 
-// resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
-// where "{id}" is a resource identifier to delete a known resource.
-func (s Server) resourceDeleteHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
-	deleteErr := resourceType.Handler.Delete(r, id)
-	if deleteErr != nil {
-		scimErr := errors.CheckScimError(deleteErr, http.MethodDelete)
-		errorHandler(w, r, &scimErr)
+// schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
+// provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
+func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
+	params, paramsErr := s.parseRequestParams(r)
+	if paramsErr != nil {
+		errorHandler(w, r, paramsErr)
+		return
+	}
+	filter := f.NewFilter(params.Filter, schema.Definition())
+
+	schemas := s.getSchemas()
+	start, end := clamp(params.StartIndex-1, params.Count, len(schemas))
+	var resources []interface{}
+	for _, v := range schemas[start:end] {
+		resource := v.ToMap()
+		if params.Filter != nil {
+			valid, err := filter.IsValid(resource)
+			if err != nil {
+				scimErr := errors.CheckScimError(err, http.MethodGet)
+				errorHandler(w, r, &scimErr)
+				return
+			}
+			if !valid {
+				continue
+			}
+		}
+		resources = append(resources, resource)
+	}
+
+	raw, err := json.Marshal(listResponse{
+		TotalResults: len(schemas),
+		ItemsPerPage: params.Count,
+		StartIndex:   params.StartIndex,
+		Resources:    resources,
+	})
+	if err != nil {
+		errorHandler(w, r, &errors.ScimErrorInternal)
+		log.Fatalf("failed marshaling list response: %v", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
+}
+
+// serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
+// SCIM specification features available on a service provider.
+func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
+	raw, err := json.Marshal(s.Config.getRaw())
+	if err != nil {
+		errorHandler(w, r, &errors.ScimErrorInternal)
+		log.Fatalf("failed marshaling service provider config: %v", err)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed writing response: %v", err)
+	}
 }

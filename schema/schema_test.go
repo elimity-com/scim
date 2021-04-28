@@ -8,23 +8,6 @@ import (
 	"github.com/elimity-com/scim/optional"
 )
 
-func TestInvalidAttributeName(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("did not panic")
-		}
-	}()
-
-	_ = Schema{
-		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
-		Name:        optional.NewString("User"),
-		Description: optional.NewString("User Account"),
-		Attributes: []CoreAttribute{
-			SimpleCoreAttribute(SimpleStringParams(StringParams{Name: "_Invalid"})),
-		},
-	}
-}
-
 var testSchema = Schema{
 	ID:          "empty",
 	Name:        optional.NewString("test"),
@@ -75,10 +58,78 @@ var testSchema = Schema{
 	},
 }
 
+func TestInvalidAttributeName(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("did not panic")
+		}
+	}()
+
+	_ = Schema{
+		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
+		Name:        optional.NewString("User"),
+		Description: optional.NewString("User Account"),
+		Attributes: []CoreAttribute{
+			SimpleCoreAttribute(SimpleStringParams(StringParams{Name: "_Invalid"})),
+		},
+	}
+}
+
+func TestJSONMarshalling(t *testing.T) {
+	expectedJSON, err := ioutil.ReadFile("./testdata/schema_test.json")
+	if err != nil {
+		t.Errorf("failed to acquire test data")
+		return
+	}
+
+	actualJSON, err := testSchema.MarshalJSON()
+	if err != nil {
+		t.Errorf("failed to marshal schema into JSON")
+		return
+	}
+
+	normalizedActual, err := normalizeJSON(actualJSON)
+	normalizedExpected, expectedErr := normalizeJSON(expectedJSON)
+	if err != nil || expectedErr != nil {
+		t.Errorf("failed to normalize test JSON")
+		return
+	}
+
+	if normalizedActual != normalizedExpected {
+		t.Errorf("schema output by MarshalJSON did not match the expected output. want %s, got %s", normalizedExpected, normalizedActual)
+	}
+}
+
 func TestResourceInvalid(t *testing.T) {
 	var resource interface{}
 	if _, scimErr := testSchema.Validate(resource); scimErr == nil {
 		t.Error("invalid resource expected")
+	}
+}
+
+func TestValidValidation(t *testing.T) {
+	for _, test := range []map[string]interface{}{
+		{
+			"required": "present",
+			"booleans": []interface{}{
+				true,
+			},
+			"complex": []interface{}{
+				map[string]interface{}{
+					"sub": "present",
+				},
+			},
+			"binary":        "ZXhhbXBsZQ==",
+			"dateTime":      "2008-01-23T04:56:22Z",
+			"integer":       11,
+			"decimal":       -2.1e5,
+			"integerNumber": json.Number("11"),
+			"decimalNumber": json.Number("11.12"),
+		},
+	} {
+		if _, scimErr := testSchema.Validate(test); scimErr != nil {
+			t.Errorf("valid resource expected")
+		}
 	}
 }
 
@@ -198,57 +249,6 @@ func TestValidationInvalid(t *testing.T) {
 		if _, scimErr := testSchema.Validate(test); scimErr == nil {
 			t.Errorf("invalid resource expected")
 		}
-	}
-}
-
-func TestValidValidation(t *testing.T) {
-	for _, test := range []map[string]interface{}{
-		{
-			"required": "present",
-			"booleans": []interface{}{
-				true,
-			},
-			"complex": []interface{}{
-				map[string]interface{}{
-					"sub": "present",
-				},
-			},
-			"binary":        "ZXhhbXBsZQ==",
-			"dateTime":      "2008-01-23T04:56:22Z",
-			"integer":       11,
-			"decimal":       -2.1e5,
-			"integerNumber": json.Number("11"),
-			"decimalNumber": json.Number("11.12"),
-		},
-	} {
-		if _, scimErr := testSchema.Validate(test); scimErr != nil {
-			t.Errorf("valid resource expected")
-		}
-	}
-}
-
-func TestJSONMarshalling(t *testing.T) {
-	expectedJSON, err := ioutil.ReadFile("./testdata/schema_test.json")
-	if err != nil {
-		t.Errorf("failed to acquire test data")
-		return
-	}
-
-	actualJSON, err := testSchema.MarshalJSON()
-	if err != nil {
-		t.Errorf("failed to marshal schema into JSON")
-		return
-	}
-
-	normalizedActual, err := normalizeJSON(actualJSON)
-	normalizedExpected, expectedErr := normalizeJSON(expectedJSON)
-	if err != nil || expectedErr != nil {
-		t.Errorf("failed to normalize test JSON")
-		return
-	}
-
-	if normalizedActual != normalizedExpected {
-		t.Errorf("schema output by MarshalJSON did not match the expected output. want %s, got %s", normalizedExpected, normalizedActual)
 	}
 }
 

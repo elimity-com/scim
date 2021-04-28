@@ -8,133 +8,6 @@ import (
 	"strings"
 )
 
-// ScimType is A SCIM detail error keyword.
-// Source: RFC7644.3.12.Table9
-type ScimType string
-
-const (
-	// ScimTypeInvalidFilter indicates that the specified filter syntax was invalid or the specified attribute and
-	// filter comparison combination is not supported.
-	ScimTypeInvalidFilter ScimType = "invalidFilter"
-	// ScimTypeTooMany indicates that the specified filter yields many more results than the server is willing to
-	// calculate or process.
-	ScimTypeTooMany ScimType = "tooMany"
-	// ScimTypeUniqueness indicates that one or more of the attribute values are already in use or are reserved.
-	ScimTypeUniqueness ScimType = "uniqueness"
-	// ScimTypeMutability indicates that the attempted modification is not compatible with the target attribute's
-	// mutability or current state.
-	ScimTypeMutability ScimType = "mutability"
-	// ScimTypeInvalidSyntax indicates that the request body message structure was invalid or did not conform to the
-	// request schema.
-	ScimTypeInvalidSyntax ScimType = "invalidSyntax"
-	// ScimTypeInvalidPath indicates that the "path" attribute was invalid or malformed.
-	ScimTypeInvalidPath ScimType = "invalidPath"
-	// ScimTypeNoTarget indicates that the specified "path" did not yield an attribute or attribute value that could be
-	// operated on.
-	ScimTypeNoTarget ScimType = "noTarget"
-	// ScimTypeInvalidValue indicates that a required value was missing or the value specified was not compatible with
-	// the operation, attribute type or resource schema.
-	ScimTypeInvalidValue ScimType = "invalidValue"
-	// ScimTypeInvalidVersion indicates that the specified SCIM protocol version is not supported.
-	ScimTypeInvalidVersion ScimType = "invalidVers"
-	// ScimTypeSensitive indicates that the specified request cannot be completed, due to the passing of sensitive information in a request URI.
-	ScimTypeSensitive ScimType = "sensitive"
-)
-
-// ScimError is a SCIM error response to indicate operation success or failure.
-type ScimError struct {
-	// scimType is a SCIM detail error keyword.
-	ScimType ScimType
-	// detail is a detailed human-readable message.
-	Detail string
-	// status is the HTTP status code expressed as a JSON string. REQUIRED.
-	Status int
-}
-
-func (e ScimError) Error() string {
-	errorMessage := fmt.Sprint(e.Status)
-	if e.ScimType != "" {
-		errorMessage += fmt.Sprintf(" (%s)", e.ScimType)
-	}
-	if e.Detail != "" {
-		return fmt.Sprintf("%s - %s", errorMessage, e.Detail)
-	}
-	return fmt.Sprintf("%s - No detailed human-readable message", errorMessage)
-}
-
-// MarshalJSON converts the error struct to its corresponding json representation.
-func (e ScimError) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Schemas  []string `json:"schemas"`
-		ScimType ScimType `json:"scimType,omitempty"`
-		Detail   string   `json:"detail,omitempty"`
-		Status   string   `json:"status"`
-	}{
-		Schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
-		ScimType: e.ScimType,
-		Detail:   e.Detail,
-		Status:   strconv.Itoa(e.Status),
-	})
-}
-
-// UnmarshalJSON converts the error json data to its corresponding struct representation.
-func (e *ScimError) UnmarshalJSON(data []byte) error {
-	var tmpScimError struct {
-		ScimType ScimType
-		Detail   string
-		Status   string
-	}
-
-	err := json.Unmarshal(data, &tmpScimError)
-	if err != nil {
-		return err
-	}
-
-	status, err := strconv.Atoi(tmpScimError.Status)
-	if err != nil {
-		return err
-	}
-
-	*e = ScimError{
-		ScimType: tmpScimError.ScimType,
-		Detail:   tmpScimError.Detail,
-		Status:   status,
-	}
-
-	return nil
-}
-
-// ScimErrorResourceNotFound returns an 404 SCIM error with a detailed message based on the id.
-func ScimErrorResourceNotFound(id string) ScimError {
-	return ScimError{
-		Detail: fmt.Sprintf("Resource %s not found.", id),
-		Status: http.StatusNotFound,
-	}
-}
-
-// ScimErrorBadParams returns an 400 SCIM error with a detailed message based on the invalid parameters.
-func ScimErrorBadParams(invalidParams []string) ScimError {
-	var suffix string
-
-	if len(invalidParams) > 1 {
-		suffix = "s"
-	}
-
-	return ScimErrorBadRequest(fmt.Sprintf(
-		"Bad Request. Invalid parameter%s provided in request: %s.",
-		suffix,
-		strings.Join(invalidParams, ", "),
-	))
-}
-
-// ScimErrorBadRequest returns an 400 SCIM error with the given message.
-func ScimErrorBadRequest(msg string) ScimError {
-	return ScimError{
-		Detail: msg,
-		Status: http.StatusBadRequest,
-	}
-}
-
 var (
 	// ScimErrorInvalidFilter returns an 400 SCIM error with a detailed message.
 	ScimErrorInvalidFilter = ScimError{
@@ -202,24 +75,6 @@ var (
 	}
 )
 
-// CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
-func CheckScimError(err error, method string) ScimError {
-	scimErr, ok := err.(ScimError)
-	if !ok {
-		return ScimError{
-			Detail: err.Error(),
-			Status: http.StatusInternalServerError,
-		}
-	}
-	if !checkApplicability(scimErr, method) {
-		return ScimError{
-			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
-			Status: http.StatusInternalServerError,
-		}
-	}
-	return scimErr
-}
-
 var (
 	applicableToAll = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}
 	applicability   = map[int][]string{
@@ -265,3 +120,148 @@ func checkApplicability(err ScimError, method string) bool {
 	}
 	return false
 }
+
+// ScimError is a SCIM error response to indicate operation success or failure.
+type ScimError struct {
+	// scimType is a SCIM detail error keyword.
+	ScimType ScimType
+	// detail is a detailed human-readable message.
+	Detail string
+	// status is the HTTP status code expressed as a JSON string. REQUIRED.
+	Status int
+}
+
+// CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
+func CheckScimError(err error, method string) ScimError {
+	scimErr, ok := err.(ScimError)
+	if !ok {
+		return ScimError{
+			Detail: err.Error(),
+			Status: http.StatusInternalServerError,
+		}
+	}
+	if !checkApplicability(scimErr, method) {
+		return ScimError{
+			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
+			Status: http.StatusInternalServerError,
+		}
+	}
+	return scimErr
+}
+
+// ScimErrorBadParams returns an 400 SCIM error with a detailed message based on the invalid parameters.
+func ScimErrorBadParams(invalidParams []string) ScimError {
+	var suffix string
+
+	if len(invalidParams) > 1 {
+		suffix = "s"
+	}
+
+	return ScimErrorBadRequest(fmt.Sprintf(
+		"Bad Request. Invalid parameter%s provided in request: %s.",
+		suffix,
+		strings.Join(invalidParams, ", "),
+	))
+}
+
+// ScimErrorBadRequest returns an 400 SCIM error with the given message.
+func ScimErrorBadRequest(msg string) ScimError {
+	return ScimError{
+		Detail: msg,
+		Status: http.StatusBadRequest,
+	}
+}
+
+// ScimErrorResourceNotFound returns an 404 SCIM error with a detailed message based on the id.
+func ScimErrorResourceNotFound(id string) ScimError {
+	return ScimError{
+		Detail: fmt.Sprintf("Resource %s not found.", id),
+		Status: http.StatusNotFound,
+	}
+}
+
+func (e ScimError) Error() string {
+	errorMessage := fmt.Sprint(e.Status)
+	if e.ScimType != "" {
+		errorMessage += fmt.Sprintf(" (%s)", e.ScimType)
+	}
+	if e.Detail != "" {
+		return fmt.Sprintf("%s - %s", errorMessage, e.Detail)
+	}
+	return fmt.Sprintf("%s - No detailed human-readable message", errorMessage)
+}
+
+// MarshalJSON converts the error struct to its corresponding json representation.
+func (e ScimError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Schemas  []string `json:"schemas"`
+		ScimType ScimType `json:"scimType,omitempty"`
+		Detail   string   `json:"detail,omitempty"`
+		Status   string   `json:"status"`
+	}{
+		Schemas:  []string{"urn:ietf:params:scim:api:messages:2.0:Error"},
+		ScimType: e.ScimType,
+		Detail:   e.Detail,
+		Status:   strconv.Itoa(e.Status),
+	})
+}
+
+// UnmarshalJSON converts the error json data to its corresponding struct representation.
+func (e *ScimError) UnmarshalJSON(data []byte) error {
+	var tmpScimError struct {
+		ScimType ScimType
+		Detail   string
+		Status   string
+	}
+
+	err := json.Unmarshal(data, &tmpScimError)
+	if err != nil {
+		return err
+	}
+
+	status, err := strconv.Atoi(tmpScimError.Status)
+	if err != nil {
+		return err
+	}
+
+	*e = ScimError{
+		ScimType: tmpScimError.ScimType,
+		Detail:   tmpScimError.Detail,
+		Status:   status,
+	}
+
+	return nil
+}
+
+// ScimType is A SCIM detail error keyword.
+// Source: RFC7644.3.12.Table9
+type ScimType string
+
+const (
+	// ScimTypeInvalidFilter indicates that the specified filter syntax was invalid or the specified attribute and
+	// filter comparison combination is not supported.
+	ScimTypeInvalidFilter ScimType = "invalidFilter"
+	// ScimTypeTooMany indicates that the specified filter yields many more results than the server is willing to
+	// calculate or process.
+	ScimTypeTooMany ScimType = "tooMany"
+	// ScimTypeUniqueness indicates that one or more of the attribute values are already in use or are reserved.
+	ScimTypeUniqueness ScimType = "uniqueness"
+	// ScimTypeMutability indicates that the attempted modification is not compatible with the target attribute's
+	// mutability or current state.
+	ScimTypeMutability ScimType = "mutability"
+	// ScimTypeInvalidSyntax indicates that the request body message structure was invalid or did not conform to the
+	// request schema.
+	ScimTypeInvalidSyntax ScimType = "invalidSyntax"
+	// ScimTypeInvalidPath indicates that the "path" attribute was invalid or malformed.
+	ScimTypeInvalidPath ScimType = "invalidPath"
+	// ScimTypeNoTarget indicates that the specified "path" did not yield an attribute or attribute value that could be
+	// operated on.
+	ScimTypeNoTarget ScimType = "noTarget"
+	// ScimTypeInvalidValue indicates that a required value was missing or the value specified was not compatible with
+	// the operation, attribute type or resource schema.
+	ScimTypeInvalidValue ScimType = "invalidValue"
+	// ScimTypeInvalidVersion indicates that the specified SCIM protocol version is not supported.
+	ScimTypeInvalidVersion ScimType = "invalidVers"
+	// ScimTypeSensitive indicates that the specified request cannot be completed, due to the passing of sensitive information in a request URI.
+	ScimTypeSensitive ScimType = "sensitive"
+)

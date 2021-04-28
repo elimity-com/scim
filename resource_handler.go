@@ -25,10 +25,6 @@ type ListRequestParams struct {
 	StartIndex int
 }
 
-// ResourceAttributes represents a list of attributes given to the callback method to create or replace
-// a resource based on the given attributes.
-type ResourceAttributes map[string]interface{}
-
 // Meta represents the metadata of a resource
 type Meta struct {
 	// Created is the time that the resource was added to the service provider.
@@ -85,6 +81,10 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 
 	return response
 }
+
+// ResourceAttributes represents a list of attributes given to the callback method to create or replace
+// a resource based on the given attributes.
+type ResourceAttributes map[string]interface{}
 
 // ResourceHandler represents a set of callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {

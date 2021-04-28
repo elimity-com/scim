@@ -17,45 +17,39 @@ const (
 	fallbackCount     = 100
 )
 
+func getFilter(r *http.Request) (filter.Expression, error) {
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	decodedFilter, _ := url.QueryUnescape(rawFilter)
+	if decodedFilter != "" {
+		parser := filter.NewParser(strings.NewReader(decodedFilter))
+		return parser.Parse()
+	}
+	return nil, nil
+}
+
+func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
+	strVal := r.URL.Query().Get(key)
+
+	if strVal == "" {
+		return def, nil
+	}
+
+	if intVal, err := strconv.Atoi(strVal); err == nil {
+		return intVal, nil
+	}
+
+	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
+}
+
+func parseIdentifier(path, endpoint string) (string, error) {
+	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
+}
+
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
 // domain scenarios easier to support via a standardized service.
 type Server struct {
 	Config        ServiceProviderConfig
 	ResourceTypes []ResourceType
-}
-
-// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will be ignored.
-func (s Server) getSchemas() []schema.Schema {
-	ids := make([]string, 0)
-	schemas := make([]schema.Schema, 0)
-	for _, resourceType := range s.ResourceTypes {
-		if !contains(ids, resourceType.Schema.ID) {
-			schemas = append(schemas, resourceType.Schema)
-		}
-		ids = append(ids, resourceType.Schema.ID)
-		for _, extension := range resourceType.SchemaExtensions {
-			if !contains(ids, extension.Schema.ID) {
-				schemas = append(schemas, extension.Schema)
-			}
-			ids = append(ids, extension.Schema.ID)
-		}
-	}
-	return schemas
-}
-
-// getSchema extracts the schemas from the resources types defined in the server with given id.
-func (s Server) getSchema(id string) schema.Schema {
-	for _, resourceType := range s.ResourceTypes {
-		if resourceType.Schema.ID == id {
-			return resourceType.Schema
-		}
-		for _, extension := range resourceType.SchemaExtensions {
-			if extension.Schema.ID == id {
-				return extension.Schema
-			}
-		}
-	}
-	return schema.Schema{}
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
@@ -123,22 +117,38 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func parseIdentifier(path, endpoint string) (string, error) {
-	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
+// getSchema extracts the schemas from the resources types defined in the server with given id.
+func (s Server) getSchema(id string) schema.Schema {
+	for _, resourceType := range s.ResourceTypes {
+		if resourceType.Schema.ID == id {
+			return resourceType.Schema
+		}
+		for _, extension := range resourceType.SchemaExtensions {
+			if extension.Schema.ID == id {
+				return extension.Schema
+			}
+		}
+	}
+	return schema.Schema{}
 }
 
-func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
-	strVal := r.URL.Query().Get(key)
-
-	if strVal == "" {
-		return def, nil
+// getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will be ignored.
+func (s Server) getSchemas() []schema.Schema {
+	ids := make([]string, 0)
+	schemas := make([]schema.Schema, 0)
+	for _, resourceType := range s.ResourceTypes {
+		if !contains(ids, resourceType.Schema.ID) {
+			schemas = append(schemas, resourceType.Schema)
+		}
+		ids = append(ids, resourceType.Schema.ID)
+		for _, extension := range resourceType.SchemaExtensions {
+			if !contains(ids, extension.Schema.ID) {
+				schemas = append(schemas, extension.Schema)
+			}
+			ids = append(ids, extension.Schema.ID)
+		}
 	}
-
-	if intVal, err := strconv.Atoi(strVal); err == nil {
-		return intVal, nil
-	}
-
-	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
+	return schemas
 }
 
 func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.ScimError) {
@@ -181,14 +191,4 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 		Filter:     filterExpr,
 		StartIndex: startIndex,
 	}, nil
-}
-
-func getFilter(r *http.Request) (filter.Expression, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	decodedFilter, _ := url.QueryUnescape(rawFilter)
-	if decodedFilter != "" {
-		parser := filter.NewParser(strings.NewReader(decodedFilter))
-		return parser.Parse()
-	}
-	return nil, nil
 }

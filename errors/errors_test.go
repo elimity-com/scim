@@ -7,44 +7,14 @@ import (
 	"testing"
 )
 
-func TestScimErrorMarshalling(t *testing.T) {
-	scimErr := ScimError{
-		ScimType: ScimTypeTooMany,
-		Detail:   "Just too many.",
-		Status:   http.StatusTooManyRequests,
+func TestCheckError(t *testing.T) {
+	err := fmt.Errorf("error message")
+	scimErr := CheckScimError(err, http.MethodGet)
+	if scimErr.Detail != err.Error() {
+		t.Error("invalid detail message")
 	}
-
-	raw, err := json.Marshal(scimErr)
-	if err != nil {
-		t.Error(err)
-	}
-
-	var s struct {
-		Schemas []string `json:"schemas"`
-	}
-	if err := json.Unmarshal(raw, &s); err != nil {
-		t.Error(err)
-	}
-
-	if len(s.Schemas) != 1 || s.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:Error" {
-		t.Errorf("did not get the correct schemas")
-	}
-
-	var e ScimError
-	if err := json.Unmarshal(raw, &e); err != nil {
-		t.Error(err)
-	}
-
-	if e.ScimType != scimErr.ScimType {
-		t.Errorf("got invalid scim type: %s", e.ScimType)
-	}
-
-	if e.Detail != scimErr.Detail {
-		t.Errorf("got invalid detail: %s", e.Detail)
-	}
-
-	if e.Status != scimErr.Status {
-		t.Errorf("got invalid status: %d", e.Status)
+	if scimErr.Status != 500 {
+		t.Errorf("status code 500 expected, got %d", scimErr.Status)
 	}
 }
 
@@ -94,13 +64,43 @@ func TestCheckScimError(t *testing.T) {
 	}
 }
 
-func TestCheckError(t *testing.T) {
-	err := fmt.Errorf("error message")
-	scimErr := CheckScimError(err, http.MethodGet)
-	if scimErr.Detail != err.Error() {
-		t.Error("invalid detail message")
+func TestScimErrorMarshalling(t *testing.T) {
+	scimErr := ScimError{
+		ScimType: ScimTypeTooMany,
+		Detail:   "Just too many.",
+		Status:   http.StatusTooManyRequests,
 	}
-	if scimErr.Status != 500 {
-		t.Errorf("status code 500 expected, got %d", scimErr.Status)
+
+	raw, err := json.Marshal(scimErr)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var s struct {
+		Schemas []string `json:"schemas"`
+	}
+	if err := json.Unmarshal(raw, &s); err != nil {
+		t.Error(err)
+	}
+
+	if len(s.Schemas) != 1 || s.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:Error" {
+		t.Errorf("did not get the correct schemas")
+	}
+
+	var e ScimError
+	if err := json.Unmarshal(raw, &e); err != nil {
+		t.Error(err)
+	}
+
+	if e.ScimType != scimErr.ScimType {
+		t.Errorf("got invalid scim type: %s", e.ScimType)
+	}
+
+	if e.Detail != scimErr.Detail {
+		t.Errorf("got invalid detail: %s", e.Detail)
+	}
+
+	if e.Status != scimErr.Status {
+		t.Errorf("got invalid status: %d", e.Status)
 	}
 }

@@ -28,51 +28,6 @@ type testResourceHandler struct {
 	data map[string]testData
 }
 
-func (h testResourceHandler) shouldReturnNoContent(id string, ops []PatchOperation) bool {
-	for _, op := range ops {
-		if h.noContentOperation(id, op) {
-			continue
-		}
-		return false
-	}
-	return true
-}
-
-func (h testResourceHandler) noContentOperation(id string, op PatchOperation) bool {
-	isRemoveOp := strings.EqualFold(op.Op, PatchOperationRemove)
-
-	dataValue, ok := h.data[id]
-	if !ok {
-		return isRemoveOp
-	}
-	attrValue, ok := dataValue.resourceAttributes[op.Path]
-	if ok && attrValue == op.Value {
-		return true
-	}
-	if !ok && isRemoveOp {
-		return true
-	}
-
-	switch opValue := op.Value.(type) {
-	case map[string]interface{}:
-		for k, v := range opValue {
-			if v == dataValue.resourceAttributes[k] {
-				return true
-			}
-		}
-
-	case []map[string]interface{}:
-		for _, m := range opValue {
-			for k, v := range m {
-				if v == dataValue.resourceAttributes[k] {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, error) {
 	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
@@ -96,6 +51,19 @@ func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 			Version:      fmt.Sprintf("v%s", id),
 		},
 	}, nil
+}
+
+func (h testResourceHandler) Delete(r *http.Request, id string) error {
+	// check if resource exists
+	_, ok := h.data[id]
+	if !ok {
+		return errors.ScimErrorResourceNotFound(id)
+	}
+
+	// delete resource
+	delete(h.data, id)
+
+	return nil
 }
 
 func (h testResourceHandler) Get(r *http.Request, id string) (Resource, error) {
@@ -152,39 +120,6 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}, nil
 }
 
-func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, error) {
-	// check if resource exists
-	_, ok := h.data[id]
-	if !ok {
-		return Resource{}, errors.ScimErrorResourceNotFound(id)
-	}
-
-	// replace (all) attributes
-	h.data[id] = testData{
-		resourceAttributes: attributes,
-	}
-
-	// return resource with replaced attributes
-	return Resource{
-		ID:         id,
-		ExternalID: h.externalID(attributes),
-		Attributes: attributes,
-	}, nil
-}
-
-func (h testResourceHandler) Delete(r *http.Request, id string) error {
-	// check if resource exists
-	_, ok := h.data[id]
-	if !ok {
-		return errors.ScimErrorResourceNotFound(id)
-	}
-
-	// delete resource
-	delete(h.data, id)
-
-	return nil
-}
-
 func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
 	if h.shouldReturnNoContent(id, req.Operations) {
 		return Resource{}, nil
@@ -236,6 +171,26 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 	}, nil
 }
 
+func (h testResourceHandler) Replace(r *http.Request, id string, attributes ResourceAttributes) (Resource, error) {
+	// check if resource exists
+	_, ok := h.data[id]
+	if !ok {
+		return Resource{}, errors.ScimErrorResourceNotFound(id)
+	}
+
+	// replace (all) attributes
+	h.data[id] = testData{
+		resourceAttributes: attributes,
+	}
+
+	// return resource with replaced attributes
+	return Resource{
+		ID:         id,
+		ExternalID: h.externalID(attributes),
+		Attributes: attributes,
+	}, nil
+}
+
 func (h testResourceHandler) externalID(attributes ResourceAttributes) optional.String {
 	if eID, ok := attributes["externalId"]; ok {
 		externalID, ok := eID.(string)
@@ -246,4 +201,49 @@ func (h testResourceHandler) externalID(attributes ResourceAttributes) optional.
 	}
 
 	return optional.String{}
+}
+
+func (h testResourceHandler) noContentOperation(id string, op PatchOperation) bool {
+	isRemoveOp := strings.EqualFold(op.Op, PatchOperationRemove)
+
+	dataValue, ok := h.data[id]
+	if !ok {
+		return isRemoveOp
+	}
+	attrValue, ok := dataValue.resourceAttributes[op.Path]
+	if ok && attrValue == op.Value {
+		return true
+	}
+	if !ok && isRemoveOp {
+		return true
+	}
+
+	switch opValue := op.Value.(type) {
+	case map[string]interface{}:
+		for k, v := range opValue {
+			if v == dataValue.resourceAttributes[k] {
+				return true
+			}
+		}
+
+	case []map[string]interface{}:
+		for _, m := range opValue {
+			for k, v := range m {
+				if v == dataValue.resourceAttributes[k] {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (h testResourceHandler) shouldReturnNoContent(id string, ops []PatchOperation) bool {
+	for _, op := range ops {
+		if h.noContentOperation(id, op) {
+			continue
+		}
+		return false
+	}
+	return true
 }

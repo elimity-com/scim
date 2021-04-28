@@ -15,147 +15,6 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
-func newTestServer() Server {
-	userSchema := getUserSchema()
-	userSchemaExtension := getUserExtensionSchema()
-	return Server{
-		Config: ServiceProviderConfig{},
-		ResourceTypes: []ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      userSchema,
-				Handler:     newTestResourceHandler(),
-			},
-			{
-				ID:          optional.NewString("EnterpriseUser"),
-				Name:        "EnterpriseUser",
-				Endpoint:    "/EnterpriseUsers",
-				Description: optional.NewString("Enterprise User Account"),
-				Schema:      userSchema,
-				SchemaExtensions: []SchemaExtension{
-					{Schema: userSchemaExtension},
-				},
-				Handler: newTestResourceHandler(),
-			},
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler:     newTestResourceHandler(),
-			},
-		},
-	}
-}
-
-func getUserSchema() schema.Schema {
-	return schema.Schema{
-		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
-		Name:        optional.NewString("User"),
-		Description: optional.NewString("User Account"),
-		Attributes: []schema.CoreAttribute{
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "userName",
-				Required:   true,
-				Uniqueness: schema.AttributeUniquenessServer(),
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
-				Name:     "active",
-				Required: false,
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "readonlyThing",
-				Required:   false,
-				Mutability: schema.AttributeMutabilityReadOnly(),
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "immutableThing",
-				Required:   false,
-				Mutability: schema.AttributeMutabilityImmutable(),
-			})),
-			schema.ComplexCoreAttribute(schema.ComplexParams{
-				Name:     "Name",
-				Required: false,
-				SubAttributes: []schema.SimpleParams{
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "familyName",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "givenName",
-					}),
-				},
-			}),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "displayName",
-			})),
-			schema.ComplexCoreAttribute(schema.ComplexParams{
-				Name:        "emails",
-				MultiValued: true,
-				SubAttributes: []schema.SimpleParams{
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "value",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "display",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "type",
-						CanonicalValues: []string{
-							"work", "home", "other",
-						},
-					}),
-					schema.SimpleBooleanParams(schema.BooleanParams{
-						Name: "primary",
-					}),
-				},
-			}),
-		},
-	}
-}
-
-func getUserExtensionSchema() schema.Schema {
-	return schema.Schema{
-		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-		Name:        optional.NewString("EnterpriseUser"),
-		Description: optional.NewString("Enterprise User"),
-		Attributes: []schema.CoreAttribute{
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "employeeNumber",
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "organization",
-			})),
-		},
-	}
-}
-
-func newTestResourceHandler() ResourceHandler {
-	data := make(map[string]testData)
-
-	// Generate enough test data to test pagination
-	for i := 1; i < 21; i++ {
-		data[fmt.Sprintf("000%d", i)] = testData{
-			resourceAttributes: ResourceAttributes{
-				"userName":   fmt.Sprintf("test%02d", i),
-				"externalId": fmt.Sprintf("external%d", i),
-			},
-			meta: map[string]string{
-				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
-				"lastModified": fmt.Sprintf("2020-02-%02dT16:05:04+07:00", i),
-				"version":      fmt.Sprintf("v%d", i),
-			},
-		}
-	}
-
-	return testResourceHandler{
-		data: data,
-	}
-}
-
 func TestInvalidRequests(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -232,278 +91,28 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
-func TestServerSchemasEndpoint(t *testing.T) {
-	tests := []struct {
-		name   string
-		target string
-	}{
-		{
-			name:   "schemas request without version",
-			target: "/Schemas",
-		}, {
-			name:   "schemas request with version",
-			target: "/v2/Schemas",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, test.target, nil)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-			var response listResponse
-			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-
-			expectedLen := 3
-			assertEqual(t, expectedLen, response.TotalResults)
-			assertLen(t, response.Resources, expectedLen)
-
-			resourceIDs := make([]string, 3)
-			for i, resource := range response.Resources {
-				resourceType, ok := resource.(map[string]interface{})
-				assertTypeOk(t, ok, "object")
-				resourceIDs[i] = resourceType["id"].(string)
-			}
-
-			assertEqualStrings(t, []string{
-				"urn:ietf:params:scim:schemas:core:2.0:User",
-				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-				"urn:ietf:params:scim:schemas:core:2.0:Group",
-			}, resourceIDs)
-		})
-	}
-}
-
-func TestServerSchemasEndpointFilter(t *testing.T) {
-	params := url.Values{
-		"filter": []string{"id co \"extension\""},
-	}
-
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
-		"/Schemas?%s", params.Encode(),
-	), nil)
+func TestServerResourceDeleteHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-	var response listResponse
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	assertLen(t, response.Resources, 1)
-	assertEqual(t, 3, response.TotalResults)
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
-func TestServerSchemaEndpointValid(t *testing.T) {
-	tests := []struct {
-		name          string
-		schema        string
-		versionPrefix string
-	}{
-		{
-			name:   "User schema",
-			schema: "urn:ietf:params:scim:schemas:core:2.0:User",
-		}, {
-			name:   "Enterprice user schema",
-			schema: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-		}, {
-			name:          "User schema, with base path",
-			schema:        "urn:ietf:params:scim:schemas:core:2.0:User",
-			versionPrefix: "/v2",
-		}, {
-			name:          "Enterprice user schema, with base path",
-			schema:        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-			versionPrefix: "/v2",
-		},
+func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	expectedError := &errors.ScimError{
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("Resource %d not found.", 9999),
 	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
-				"%s/Schemas/%s", test.versionPrefix, test.schema,
-			), nil)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-			var s map[string]interface{}
-			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &s))
-			assertEqual(t, test.schema, s["id"].(string))
-		})
-	}
-}
-
-func TestServerResourceTypesHandler(t *testing.T) {
-	tests := []struct {
-		name   string
-		target string
-	}{
-		{
-			name:   "resource types request without version",
-			target: "/ResourceTypes",
-		}, {
-			name:   "resource types request with version",
-			target: "/v2/ResourceTypes",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, test.target, nil)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-			var response listResponse
-			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-
-			assertEqual(t, 3, response.TotalResults)
-			assertLen(t, response.Resources, 3)
-
-			resourceTypes := make([]string, 3)
-			for i, resource := range response.Resources {
-				resourceType, ok := resource.(map[string]interface{})
-				assertTypeOk(t, ok, "object")
-				resourceTypes[i] = resourceType["name"].(string)
-			}
-
-			assertEqualStrings(t, []string{"User", "EnterpriseUser", "Group"}, resourceTypes)
-		})
-	}
-}
-
-func TestServerResourceTypeHandlerValid(t *testing.T) {
-	tests := []struct {
-		name          string
-		resourceType  string
-		versionPrefix string
-	}{
-		{
-			name:         "User schema",
-			resourceType: "User",
-		}, {
-			name:         "Enterprice user schema",
-			resourceType: "EnterpriseUser",
-		}, {
-			name:          "User schema, with base path",
-			resourceType:  "User",
-			versionPrefix: "/v2",
-		}, {
-			name:          "Enterprice user schema, with base path",
-			resourceType:  "EnterpriseUser",
-			versionPrefix: "/v2",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-			var resourceType map[string]interface{}
-			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resourceType))
-
-			assertEqual(t, tt.resourceType, resourceType["id"])
-		})
-	}
-}
-
-func TestServerServiceProviderConfigHandler(t *testing.T) {
-	tests := []struct {
-		name   string
-		target string
-	}{
-		{
-			name:   "service provide config request without version",
-			target: "/ServiceProviderConfig",
-		}, {
-			name:   "service provide config request with version",
-			target: "/v2/ServiceProviderConfig",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusOK, rr.Code)
-		})
-	}
-}
-
-func TestServerResourcePostHandlerValid(t *testing.T) {
-	tests := []struct {
-		name               string
-		target             string
-		body               io.Reader
-		expectedUserName   string
-		expectedExternalID interface{}
-	}{
-		{
-			name:               "Users post request without version",
-			target:             "/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test1", "externalId": "external_test1"}`),
-			expectedUserName:   "test1",
-			expectedExternalID: "external_test1",
-		}, {
-			name:               "Users post request with version",
-			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
-			expectedUserName:   "test2",
-			expectedExternalID: "external_test2",
-		}, {
-			name:               "Users post request without externalId",
-			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
-			expectedUserName:   "test3",
-			expectedExternalID: nil,
-		}, {
-			name:               "Users post request with immutable attribute",
-			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
-			expectedUserName:   "test3",
-			expectedExternalID: nil,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, test.target, test.body)
-			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusCreated, rr.Code)
-
-			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
-
-			var resource map[string]interface{}
-			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
-
-			assertEqual(t, test.expectedUserName, resource["userName"])
-
-			assertEqual(t, test.expectedExternalID, resource["externalId"])
-
-			meta, ok := resource["meta"].(map[string]interface{})
-			assertTypeOk(t, ok, "object")
-
-			assertEqual(t, "User", meta["resourceType"])
-			assertNotNil(t, meta["created"], "created")
-			assertNotNil(t, meta["lastModified"], "last modified")
-			assertEqual(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
-			assertEqual(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
-			// ETag and version needs to be the same.
-			assertEqual(t, rr.Header().Get("Etag"), meta["version"])
-		})
-	}
+	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
 
 func TestServerResourceGetHandler(t *testing.T) {
@@ -581,54 +190,163 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
 
-func TestServerResourcesGetHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
+func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"active",
+		    "value":"test"
+		  }
+		]
+	}`))
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
-	var response listResponse
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	assertEqual(t, 20, response.TotalResults)
-	assertEqual(t, 20, len(response.Resources))
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
-func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users?count=-1", nil)
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
-
-	var response listResponse
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	assertEqual(t, 20, response.TotalResults)
-	assertEqual(t, 0, len(response.Resources))
+// Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
+func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
+	runPatchImmutableTest(t, PatchOperationAdd, "immutableThing", http.StatusOK)
+	runPatchImmutableTest(t, PatchOperationRemove, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "immutableThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
+	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
 }
 
-func TestServerResourcesGetHandlerPagination(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
+func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"add",
+		    "value":{
+		      "notActuallyAThing": "adfad"
+		    }
+		  }
+		]
+	}`))
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
-	var response listResponse
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	assertEqual(t, 20, response.TotalResults)
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidValue, scimErr)
 }
 
-func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
+func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"name.invalid",
+		    "value":"test"
+		  }
+		]
+	}`))
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
-	var response listResponse
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	assertEqual(t, 20, response.TotalResults)
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidPath, scimErr)
+}
+
+func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"remove",
+		    "path":"members[invalid eq \"empty\"]"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	newTestServer().ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "emails[type eq \"work\"].value",
+				"value": "hoge@example.com"
+			  }
+			]
+		}`)))
+	assertEqualStatusCode(t, http.StatusOK, recorder.Code)
+
+	recorder2 := httptest.NewRecorder()
+	newTestServer().ServeHTTP(recorder2, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "emails[type eq \"work\"].value",
+				"value": 10000
+			  }
+			]
+		}`)))
+	assertEqualStatusCode(t, http.StatusBadRequest, recorder2.Code)
+}
+
+func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
+	reqs := []*http.Request{
+		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "add",
+				"path": "userName",
+				"value": "test01"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0002", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "replace",
+				"path": "userName",
+				"value": "test02"
+			  }
+			]
+		}`)),
+		httptest.NewRequest(http.MethodPatch, "/Users/0003", strings.NewReader(`{
+			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+			"Operations":[
+			  {
+				"op": "remove",
+				"path": "name.givenName"
+			  }
+			]
+		}`)),
+	}
+	for _, req := range reqs {
+		rr := httptest.NewRecorder()
+		newTestServer().ServeHTTP(rr, req)
+
+		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+	}
 }
 
 // Tests valid add, replace, and remove operations
@@ -697,136 +415,6 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 	assertEqual(t, expectedVersion, meta["version"])
 }
 
-func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"remove",
-		    "path":"members[value eq \"2819c223-7f76-...413861904646\"]"
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
-}
-
-func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"remove",
-		    "path":"members[invalid eq \"empty\"]"
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
-}
-
-func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"replace",
-		    "path":"active",
-		    "value":"test"
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	var resource map[string]interface{}
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
-
-	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
-
-	assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
-}
-
-func TestServerResourcePatchHandlerFailOnUndefinedAttribute(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"add",
-		    "value":{
-		      "notActuallyAThing": "adfad"
-		    }
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
-
-	var scimErr *errors.ScimError
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
-	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidValue, scimErr)
-}
-
-func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(fmt.Sprintf(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"%s",
-		    "path":"%s",
-		    "value":"test"
-		  }
-		]
-	}`, op, path)))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, expectedStatus, rr.Code)
-
-	var resource map[string]interface{}
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
-	if expectedStatus >= 400 {
-		assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
-	}
-}
-
-// Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
-func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
-	runPatchImmutableTest(t, PatchOperationAdd, "immutableThing", http.StatusOK)
-	runPatchImmutableTest(t, PatchOperationRemove, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
-}
-
-func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"replace",
-		    "path":"name.invalid",
-		    "value":"test"
-		  }
-		]
-	}`))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
-
-	var scimErr *errors.ScimError
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
-	assertEqualSCIMErrors(t, &errors.ScimErrorInvalidPath, scimErr)
-}
-
 func TestServerResourcePatchHandlerValidPathHasSubAttributes(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -847,6 +435,109 @@ func TestServerResourcePatchHandlerValidPathHasSubAttributes(t *testing.T) {
 	newTestServer().ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+}
+
+func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"remove",
+		    "path":"members[value eq \"2819c223-7f76-...413861904646\"]"
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+}
+
+func TestServerResourcePostHandlerValid(t *testing.T) {
+	tests := []struct {
+		name               string
+		target             string
+		body               io.Reader
+		expectedUserName   string
+		expectedExternalID interface{}
+	}{
+		{
+			name:               "Users post request without version",
+			target:             "/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test1", "externalId": "external_test1"}`),
+			expectedUserName:   "test1",
+			expectedExternalID: "external_test1",
+		}, {
+			name:               "Users post request with version",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
+			expectedUserName:   "test2",
+			expectedExternalID: "external_test2",
+		}, {
+			name:               "Users post request without externalId",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
+		}, {
+			name:               "Users post request with immutable attribute",
+			target:             "/v2/Users",
+			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
+			expectedUserName:   "test3",
+			expectedExternalID: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, test.target, test.body)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusCreated, rr.Code)
+
+			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
+
+			var resource map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+			assertEqual(t, test.expectedUserName, resource["userName"])
+
+			assertEqual(t, test.expectedExternalID, resource["externalId"])
+
+			meta, ok := resource["meta"].(map[string]interface{})
+			assertTypeOk(t, ok, "object")
+
+			assertEqual(t, "User", meta["resourceType"])
+			assertNotNil(t, meta["created"], "created")
+			assertNotNil(t, meta["lastModified"], "last modified")
+			assertEqual(t, fmt.Sprintf("Users/%s", resource["id"]), meta["location"])
+			assertEqual(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
+			// ETag and version needs to be the same.
+			assertEqual(t, rr.Header().Get("Etag"), meta["version"])
+		})
+	}
+}
+
+func TestServerResourcePutHandlerNotFound(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	expectedError := &errors.ScimError{
+		Status: http.StatusNotFound,
+		Detail: fmt.Sprintf("Resource %d not found.", 9999),
+	}
+	assertEqualSCIMErrors(t, expectedError, scimErr)
+
+	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
+		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
+		t.Errorf("wrong scim error: %v", scimErr)
+	}
 }
 
 func TestServerResourcePutHandlerValid(t *testing.T) {
@@ -901,115 +592,424 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 	}
 }
 
-func TestServerResourcePutHandlerNotFound(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
+func TestServerResourceTypeHandlerValid(t *testing.T) {
+	tests := []struct {
+		name          string
+		resourceType  string
+		versionPrefix string
+	}{
+		{
+			name:         "User schema",
+			resourceType: "User",
+		}, {
+			name:         "Enterprice user schema",
+			resourceType: "EnterpriseUser",
+		}, {
+			name:          "User schema, with base path",
+			resourceType:  "User",
+			versionPrefix: "/v2",
+		}, {
+			name:          "Enterprice user schema, with base path",
+			resourceType:  "EnterpriseUser",
+			versionPrefix: "/v2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var resourceType map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resourceType))
+
+			assertEqual(t, tt.resourceType, resourceType["id"])
+		})
+	}
+}
+
+func TestServerResourceTypesHandler(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{
+			name:   "resource types request without version",
+			target: "/ResourceTypes",
+		}, {
+			name:   "resource types request with version",
+			target: "/v2/ResourceTypes",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, test.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var response listResponse
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+
+			assertEqual(t, 3, response.TotalResults)
+			assertLen(t, response.Resources, 3)
+
+			resourceTypes := make([]string, 3)
+			for i, resource := range response.Resources {
+				resourceType, ok := resource.(map[string]interface{})
+				assertTypeOk(t, ok, "object")
+				resourceTypes[i] = resourceType["name"].(string)
+			}
+
+			assertEqualStrings(t, []string{"User", "EnterpriseUser", "Group"}, resourceTypes)
+		})
+	}
+}
+
+func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=-1", nil)
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-	var scimErr *errors.ScimError
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
-	expectedError := &errors.ScimError{
-		Status: http.StatusNotFound,
-		Detail: fmt.Sprintf("Resource %d not found.", 9999),
-	}
-	assertEqualSCIMErrors(t, expectedError, scimErr)
-
-	if scimErr == nil || scimErr.Status != http.StatusNotFound ||
-		scimErr.Detail != fmt.Sprintf("Resource %d not found.", 9999) {
-		t.Errorf("wrong scim error: %v", scimErr)
-	}
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
+	assertEqual(t, 0, len(response.Resources))
 }
 
-func TestServerResourceDeleteHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
+func TestServerResourcesGetHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
+	assertEqual(t, 20, len(response.Resources))
 }
 
-func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
-	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
+func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
 	rr := httptest.NewRecorder()
 	newTestServer().ServeHTTP(rr, req)
 
-	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-	var scimErr *errors.ScimError
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
-	expectedError := &errors.ScimError{
-		Status: http.StatusNotFound,
-		Detail: fmt.Sprintf("Resource %d not found.", 9999),
-	}
-	assertEqualSCIMErrors(t, expectedError, scimErr)
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
 }
 
-func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
-	reqs := []*http.Request{
-		httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-			"Operations":[
-			  {
-				"op": "add",
-				"path": "userName",
-				"value": "test01"
-			  }
-			]
-		}`)),
-		httptest.NewRequest(http.MethodPatch, "/Users/0002", strings.NewReader(`{
-			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-			"Operations":[
-			  {
-				"op": "replace",
-				"path": "userName",
-				"value": "test02"
-			  }
-			]
-		}`)),
-		httptest.NewRequest(http.MethodPatch, "/Users/0003", strings.NewReader(`{
-			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-			"Operations":[
-			  {
-				"op": "remove",
-				"path": "name.givenName"
-			  }
-			]
-		}`)),
-	}
-	for _, req := range reqs {
-		rr := httptest.NewRecorder()
-		newTestServer().ServeHTTP(rr, req)
+func TestServerResourcesGetHandlerPagination(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
 
-		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 20, response.TotalResults)
+}
+
+func TestServerSchemaEndpointValid(t *testing.T) {
+	tests := []struct {
+		name          string
+		schema        string
+		versionPrefix string
+	}{
+		{
+			name:   "User schema",
+			schema: "urn:ietf:params:scim:schemas:core:2.0:User",
+		}, {
+			name:   "Enterprice user schema",
+			schema: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+		}, {
+			name:          "User schema, with base path",
+			schema:        "urn:ietf:params:scim:schemas:core:2.0:User",
+			versionPrefix: "/v2",
+		}, {
+			name:          "Enterprice user schema, with base path",
+			schema:        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+			versionPrefix: "/v2",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+				"%s/Schemas/%s", test.versionPrefix, test.schema,
+			), nil)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var s map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &s))
+			assertEqual(t, test.schema, s["id"].(string))
+		})
 	}
 }
 
-func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	newTestServer().ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-			"Operations":[
-			  {
-				"op": "replace",
-				"path": "emails[type eq \"work\"].value",
-				"value": "hoge@example.com"
-			  }
-			]
-		}`)))
-	assertEqualStatusCode(t, http.StatusOK, recorder.Code)
+func TestServerSchemasEndpoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{
+			name:   "schemas request without version",
+			target: "/Schemas",
+		}, {
+			name:   "schemas request with version",
+			target: "/v2/Schemas",
+		},
+	}
 
-	recorder2 := httptest.NewRecorder()
-	newTestServer().ServeHTTP(recorder2, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
-			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-			"Operations":[
-			  {
-				"op": "replace",
-				"path": "emails[type eq \"work\"].value",
-				"value": 10000
-			  }
-			]
-		}`)))
-	assertEqualStatusCode(t, http.StatusBadRequest, recorder2.Code)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, test.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var response listResponse
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+
+			expectedLen := 3
+			assertEqual(t, expectedLen, response.TotalResults)
+			assertLen(t, response.Resources, expectedLen)
+
+			resourceIDs := make([]string, 3)
+			for i, resource := range response.Resources {
+				resourceType, ok := resource.(map[string]interface{})
+				assertTypeOk(t, ok, "object")
+				resourceIDs[i] = resourceType["id"].(string)
+			}
+
+			assertEqualStrings(t, []string{
+				"urn:ietf:params:scim:schemas:core:2.0:User",
+				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+				"urn:ietf:params:scim:schemas:core:2.0:Group",
+			}, resourceIDs)
+		})
+	}
+}
+
+func TestServerSchemasEndpointFilter(t *testing.T) {
+	params := url.Values{
+		"filter": []string{"id co \"extension\""},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+		"/Schemas?%s", params.Encode(),
+	), nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertLen(t, response.Resources, 1)
+	assertEqual(t, 3, response.TotalResults)
+}
+
+func TestServerServiceProviderConfigHandler(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{
+			name:   "service provide config request without version",
+			target: "/ServiceProviderConfig",
+		}, {
+			name:   "service provide config request with version",
+			target: "/v2/ServiceProviderConfig",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer().ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+		})
+	}
+}
+
+func getUserExtensionSchema() schema.Schema {
+	return schema.Schema{
+		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+		Name:        optional.NewString("EnterpriseUser"),
+		Description: optional.NewString("Enterprise User"),
+		Attributes: []schema.CoreAttribute{
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name: "employeeNumber",
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name: "organization",
+			})),
+		},
+	}
+}
+
+func getUserSchema() schema.Schema {
+	return schema.Schema{
+		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
+		Name:        optional.NewString("User"),
+		Description: optional.NewString("User Account"),
+		Attributes: []schema.CoreAttribute{
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:       "userName",
+				Required:   true,
+				Uniqueness: schema.AttributeUniquenessServer(),
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+				Name:     "active",
+				Required: false,
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:       "readonlyThing",
+				Required:   false,
+				Mutability: schema.AttributeMutabilityReadOnly(),
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:       "immutableThing",
+				Required:   false,
+				Mutability: schema.AttributeMutabilityImmutable(),
+			})),
+			schema.ComplexCoreAttribute(schema.ComplexParams{
+				Name:     "Name",
+				Required: false,
+				SubAttributes: []schema.SimpleParams{
+					schema.SimpleStringParams(schema.StringParams{
+						Name: "familyName",
+					}),
+					schema.SimpleStringParams(schema.StringParams{
+						Name: "givenName",
+					}),
+				},
+			}),
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name: "displayName",
+			})),
+			schema.ComplexCoreAttribute(schema.ComplexParams{
+				Name:        "emails",
+				MultiValued: true,
+				SubAttributes: []schema.SimpleParams{
+					schema.SimpleStringParams(schema.StringParams{
+						Name: "value",
+					}),
+					schema.SimpleStringParams(schema.StringParams{
+						Name: "display",
+					}),
+					schema.SimpleStringParams(schema.StringParams{
+						Name: "type",
+						CanonicalValues: []string{
+							"work", "home", "other",
+						},
+					}),
+					schema.SimpleBooleanParams(schema.BooleanParams{
+						Name: "primary",
+					}),
+				},
+			}),
+		},
+	}
+}
+
+func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(fmt.Sprintf(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"%s",
+		    "path":"%s",
+		    "value":"test"
+		  }
+		]
+	}`, op, path)))
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, expectedStatus, rr.Code)
+
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+	if expectedStatus >= 400 {
+		assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
+	}
+}
+
+func newTestResourceHandler() ResourceHandler {
+	data := make(map[string]testData)
+
+	// Generate enough test data to test pagination
+	for i := 1; i < 21; i++ {
+		data[fmt.Sprintf("000%d", i)] = testData{
+			resourceAttributes: ResourceAttributes{
+				"userName":   fmt.Sprintf("test%02d", i),
+				"externalId": fmt.Sprintf("external%d", i),
+			},
+			meta: map[string]string{
+				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
+				"lastModified": fmt.Sprintf("2020-02-%02dT16:05:04+07:00", i),
+				"version":      fmt.Sprintf("v%d", i),
+			},
+		}
+	}
+
+	return testResourceHandler{
+		data: data,
+	}
+}
+
+func newTestServer() Server {
+	userSchema := getUserSchema()
+	userSchemaExtension := getUserExtensionSchema()
+	return Server{
+		Config: ServiceProviderConfig{},
+		ResourceTypes: []ResourceType{
+			{
+				ID:          optional.NewString("User"),
+				Name:        "User",
+				Endpoint:    "/Users",
+				Description: optional.NewString("User Account"),
+				Schema:      userSchema,
+				Handler:     newTestResourceHandler(),
+			},
+			{
+				ID:          optional.NewString("EnterpriseUser"),
+				Name:        "EnterpriseUser",
+				Endpoint:    "/EnterpriseUsers",
+				Description: optional.NewString("Enterprise User Account"),
+				Schema:      userSchema,
+				SchemaExtensions: []SchemaExtension{
+					{Schema: userSchemaExtension},
+				},
+				Handler: newTestResourceHandler(),
+			},
+			{
+				ID:          optional.NewString("Group"),
+				Name:        "Group",
+				Endpoint:    "/Groups",
+				Description: optional.NewString("Group"),
+				Schema:      schema.CoreGroupSchema(),
+				Handler:     newTestResourceHandler(),
+			},
+		},
+	}
 }
