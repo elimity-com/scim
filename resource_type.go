@@ -13,6 +13,13 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
+// unmarshal unifies the unmarshal of the requests.
+func unmarshal(data []byte, v interface{}) error {
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	return d.Decode(v)
+}
+
 // ResourceType specifies the metadata about a resource type.
 type ResourceType struct {
 	// ID is the resource type's server unique id. This is often the same value as the "name" attribute.
@@ -33,22 +40,45 @@ type ResourceType struct {
 	Handler ResourceHandler
 }
 
-// SchemaExtension is one of the resource type's schema extensions.
-type SchemaExtension struct {
-	// Schema is the URI of an extended schema, e.g., "urn:edu:2.0:Staff".
-	Schema schema.Schema
-	// Required is a boolean value that specifies whether or not the schema extension is required for the resource
-	// type. If true, a resource of this type MUST include this schema extension and also include any attributes
-	// declared as required in this schema extension. If false, a resource of this type MAY omit this schema
-	// extension.
-	Required bool
+func (t ResourceType) getRaw() map[string]interface{} {
+	return map[string]interface{}{
+		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
+		"id":               t.ID.Value(),
+		"name":             t.Name,
+		"description":      t.Description.Value(),
+		"endpoint":         t.Endpoint,
+		"schema":           t.Schema.ID,
+		"schemaExtensions": t.getRawSchemaExtensions(),
+	}
 }
 
-// unmarshal unifies the unmarshal of the requests.
-func unmarshal(data []byte, v interface{}) error {
-	d := json.NewDecoder(bytes.NewReader(data))
-	d.UseNumber()
-	return d.Decode(v)
+func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
+	schemas := make([]map[string]interface{}, 0)
+	for _, e := range t.SchemaExtensions {
+		schemas = append(schemas, map[string]interface{}{
+			"schema":   e.Schema.ID,
+			"required": e.Required,
+		})
+	}
+	return schemas
+}
+
+func (t ResourceType) schemaWithCommon() schema.Schema {
+	s := t.Schema
+
+	externalID := schema.SimpleCoreAttribute(
+		schema.SimpleStringParams(schema.StringParams{
+			CaseExact:  true,
+			Mutability: schema.AttributeMutabilityReadWrite(),
+			Name:       schema.CommonAttributeExternalID,
+			Uniqueness: schema.AttributeUniquenessNone(),
+		}),
+	)
+
+	s.Attributes = append(s.Attributes, externalID)
+
+	return s
+
 }
 
 func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *errors.ScimError) {
@@ -80,82 +110,6 @@ func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *
 	}
 
 	return attributes, nil
-}
-
-func (t ResourceType) schemaWithCommon() schema.Schema {
-	s := t.Schema
-
-	externalID := schema.SimpleCoreAttribute(
-		schema.SimpleStringParams(schema.StringParams{
-			CaseExact:  true,
-			Mutability: schema.AttributeMutabilityReadWrite(),
-			Name:       schema.CommonAttributeExternalID,
-			Uniqueness: schema.AttributeUniquenessNone(),
-		}),
-	)
-
-	s.Attributes = append(s.Attributes, externalID)
-
-	return s
-
-}
-
-func (t ResourceType) getRaw() map[string]interface{} {
-	return map[string]interface{}{
-		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
-		"id":               t.ID.Value(),
-		"name":             t.Name,
-		"description":      t.Description.Value(),
-		"endpoint":         t.Endpoint,
-		"schema":           t.Schema.ID,
-		"schemaExtensions": t.getRawSchemaExtensions(),
-	}
-}
-
-func (t ResourceType) getRawSchemaExtensions() []map[string]interface{} {
-	schemas := make([]map[string]interface{}, 0)
-	for _, e := range t.SchemaExtensions {
-		schemas = append(schemas, map[string]interface{}{
-			"schema":   e.Schema.ID,
-			"required": e.Required,
-		})
-	}
-	return schemas
-}
-
-// validatePatch parse and validate PATCH request
-func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
-	var req PatchRequest
-
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		return req, &errors.ScimErrorInvalidSyntax
-	}
-
-	if err := unmarshal(data, &req); err != nil {
-		return req, &errors.ScimErrorInvalidSyntax
-	}
-
-	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
-	errorCauses := make([]*errors.ScimError, 0)
-
-	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
-	// whose value is an array of one or more PATCH operations.
-	if len(req.Operations) < 1 {
-		return req, &errors.ScimErrorInvalidValue
-	}
-
-	for i := range req.Operations {
-		req.Operations[i].Op = strings.ToLower(req.Operations[i].Op)
-		errorCauses = append(errorCauses, t.validateOperation(req.Operations[i])...)
-	}
-
-	// Denotes all of the errors that have occurred parsing the request.
-	if len(errorCauses) > 0 {
-		return req, errorCauses[0]
-	}
-
-	return req, nil
 }
 
 func (t ResourceType) validateOperation(op PatchOperation) []*errors.ScimError {
@@ -235,4 +189,50 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 	}
 
 	return t.schemaWithCommon().ValidatePatchOperationValue(op.Op, mapValue)
+}
+
+// validatePatch parse and validate PATCH request
+func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
+	var req PatchRequest
+
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		return req, &errors.ScimErrorInvalidSyntax
+	}
+
+	if err := unmarshal(data, &req); err != nil {
+		return req, &errors.ScimErrorInvalidSyntax
+	}
+
+	// Error causes are currently unused but could be logged or perhaps used to build a more detailed error message.
+	errorCauses := make([]*errors.ScimError, 0)
+
+	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
+	// whose value is an array of one or more PATCH operations.
+	if len(req.Operations) < 1 {
+		return req, &errors.ScimErrorInvalidValue
+	}
+
+	for i := range req.Operations {
+		req.Operations[i].Op = strings.ToLower(req.Operations[i].Op)
+		errorCauses = append(errorCauses, t.validateOperation(req.Operations[i])...)
+	}
+
+	// Denotes all of the errors that have occurred parsing the request.
+	if len(errorCauses) > 0 {
+		return req, errorCauses[0]
+	}
+
+	return req, nil
+}
+
+// SchemaExtension is one of the resource type's schema extensions.
+type SchemaExtension struct {
+	// Schema is the URI of an extended schema, e.g., "urn:edu:2.0:Staff".
+	Schema schema.Schema
+	// Required is a boolean value that specifies whether or not the schema extension is required for the resource
+	// type. If true, a resource of this type MUST include this schema extension and also include any attributes
+	// declared as required in this schema extension. If false, a resource of this type MAY omit this schema
+	// extension.
+	Required bool
 }

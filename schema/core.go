@@ -11,23 +11,21 @@ import (
 	"github.com/elimity-com/scim/optional"
 )
 
-// SimpleCoreAttribute creates a non-complex attribute based on given parameters.
-func SimpleCoreAttribute(params SimpleParams) CoreAttribute {
-	checkAttributeName(params.name)
-
-	return CoreAttribute{
-		canonicalValues: params.canonicalValues,
-		caseExact:       params.caseExact,
-		description:     params.description,
-		multiValued:     params.multiValued,
-		mutability:      params.mutability,
-		name:            params.name,
-		referenceTypes:  params.referenceTypes,
-		required:        params.required,
-		returned:        params.returned,
-		typ:             params.typ,
-		uniqueness:      params.uniqueness,
-	}
+// CoreAttribute represents those attributes that sit at the top level of the JSON object together with the common
+// attributes (such as the resource "id").
+type CoreAttribute struct {
+	canonicalValues []string
+	caseExact       bool
+	description     optional.String
+	multiValued     bool
+	mutability      attributeMutability
+	name            string
+	referenceTypes  []AttributeReferenceType
+	required        bool
+	returned        attributeReturned
+	subAttributes   Attributes
+	typ             attributeType
+	uniqueness      attributeUniqueness
 }
 
 // ComplexCoreAttribute creates a complex attribute based on given parameters.
@@ -73,21 +71,28 @@ func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 	}
 }
 
-// CoreAttribute represents those attributes that sit at the top level of the JSON object together with the common
-// attributes (such as the resource "id").
-type CoreAttribute struct {
-	canonicalValues []string
-	caseExact       bool
-	description     optional.String
-	multiValued     bool
-	mutability      attributeMutability
-	name            string
-	referenceTypes  []AttributeReferenceType
-	required        bool
-	returned        attributeReturned
-	subAttributes   Attributes
-	typ             attributeType
-	uniqueness      attributeUniqueness
+// SimpleCoreAttribute creates a non-complex attribute based on given parameters.
+func SimpleCoreAttribute(params SimpleParams) CoreAttribute {
+	checkAttributeName(params.name)
+
+	return CoreAttribute{
+		canonicalValues: params.canonicalValues,
+		caseExact:       params.caseExact,
+		description:     params.description,
+		multiValued:     params.multiValued,
+		mutability:      params.mutability,
+		name:            params.name,
+		referenceTypes:  params.referenceTypes,
+		required:        params.required,
+		returned:        params.returned,
+		typ:             params.typ,
+		uniqueness:      params.uniqueness,
+	}
+}
+
+// AttributeType returns the attribute type.
+func (a CoreAttribute) AttributeType() string {
+	return a.typ.String()
 }
 
 // CanonicalValues returns the canonical values of the attribute.
@@ -103,6 +108,11 @@ func (a CoreAttribute) CaseExact() bool {
 // Description returns whether the description of the attribute.
 func (a CoreAttribute) Description() string {
 	return a.description.Value()
+}
+
+// HasSubAttributes returns whether the attribute is complex and has sub attributes.
+func (a CoreAttribute) HasSubAttributes() bool {
+	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
 }
 
 // MultiValued returns whether the attribute is multi valued.
@@ -142,20 +152,46 @@ func (a CoreAttribute) SubAttributes() Attributes {
 	return a.subAttributes
 }
 
-// AttributeType returns the attribute type.
-func (a CoreAttribute) AttributeType() string {
-	return a.typ.String()
-}
-
 // Uniqueness returns the attributes uniqueness.
 func (a CoreAttribute) Uniqueness() string {
 	raw, _ := a.uniqueness.MarshalJSON()
 	return string(raw)
 }
 
-// HasSubAttributes returns whether the attribute is complex and has sub attributes.
-func (a CoreAttribute) HasSubAttributes() bool {
-	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
+func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
+	attributes := map[string]interface{}{
+		"description": a.description.Value(),
+		"multiValued": a.multiValued,
+		"mutability":  a.mutability,
+		"name":        a.name,
+		"required":    a.required,
+		"returned":    a.returned,
+		"type":        a.typ,
+	}
+
+	if a.canonicalValues != nil {
+		attributes["canonicalValues"] = a.canonicalValues
+	}
+
+	if a.referenceTypes != nil {
+		attributes["referenceTypes"] = a.referenceTypes
+	}
+
+	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
+	for i, subAttr := range a.subAttributes {
+		rawSubAttributes[i] = subAttr.getRawAttributes()
+	}
+
+	if a.subAttributes != nil && len(a.subAttributes) != 0 {
+		attributes["subAttributes"] = rawSubAttributes
+	}
+
+	if a.typ != attributeDataTypeComplex && a.typ != attributeDataTypeBoolean {
+		attributes["caseExact"] = a.caseExact
+		attributes["uniqueness"] = a.uniqueness
+	}
+
+	return attributes
 }
 
 func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
@@ -328,40 +364,4 @@ func (a CoreAttribute) validateSingular(attribute interface{}) (interface{}, *er
 	default:
 		return nil, &errors.ScimErrorInvalidSyntax
 	}
-}
-
-func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
-	attributes := map[string]interface{}{
-		"description": a.description.Value(),
-		"multiValued": a.multiValued,
-		"mutability":  a.mutability,
-		"name":        a.name,
-		"required":    a.required,
-		"returned":    a.returned,
-		"type":        a.typ,
-	}
-
-	if a.canonicalValues != nil {
-		attributes["canonicalValues"] = a.canonicalValues
-	}
-
-	if a.referenceTypes != nil {
-		attributes["referenceTypes"] = a.referenceTypes
-	}
-
-	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
-	for i, subAttr := range a.subAttributes {
-		rawSubAttributes[i] = subAttr.getRawAttributes()
-	}
-
-	if a.subAttributes != nil && len(a.subAttributes) != 0 {
-		attributes["subAttributes"] = rawSubAttributes
-	}
-
-	if a.typ != attributeDataTypeComplex && a.typ != attributeDataTypeBoolean {
-		attributes["caseExact"] = a.caseExact
-		attributes["uniqueness"] = a.uniqueness
-	}
-
-	return attributes
 }

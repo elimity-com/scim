@@ -1,15 +1,5 @@
 package scim
 
-func contains(arr []string, el string) bool {
-	for _, item := range arr {
-		if item == el {
-			return true
-		}
-	}
-
-	return false
-}
-
 func clamp(offset, limit, length int) (int, int) {
 	start := length
 	if offset < length {
@@ -20,4 +10,14 @@ func clamp(offset, limit, length int) (int, int) {
 		end = start + limit
 	}
 	return start, end
+}
+
+func contains(arr []string, el string) bool {
+	for _, item := range arr {
+		if item == el {
+			return true
+		}
+	}
+
+	return false
 }

@@ -18,6 +18,22 @@ func checkAttributeName(name string) {
 	}
 }
 
+// AttributeDataType is a single keyword indicating the derived data type from JSON.
+type AttributeDataType struct {
+	t attributeType
+}
+
+// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
+// This is the default value.
+func AttributeTypeDecimal() AttributeDataType {
+	return AttributeDataType{t: attributeDataTypeDecimal}
+}
+
+// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
+func AttributeTypeInteger() AttributeDataType {
+	return AttributeDataType{t: attributeDataTypeInteger}
+}
+
 // AttributeMutability is a single keyword indicating the circumstances under which the value of the attribute can be
 // (re)defined.
 type AttributeMutability struct {
@@ -46,28 +62,6 @@ func AttributeMutabilityReadWrite() AttributeMutability {
 // Note: An attribute with a mutability of "writeOnly" usually also has a returned setting of "never".
 func AttributeMutabilityWriteOnly() AttributeMutability {
 	return AttributeMutability{m: attributeMutabilityWriteOnly}
-}
-
-type attributeMutability int
-
-const (
-	attributeMutabilityReadWrite attributeMutability = iota
-	attributeMutabilityImmutable
-	attributeMutabilityReadOnly
-	attributeMutabilityWriteOnly
-)
-
-func (a attributeMutability) MarshalJSON() ([]byte, error) {
-	switch a {
-	case attributeMutabilityImmutable:
-		return json.Marshal("immutable")
-	case attributeMutabilityReadOnly:
-		return json.Marshal("readOnly")
-	case attributeMutabilityWriteOnly:
-		return json.Marshal("writeOnly")
-	default:
-		return json.Marshal("readWrite")
-	}
 }
 
 // AttributeReferenceType is a single keyword indicating the reference type of the SCIM resource that may be referenced.
@@ -109,6 +103,51 @@ func AttributeReturnedRequest() AttributeReturned {
 	return AttributeReturned{r: attributeReturnedRequest}
 }
 
+// AttributeUniqueness is a single keyword value that specifies how the service provider enforces uniqueness of attribute values.
+type AttributeUniqueness struct {
+	u attributeUniqueness
+}
+
+// AttributeUniquenessGlobal indicates that the value SHOULD be globally unique (e.g., an email address, a GUID, or
+// other value). No two resources on any server SHOULD possess the same value.
+func AttributeUniquenessGlobal() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessGlobal}
+}
+
+// AttributeUniquenessNone indicates that the values are not intended to be unique in any way.
+// This is the default value.
+func AttributeUniquenessNone() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessNone}
+}
+
+// AttributeUniquenessServer indicates that the value SHOULD be unique within the context of the current SCIM
+// endpoint (or tenancy).  No two resources on the same server SHOULD possess the same value.
+func AttributeUniquenessServer() AttributeUniqueness {
+	return AttributeUniqueness{u: attributeUniquenessServer}
+}
+
+type attributeMutability int
+
+const (
+	attributeMutabilityReadWrite attributeMutability = iota
+	attributeMutabilityImmutable
+	attributeMutabilityReadOnly
+	attributeMutabilityWriteOnly
+)
+
+func (a attributeMutability) MarshalJSON() ([]byte, error) {
+	switch a {
+	case attributeMutabilityImmutable:
+		return json.Marshal("immutable")
+	case attributeMutabilityReadOnly:
+		return json.Marshal("readOnly")
+	case attributeMutabilityWriteOnly:
+		return json.Marshal("writeOnly")
+	default:
+		return json.Marshal("readWrite")
+	}
+}
+
 type attributeReturned int
 
 const (
@@ -129,22 +168,6 @@ func (a attributeReturned) MarshalJSON() ([]byte, error) {
 	default:
 		return json.Marshal("default")
 	}
-}
-
-// AttributeDataType is a single keyword indicating the derived data type from JSON.
-type AttributeDataType struct {
-	t attributeType
-}
-
-// AttributeTypeDecimal indicates that the data type is a real number with at least one digit to the left and right of the period.
-// This is the default value.
-func AttributeTypeDecimal() AttributeDataType {
-	return AttributeDataType{t: attributeDataTypeDecimal}
-}
-
-// AttributeTypeInteger indicates that the data type is a whole number with no fractional digits or decimal.
-func AttributeTypeInteger() AttributeDataType {
-	return AttributeDataType{t: attributeDataTypeInteger}
 }
 
 type attributeType int
@@ -184,29 +207,6 @@ func (a attributeType) String() string {
 	default:
 		return "string"
 	}
-}
-
-// AttributeUniqueness is a single keyword value that specifies how the service provider enforces uniqueness of attribute values.
-type AttributeUniqueness struct {
-	u attributeUniqueness
-}
-
-// AttributeUniquenessGlobal indicates that the value SHOULD be globally unique (e.g., an email address, a GUID, or
-// other value). No two resources on any server SHOULD possess the same value.
-func AttributeUniquenessGlobal() AttributeUniqueness {
-	return AttributeUniqueness{u: attributeUniquenessGlobal}
-}
-
-// AttributeUniquenessNone indicates that the values are not intended to be unique in any way.
-// This is the default value.
-func AttributeUniquenessNone() AttributeUniqueness {
-	return AttributeUniqueness{u: attributeUniquenessNone}
-}
-
-// AttributeUniquenessServer indicates that the value SHOULD be unique within the context of the current SCIM
-// endpoint (or tenancy).  No two resources on the same server SHOULD possess the same value.
-func AttributeUniquenessServer() AttributeUniqueness {
-	return AttributeUniqueness{u: attributeUniquenessServer}
 }
 
 type attributeUniqueness int

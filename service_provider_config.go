@@ -4,22 +4,6 @@ import (
 	"github.com/elimity-com/scim/optional"
 )
 
-// ServiceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
-// well as provide additional implementation details to clients.
-type ServiceProviderConfig struct {
-	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
-	// documentation.
-	DocumentationURI optional.String
-	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
-	AuthenticationSchemes []AuthenticationScheme
-	// MaxResults denotes the the integer value specifying the maximum number of resources returned in a response. It defaults to 100.
-	MaxResults int
-	// SupportFiltering whether you SCIM implementation will support filtering.
-	SupportFiltering bool
-	// SupportPatch whether your SCIM implementation will support patch requests.
-	SupportPatch bool
-}
-
 // AuthenticationScheme specifies a supported authentication scheme property.
 type AuthenticationScheme struct {
 	// Type is the authentication scheme. This specification defines the values "oauth", "oauth2", "oauthbearertoken",
@@ -53,6 +37,30 @@ const (
 	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
 )
 
+// ServiceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
+// well as provide additional implementation details to clients.
+type ServiceProviderConfig struct {
+	// DocumentationURI is an HTTP-addressable URL pointing to the service provider's human-consumable help
+	// documentation.
+	DocumentationURI optional.String
+	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
+	AuthenticationSchemes []AuthenticationScheme
+	// MaxResults denotes the the integer value specifying the maximum number of resources returned in a response. It defaults to 100.
+	MaxResults int
+	// SupportFiltering whether you SCIM implementation will support filtering.
+	SupportFiltering bool
+	// SupportPatch whether your SCIM implementation will support patch requests.
+	SupportPatch bool
+}
+
+// getItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.
+func (config ServiceProviderConfig) getItemsPerPage() int {
+	if config.MaxResults < 1 {
+		return fallbackCount
+	}
+	return config.MaxResults
+}
+
 func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
@@ -80,14 +88,6 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 		},
 		"authenticationSchemes": config.getRawAuthenticationSchemes(),
 	}
-}
-
-// getItemsPerPage retrieves the configured default count. It falls back to 100 when not configured.
-func (config ServiceProviderConfig) getItemsPerPage() int {
-	if config.MaxResults < 1 {
-		return fallbackCount
-	}
-	return config.MaxResults
 }
 
 func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]interface{} {

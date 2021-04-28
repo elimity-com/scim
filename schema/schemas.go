@@ -2,16 +2,6 @@ package schema
 
 import "github.com/elimity-com/scim/optional"
 
-// SchemasAttributes represent the common attribute "schemas".
-func SchemasAttributes() CoreAttribute {
-	return SimpleCoreAttribute(SimpleStringParams(StringParams{
-		MultiValued: true,
-		Mutability:  AttributeMutabilityImmutable(),
-		Name:        "schemas",
-		Required:    true,
-	}))
-}
-
 // CommonAttributes returns all the common attributes.
 func CommonAttributes() []CoreAttribute {
 	return []CoreAttribute{
@@ -64,6 +54,163 @@ func CommonAttributes() []CoreAttribute {
 				}),
 			},
 		}),
+	}
+}
+
+// SchemasAttributes represent the common attribute "schemas".
+func SchemasAttributes() CoreAttribute {
+	return SimpleCoreAttribute(SimpleStringParams(StringParams{
+		MultiValued: true,
+		Mutability:  AttributeMutabilityImmutable(),
+		Name:        "schemas",
+		Required:    true,
+	}))
+}
+
+// Unlike other core resources, the Schema" resource MAY contain a complex object within a sub-attribute.
+func schemaAttributes(subAttrs bool) []CoreAttribute {
+	attributes := []CoreAttribute{
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			Description: optional.NewString("The attribute's name."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "name",
+			Required:    true,
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			CanonicalValues: []string{
+				"string", "boolean", "binary", "decimal",
+				"integer", "dateTime", "reference", "complex",
+			},
+			Description: optional.NewString("The attribute's data type."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "type",
+			Required:    true,
+		})),
+
+		// subAttributes added below
+
+		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
+			Description: optional.NewString("A Boolean value indicating the attribute's plurality."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "multiValued",
+			Required:    true,
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			Description: optional.NewString("The attribute's human-readable description."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "description",
+		})),
+		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
+			Description: optional.NewString("A Boolean value that specifies whether or not the attribute is required."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "required",
+			Required:    true,
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			Description: optional.NewString("A collection of suggested canonical values that MAY be used."),
+			MultiValued: true,
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "canonicalValues",
+		})),
+		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
+			Description: optional.NewString("A Boolean value that specifies whether or not a string attribute is case sensitive."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "caseExact",
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			CanonicalValues: []string{
+				"readOnly", "readWrite",
+				"immutable", "writeOnly",
+			},
+			CaseExact:   true,
+			Description: optional.NewString("A single keyword indicating the circumstances under which the value of the attribute can be (re)defined."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "mutability",
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			CanonicalValues: []string{
+				"always", "never",
+				"default", "request",
+			},
+			CaseExact:   true,
+			Description: optional.NewString("A single keyword that indicates when an attribute and associated values are returned in a response."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "returned",
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			CanonicalValues: []string{
+				"none", "server", "global",
+			},
+			CaseExact:   true,
+			Description: optional.NewString("A single keyword value that specifies how the service provider enforces uniqueness of attribute values."),
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "uniqueness",
+		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			CaseExact:   true,
+			Description: optional.NewString("A multi-valued array of JSON strings that indicate the SCIM resource types that may be referenced."),
+			MultiValued: true,
+			Mutability:  AttributeMutabilityReadOnly(),
+			Name:        "referenceTypes",
+		})),
+	}
+
+	if subAttrs {
+		attributes = append(attributes, CoreAttribute{
+			description:   optional.NewString("Defines a set of sub-attributes."),
+			multiValued:   true,
+			mutability:    attributeMutabilityReadOnly,
+			name:          "subAttributes",
+			subAttributes: schemaAttributes(false),
+			typ:           attributeDataTypeComplex,
+		})
+	}
+	return attributes
+}
+
+// CoreGroupSchema returns the default "Group" Resource Schema.
+// RFC: https://tools.ietf.org/html/rfc7643#section-4.2
+func CoreGroupSchema() Schema {
+	return Schema{
+		Attributes: []CoreAttribute{
+			SimpleCoreAttribute(SimpleStringParams(StringParams{
+				Description: optional.NewString("A human-readable name for the Group. REQUIRED."),
+				Name:        "displayName",
+				Required:    true,
+			})),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A list of members of the Group."),
+				MultiValued: true,
+				Name:        "members",
+				SubAttributes: []SimpleParams{
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("Identifier of the member of this Group."),
+						Mutability:  AttributeMutabilityImmutable(),
+						Name:        "value",
+					}),
+					SimpleReferenceParams(ReferenceParams{
+						Description:    optional.NewString("The URI corresponding to a SCIM resource that is a member of this Group."),
+						Mutability:     AttributeMutabilityImmutable(),
+						Name:           "$ref",
+						ReferenceTypes: []AttributeReferenceType{"User", "Group"},
+					}),
+					SimpleStringParams(StringParams{
+						CanonicalValues: []string{"User", "Group"},
+						Description:     optional.NewString("A label indicating the type of resource, e.g., 'User' or 'Group'."),
+						Mutability:      AttributeMutabilityImmutable(),
+						Name:            "type",
+					}),
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("A human-readable name for the group member, primarily used for display purposes."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "display",
+					}),
+				},
+			}),
+		},
+		Description: optional.NewString("Group"),
+		ID:          "urn:ietf:params:scim:schemas:core:2.0:Group",
+		Name:        optional.NewString("Group"),
 	}
 }
 
@@ -390,49 +537,40 @@ func CoreUserSchema() Schema {
 	}
 }
 
-// CoreGroupSchema returns the default "Group" Resource Schema.
-// RFC: https://tools.ietf.org/html/rfc7643#section-4.2
-func CoreGroupSchema() Schema {
+// Definition return the Schema Definition.
+// RFC: https://tools.ietf.org/html/rfc7643#section-7
+func Definition() Schema {
 	return Schema{
 		Attributes: []CoreAttribute{
 			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("A human-readable name for the Group. REQUIRED."),
-				Name:        "displayName",
+				Description: optional.NewString("The unique URI of the schema."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "id",
 				Required:    true,
 			})),
-			ComplexCoreAttribute(ComplexParams{
-				Description: optional.NewString("A list of members of the Group."),
-				MultiValued: true,
-				Name:        "members",
-				SubAttributes: []SimpleParams{
-					SimpleStringParams(StringParams{
-						Description: optional.NewString("Identifier of the member of this Group."),
-						Mutability:  AttributeMutabilityImmutable(),
-						Name:        "value",
-					}),
-					SimpleReferenceParams(ReferenceParams{
-						Description:    optional.NewString("The URI corresponding to a SCIM resource that is a member of this Group."),
-						Mutability:     AttributeMutabilityImmutable(),
-						Name:           "$ref",
-						ReferenceTypes: []AttributeReferenceType{"User", "Group"},
-					}),
-					SimpleStringParams(StringParams{
-						CanonicalValues: []string{"User", "Group"},
-						Description:     optional.NewString("A label indicating the type of resource, e.g., 'User' or 'Group'."),
-						Mutability:      AttributeMutabilityImmutable(),
-						Name:            "type",
-					}),
-					SimpleStringParams(StringParams{
-						Description: optional.NewString("A human-readable name for the group member, primarily used for display purposes."),
-						Mutability:  AttributeMutabilityReadOnly(),
-						Name:        "display",
-					}),
-				},
-			}),
+			SimpleCoreAttribute(SimpleStringParams(StringParams{
+				Description: optional.NewString("The schema's human-readable name."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "name",
+			})),
+			SimpleCoreAttribute(SimpleStringParams(StringParams{
+				Description: optional.NewString("The schema's human-readable description."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "description",
+			})),
+			{ // this is the internal struct to enable nested complex attributes.
+				description:   optional.NewString("A complex type that defines service provider attributes and their qualities."),
+				multiValued:   true,
+				mutability:    attributeMutabilityReadOnly,
+				name:          "attributes",
+				required:      true,
+				subAttributes: schemaAttributes(true),
+				typ:           attributeDataTypeComplex,
+			},
 		},
-		Description: optional.NewString("Group"),
-		ID:          "urn:ietf:params:scim:schemas:core:2.0:Group",
-		Name:        optional.NewString("Group"),
+		Description: optional.String{},
+		ID:          "urn:ietf:params:scim:schemas:core:2.0:Schema",
+		Name:        optional.String{},
 	}
 }
 
@@ -546,142 +684,4 @@ func ResourceTypeSchema() Schema {
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:ResourceType",
 		Name:        optional.NewString("Resource Type"),
 	}
-}
-
-// Definition return the Schema Definition.
-// RFC: https://tools.ietf.org/html/rfc7643#section-7
-func Definition() Schema {
-	return Schema{
-		Attributes: []CoreAttribute{
-			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("The unique URI of the schema."),
-				Mutability:  AttributeMutabilityReadOnly(),
-				Name:        "id",
-				Required:    true,
-			})),
-			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("The schema's human-readable name."),
-				Mutability:  AttributeMutabilityReadOnly(),
-				Name:        "name",
-			})),
-			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("The schema's human-readable description."),
-				Mutability:  AttributeMutabilityReadOnly(),
-				Name:        "description",
-			})),
-			{ // this is the internal struct to enable nested complex attributes.
-				description:   optional.NewString("A complex type that defines service provider attributes and their qualities."),
-				multiValued:   true,
-				mutability:    attributeMutabilityReadOnly,
-				name:          "attributes",
-				required:      true,
-				subAttributes: schemaAttributes(true),
-				typ:           attributeDataTypeComplex,
-			},
-		},
-		Description: optional.String{},
-		ID:          "urn:ietf:params:scim:schemas:core:2.0:Schema",
-		Name:        optional.String{},
-	}
-}
-
-// Unlike other core resources, the Schema" resource MAY contain a complex object within a sub-attribute.
-func schemaAttributes(subAttrs bool) []CoreAttribute {
-	attributes := []CoreAttribute{
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			Description: optional.NewString("The attribute's name."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "name",
-			Required:    true,
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			CanonicalValues: []string{
-				"string", "boolean", "binary", "decimal",
-				"integer", "dateTime", "reference", "complex",
-			},
-			Description: optional.NewString("The attribute's data type."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "type",
-			Required:    true,
-		})),
-
-		// subAttributes added below
-
-		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
-			Description: optional.NewString("A Boolean value indicating the attribute's plurality."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "multiValued",
-			Required:    true,
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			Description: optional.NewString("The attribute's human-readable description."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "description",
-		})),
-		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
-			Description: optional.NewString("A Boolean value that specifies whether or not the attribute is required."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "required",
-			Required:    true,
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			Description: optional.NewString("A collection of suggested canonical values that MAY be used."),
-			MultiValued: true,
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "canonicalValues",
-		})),
-		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
-			Description: optional.NewString("A Boolean value that specifies whether or not a string attribute is case sensitive."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "caseExact",
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			CanonicalValues: []string{
-				"readOnly", "readWrite",
-				"immutable", "writeOnly",
-			},
-			CaseExact:   true,
-			Description: optional.NewString("A single keyword indicating the circumstances under which the value of the attribute can be (re)defined."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "mutability",
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			CanonicalValues: []string{
-				"always", "never",
-				"default", "request",
-			},
-			CaseExact:   true,
-			Description: optional.NewString("A single keyword that indicates when an attribute and associated values are returned in a response."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "returned",
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			CanonicalValues: []string{
-				"none", "server", "global",
-			},
-			CaseExact:   true,
-			Description: optional.NewString("A single keyword value that specifies how the service provider enforces uniqueness of attribute values."),
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "uniqueness",
-		})),
-		SimpleCoreAttribute(SimpleStringParams(StringParams{
-			CaseExact:   true,
-			Description: optional.NewString("A multi-valued array of JSON strings that indicate the SCIM resource types that may be referenced."),
-			MultiValued: true,
-			Mutability:  AttributeMutabilityReadOnly(),
-			Name:        "referenceTypes",
-		})),
-	}
-
-	if subAttrs {
-		attributes = append(attributes, CoreAttribute{
-			description:   optional.NewString("Defines a set of sub-attributes."),
-			multiValued:   true,
-			mutability:    attributeMutabilityReadOnly,
-			name:          "subAttributes",
-			subAttributes: schemaAttributes(false),
-			typ:           attributeDataTypeComplex,
-		})
-	}
-	return attributes
 }
