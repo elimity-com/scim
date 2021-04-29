@@ -17,7 +17,7 @@ func toInt(i interface{}) (int, bool) {
 	}
 }
 
-func toFloat(i interface{}) (float64, bool)  {
+func toFloat(i interface{}) (float64, bool) {
 	switch i := i.(type) {
 	case float64:
 		return i, true
