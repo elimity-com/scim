@@ -128,7 +128,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 	case "decimal":
 		ref, ok := toFloat(e.CompareValue)
 		if !ok {
-			return nil,  fmt.Errorf("a decimal attribute needs to be compared to a float/int")
+			return nil, fmt.Errorf("a decimal attribute needs to be compared to a float/int")
 		}
 		switch e.Operator {
 		case filter.EQ:
