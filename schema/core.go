@@ -158,107 +158,6 @@ func (a CoreAttribute) Uniqueness() string {
 	return string(raw)
 }
 
-func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
-	attributes := map[string]interface{}{
-		"description": a.description.Value(),
-		"multiValued": a.multiValued,
-		"mutability":  a.mutability,
-		"name":        a.name,
-		"required":    a.required,
-		"returned":    a.returned,
-		"type":        a.typ,
-	}
-
-	if a.canonicalValues != nil {
-		attributes["canonicalValues"] = a.canonicalValues
-	}
-
-	if a.referenceTypes != nil {
-		attributes["referenceTypes"] = a.referenceTypes
-	}
-
-	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
-	for i, subAttr := range a.subAttributes {
-		rawSubAttributes[i] = subAttr.getRawAttributes()
-	}
-
-	if a.subAttributes != nil && len(a.subAttributes) != 0 {
-		attributes["subAttributes"] = rawSubAttributes
-	}
-
-	if a.typ != attributeDataTypeComplex && a.typ != attributeDataTypeBoolean {
-		attributes["caseExact"] = a.caseExact
-		attributes["uniqueness"] = a.uniqueness
-	}
-
-	return attributes
-}
-
-func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
-	// whether or not the attribute is required.
-	if attribute == nil {
-		if !a.required {
-			return nil, nil
-		}
-
-		// the attribute is not present but required.
-		return nil, &errors.ScimErrorInvalidValue
-	}
-
-	// whether the value of the attribute can be (re)defined
-	// readOnly: the attribute SHALL NOT be modified.
-	if a.mutability == attributeMutabilityReadOnly {
-		return nil, nil
-	}
-
-	if !a.multiValued {
-		return a.ValidateSingular(attribute)
-	}
-
-	switch arr := attribute.(type) {
-	case map[string]interface{}:
-		// return false if the multivalued attribute is empty.
-		if a.required && len(arr) == 0 {
-			return nil, &errors.ScimErrorInvalidValue
-		}
-
-		validMap := make(map[string]interface{}, len(arr))
-		for k, v := range arr {
-			for _, sub := range a.subAttributes {
-				if !strings.EqualFold(sub.name, k) {
-					continue
-				}
-				_, scimErr := sub.validate(v)
-				if scimErr != nil {
-					return nil, scimErr
-				}
-				validMap[sub.name] = v
-			}
-		}
-		return validMap, nil
-
-	case []interface{}:
-		// return false if the multivalued attribute is empty.
-		if a.required && len(arr) == 0 {
-			return nil, &errors.ScimErrorInvalidValue
-		}
-
-		attributes := make([]interface{}, len(arr))
-		for i, ele := range arr {
-			attr, scimErr := a.ValidateSingular(ele)
-			if scimErr != nil {
-				return nil, scimErr
-			}
-			attributes[i] = attr
-		}
-		return attributes, nil
-
-	default:
-		// return false if the multivalued attribute is not a slice.
-		return nil, &errors.ScimErrorInvalidSyntax
-	}
-}
-
 // ValidateSingular checks whether the given singular value matches the attribute data type. Unknown attributes in
 // given complex value are ignored. The returned interface contains a (sanitised) version of the given attribute.
 func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *errors.ScimError) {
@@ -364,6 +263,107 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 
 		return s, nil
 	default:
+		return nil, &errors.ScimErrorInvalidSyntax
+	}
+}
+
+func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
+	attributes := map[string]interface{}{
+		"description": a.description.Value(),
+		"multiValued": a.multiValued,
+		"mutability":  a.mutability,
+		"name":        a.name,
+		"required":    a.required,
+		"returned":    a.returned,
+		"type":        a.typ,
+	}
+
+	if a.canonicalValues != nil {
+		attributes["canonicalValues"] = a.canonicalValues
+	}
+
+	if a.referenceTypes != nil {
+		attributes["referenceTypes"] = a.referenceTypes
+	}
+
+	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
+	for i, subAttr := range a.subAttributes {
+		rawSubAttributes[i] = subAttr.getRawAttributes()
+	}
+
+	if a.subAttributes != nil && len(a.subAttributes) != 0 {
+		attributes["subAttributes"] = rawSubAttributes
+	}
+
+	if a.typ != attributeDataTypeComplex && a.typ != attributeDataTypeBoolean {
+		attributes["caseExact"] = a.caseExact
+		attributes["uniqueness"] = a.uniqueness
+	}
+
+	return attributes
+}
+
+func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
+	// whether or not the attribute is required.
+	if attribute == nil {
+		if !a.required {
+			return nil, nil
+		}
+
+		// the attribute is not present but required.
+		return nil, &errors.ScimErrorInvalidValue
+	}
+
+	// whether the value of the attribute can be (re)defined
+	// readOnly: the attribute SHALL NOT be modified.
+	if a.mutability == attributeMutabilityReadOnly {
+		return nil, nil
+	}
+
+	if !a.multiValued {
+		return a.ValidateSingular(attribute)
+	}
+
+	switch arr := attribute.(type) {
+	case map[string]interface{}:
+		// return false if the multivalued attribute is empty.
+		if a.required && len(arr) == 0 {
+			return nil, &errors.ScimErrorInvalidValue
+		}
+
+		validMap := make(map[string]interface{}, len(arr))
+		for k, v := range arr {
+			for _, sub := range a.subAttributes {
+				if !strings.EqualFold(sub.name, k) {
+					continue
+				}
+				_, scimErr := sub.validate(v)
+				if scimErr != nil {
+					return nil, scimErr
+				}
+				validMap[sub.name] = v
+			}
+		}
+		return validMap, nil
+
+	case []interface{}:
+		// return false if the multivalued attribute is empty.
+		if a.required && len(arr) == 0 {
+			return nil, &errors.ScimErrorInvalidValue
+		}
+
+		attributes := make([]interface{}, len(arr))
+		for i, ele := range arr {
+			attr, scimErr := a.ValidateSingular(ele)
+			if scimErr != nil {
+				return nil, scimErr
+			}
+			attributes[i] = attr
+		}
+		return attributes, nil
+
+	default:
+		// return false if the multivalued attribute is not a slice.
 		return nil, &errors.ScimErrorInvalidSyntax
 	}
 }

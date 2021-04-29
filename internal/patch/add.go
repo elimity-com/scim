@@ -30,10 +30,10 @@ func (v OperationValidator) ValidateAdd() error {
 		refAttr = refSubAttr
 	}
 
-	if v.path.ValueExpression != nil {
-		// TODO: fix this! We should validate the expression.
-		// return fmt.Errorf("an add operation does not support value expressions")
-	}
+	// TODO: fix this! We should validate the expression.
+	// if v.path.ValueExpression != nil {
+	//     return fmt.Errorf("an add operation does not support value expressions")
+	// }
 
 	if refAttr.MultiValued() {
 		if list, ok := v.value.([]interface{}); !ok {
@@ -59,31 +59,6 @@ func (v OperationValidator) ValidateAdd() error {
 			return err
 		}
 		v.value = attr
-	}
-	return nil
-}
-
-func (v OperationValidator) validateAddEmptyPath() error {
-	attributes, ok := v.value.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("the given value should be a complex attribute if path is empty")
-	}
-
-	for p, value := range attributes {
-		path, err := filter.ParsePath([]byte(p))
-		if err != nil {
-			return fmt.Errorf("invalid attribute path: %s", p)
-		}
-		validator := OperationValidator{
-			op:      v.op,
-			path:    &path,
-			value:   value,
-			schema:  v.schema,
-			schemas: v.schemas,
-		}
-		if err := validator.ValidateAdd(); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -147,4 +122,29 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 		return nil, fmt.Errorf("could not find attribute %s", v.path)
 	}
 	return refSubAttr, nil
+}
+
+func (v OperationValidator) validateAddEmptyPath() error {
+	attributes, ok := v.value.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("the given value should be a complex attribute if path is empty")
+	}
+
+	for p, value := range attributes {
+		path, err := filter.ParsePath([]byte(p))
+		if err != nil {
+			return fmt.Errorf("invalid attribute path: %s", p)
+		}
+		validator := OperationValidator{
+			op:      v.op,
+			path:    &path,
+			value:   value,
+			schema:  v.schema,
+			schemas: v.schemas,
+		}
+		if err := validator.ValidateAdd(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
