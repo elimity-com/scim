@@ -1,5 +1,19 @@
 package filter
 
+func toFloat(i interface{}) (float64, bool) {
+	switch i := i.(type) {
+	case float64:
+		return i, true
+	case float32:
+		return float64(i), true
+	default:
+		if i, ok := toInt(i); ok {
+			return float64(i), true
+		}
+		return 0, false
+	}
+}
+
 func toInt(i interface{}) (int, bool) {
 	switch i := i.(type) {
 	case int:
@@ -13,20 +27,6 @@ func toInt(i interface{}) (int, bool) {
 	case int8:
 		return int(i), true
 	default:
-		return 0, false
-	}
-}
-
-func toFloat(i interface{}) (float64, bool) {
-	switch i := i.(type) {
-	case float64:
-		return i, true
-	case float32:
-		return float64(i), true
-	default:
-		if i, ok := toInt(i); ok {
-			return float64(i), true
-		}
 		return 0, false
 	}
 }

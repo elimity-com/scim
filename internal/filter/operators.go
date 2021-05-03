@@ -9,6 +9,50 @@ import (
 	"time"
 )
 
+func cmpBool(ref bool, cmp func(v, ref bool) bool) func(interface{}) bool {
+	return func(i interface{}) bool {
+		value, ok := i.(bool)
+		if !ok {
+			return false
+		}
+		return cmp(value, ref)
+	}
+}
+
+func cmpDataTime(ref time.Time, cmp func(v, ref time.Time) bool) func(interface{}) bool {
+	return func(i interface{}) bool {
+		date, ok := i.(string)
+		if !ok {
+			return false
+		}
+		value, err := datetime.Parse(date)
+		if err != nil {
+			return false
+		}
+		return cmp(value, ref)
+	}
+}
+
+func cmpDecimal(ref float64, cmp func(v, ref float64) bool) func(interface{}) bool {
+	return func(i interface{}) bool {
+		value, ok := toFloat(i)
+		if !ok {
+			return false
+		}
+		return cmp(value, ref)
+	}
+}
+
+func cmpInteger(ref int, cmp func(v, ref int) bool) func(interface{}) bool {
+	return func(i interface{}) bool {
+		value, ok := toInt(i)
+		if !ok {
+			return false
+		}
+		return cmp(value, ref)
+	}
+}
+
 // createCompareFunction returns a compare function based on the attribute expression and attribute.
 // e.g. `userName eq "john"` will return a string comparator that checks whether the passed value is equal to "john".
 func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttribute) (func(interface{}) bool, error) {
@@ -181,50 +225,6 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		}
 	default:
 		panic(fmt.Sprintf("unknown attribute type: %s", typ))
-	}
-}
-
-func cmpDataTime(ref time.Time, cmp func(v, ref time.Time) bool) func(interface{}) bool {
-	return func(i interface{}) bool {
-		date, ok := i.(string)
-		if !ok {
-			return false
-		}
-		value, err := datetime.Parse(date)
-		if err != nil {
-			return false
-		}
-		return cmp(value, ref)
-	}
-}
-
-func cmpInteger(ref int, cmp func(v, ref int) bool) func(interface{}) bool {
-	return func(i interface{}) bool {
-		value, ok := toInt(i)
-		if !ok {
-			return false
-		}
-		return cmp(value, ref)
-	}
-}
-
-func cmpDecimal(ref float64, cmp func(v, ref float64) bool) func(interface{}) bool {
-	return func(i interface{}) bool {
-		value, ok := toFloat(i)
-		if !ok {
-			return false
-		}
-		return cmp(value, ref)
-	}
-}
-
-func cmpBool(ref bool, cmp func(v, ref bool) bool) func(interface{}) bool {
-	return func(i interface{}) bool {
-		value, ok := i.(bool)
-		if !ok {
-			return false
-		}
-		return cmp(value, ref)
 	}
 }
 

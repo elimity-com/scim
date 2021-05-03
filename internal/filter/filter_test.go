@@ -184,6 +184,43 @@ func TestValidator_PassesFilter(t *testing.T) {
 	})
 }
 
+func TestValidator_Validate(t *testing.T) {
+	// More info: https://tools.ietf.org/html/rfc7644#section-3.4.2.2
+	userSchema := schema.CoreUserSchema()
+	userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
+
+	for _, f := range []string{
+		`userName Eq "john"`,
+		`Username eq "john"`,
+
+		`userName eq "bjensen"`,
+		`name.familyName co "O'Malley"`,
+		`userName sw "J"`,
+		`urn:ietf:params:scim:schemas:core:2.0:User:userName sw "J"`,
+		`title pr`,
+		`meta.lastModified gt "2011-05-13T04:42:34Z"`,
+		`meta.lastModified ge "2011-05-13T04:42:34Z"`,
+		`meta.lastModified lt "2011-05-13T04:42:34Z"`,
+		`meta.lastModified le "2011-05-13T04:42:34Z"`,
+		`title pr and userType eq "Employee"`,
+		`title pr or userType eq "Intern"`,
+		`schemas eq "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"`,
+		`userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`,
+		`userType ne "Employee" and not (emails co "example.com" or emails.value co "example.org")`,
+		`userType eq "Employee" and (emails.type eq "work")`,
+		`userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`,
+		`emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]`,
+	} {
+		validator, err := internal.NewValidator(f, userSchema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := validator.Validate(); err != nil {
+			t.Errorf("(%s) %v", f, err)
+		}
+	}
+}
+
 func testResources() []map[string]interface{} {
 	return []map[string]interface{}{
 		{
@@ -239,42 +276,5 @@ func testResources() []map[string]interface{} {
 			},
 		},
 		{"userName": "another"},
-	}
-}
-
-func TestValidator_Validate(t *testing.T) {
-	// More info: https://tools.ietf.org/html/rfc7644#section-3.4.2.2
-	userSchema := schema.CoreUserSchema()
-	userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
-
-	for _, f := range []string{
-		`userName Eq "john"`,
-		`Username eq "john"`,
-
-		`userName eq "bjensen"`,
-		`name.familyName co "O'Malley"`,
-		`userName sw "J"`,
-		`urn:ietf:params:scim:schemas:core:2.0:User:userName sw "J"`,
-		`title pr`,
-		`meta.lastModified gt "2011-05-13T04:42:34Z"`,
-		`meta.lastModified ge "2011-05-13T04:42:34Z"`,
-		`meta.lastModified lt "2011-05-13T04:42:34Z"`,
-		`meta.lastModified le "2011-05-13T04:42:34Z"`,
-		`title pr and userType eq "Employee"`,
-		`title pr or userType eq "Intern"`,
-		`schemas eq "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"`,
-		`userType eq "Employee" and (emails co "example.com" or emails.value co "example.org")`,
-		`userType ne "Employee" and not (emails co "example.com" or emails.value co "example.org")`,
-		`userType eq "Employee" and (emails.type eq "work")`,
-		`userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`,
-		`emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]`,
-	} {
-		validator, err := internal.NewValidator(f, userSchema)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := validator.Validate(); err != nil {
-			t.Errorf("(%s) %v", f, err)
-		}
 	}
 }
