@@ -276,18 +276,19 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 		}
 
 		if !attr.MultiValued() {
-			if cmp(value) {
-				return nil
+			if err := cmp(value); err != nil {
+				return fmt.Errorf("the resource does not pass the filter: %s", err)
 			}
-			return fmt.Errorf("the resource does not pass the filter")
+			return nil
 		}
 
 		switch value := value.(type) {
 		case []interface{}:
 			for _, v := range value {
-				if cmp(v) {
-					return nil
+				if err := cmp(v); err != nil {
+					return fmt.Errorf("the resource does not pass the filter: %s", err)
 				}
+				return nil
 			}
 		}
 	case *filter.LogicalExpression:

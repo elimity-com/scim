@@ -46,7 +46,7 @@ func TestValidatorBoolean(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := validator.PassesFilter(attr); (err == nil) != test.valid {
-				t.Errorf("%s %s | actual %v, expected %v", f, attr, err, test.valid)
+				t.Errorf("%s %v | actual %v, expected %v", f, attr, err, test.valid)
 			}
 		})
 	}
