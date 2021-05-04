@@ -288,7 +288,6 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 				if err := cmp(v); err != nil {
 					return fmt.Errorf("the resource does not pass the filter: %s", err)
 				}
-				return nil
 			}
 		}
 	case *filter.LogicalExpression:
