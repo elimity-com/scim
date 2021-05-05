@@ -59,6 +59,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/v2")
 
 	switch {
+	case path == "/Me":
+		errorHandler(w, r, &errors.ScimError{
+			Status: http.StatusNotImplemented,
+		})
+		return
 	case path == "/Schemas" && r.Method == http.MethodGet:
 		s.schemasHandler(w, r)
 		return

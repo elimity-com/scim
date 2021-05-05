@@ -91,6 +91,14 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
+func TestServerMeEndpoint(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Me", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusNotImplemented, rr.Code)
+}
+
 func TestServerResourceDeleteHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
