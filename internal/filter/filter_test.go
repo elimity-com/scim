@@ -135,6 +135,7 @@ func TestValidator_PassesFilter(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			userSchema := schema.CoreUserSchema()
+			userSchema.Attributes = append(userSchema.Attributes, schema.SchemasAttributes())
 			userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
 			validator, err := internal.NewValidator(test.filter, userSchema)
 			if err != nil {

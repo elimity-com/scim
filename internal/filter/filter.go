@@ -285,10 +285,11 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 		switch value := value.(type) {
 		case []interface{}:
 			for _, v := range value {
-				if err := cmp(v); err != nil {
-					return fmt.Errorf("the resource does not pass the filter: %s", err)
+				if err := cmp(v); err == nil {
+					return nil
 				}
 			}
+			return fmt.Errorf("the resource does not pass the filter: %s", err)
 		}
 	case *filter.LogicalExpression:
 		switch e.Operator {
