@@ -318,10 +318,20 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		start, end = clamp(params.StartIndex-1, params.Count, len(schemas))
 		resources  []interface{}
 	)
+
+	if params.Filter != nil {
+		if err := validator.Validate(); err != nil {
+			errorHandler(w, r, &errors.ScimErrorInvalidFilter)
+			return
+		}
+	}
 	for _, v := range schemas[start:end] {
 		resource := v.ToMap()
 		if params.Filter != nil {
 			if err := validator.PassesFilter(resource); err != nil {
+				if err, ok := err.(*errors.ScimError); ok {
+					panic(err)
+				}
 				continue
 			}
 		}
