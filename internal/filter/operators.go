@@ -3,8 +3,10 @@ package filter
 import (
 	"fmt"
 	datetime "github.com/di-wu/xsd-datetime"
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -13,7 +15,10 @@ func cmpBool(ref bool, cmp func(v, ref bool) error) func(interface{}) error {
 	return func(i interface{}) error {
 		value, ok := i.(bool)
 		if !ok {
-			return fmt.Errorf("given value is not a boolean: %v", i)
+			return &errors.ScimError{
+				Detail: fmt.Sprintf("given value is not a boolean: %v", i),
+				Status: http.StatusInternalServerError,
+			}
 		}
 		return cmp(value, ref)
 	}
@@ -23,11 +28,17 @@ func cmpDataTime(ref time.Time, cmp func(v, ref time.Time) error) func(interface
 	return func(i interface{}) error {
 		date, ok := i.(string)
 		if !ok {
-			return fmt.Errorf("given value is not a string: %v", i)
+			return &errors.ScimError{
+				Detail: fmt.Sprintf("given value is not a string: %v", i),
+				Status: http.StatusInternalServerError,
+			}
 		}
 		value, err := datetime.Parse(date)
 		if err != nil {
-			return err
+			return &errors.ScimError{
+				Detail: fmt.Sprintf("given value is not a date time (%v): %s", i, err),
+				Status: http.StatusInternalServerError,
+			}
 		}
 		return cmp(value, ref)
 	}
@@ -37,7 +48,10 @@ func cmpDecimal(ref float64, cmp func(v, ref float64) error) func(interface{}) e
 	return func(i interface{}) error {
 		value, ok := toFloat(i)
 		if !ok {
-			return fmt.Errorf("given value is not a float: %v", i)
+			return &errors.ScimError{
+				Detail: fmt.Sprintf("given value is not a float: %v", i),
+				Status: http.StatusInternalServerError,
+			}
 		}
 		return cmp(value, ref)
 	}
@@ -47,7 +61,10 @@ func cmpInteger(ref int, cmp func(v, ref int) error) func(interface{}) error {
 	return func(i interface{}) error {
 		value, ok := toInt(i)
 		if !ok {
-			return fmt.Errorf("given value is not an integer: %v", i)
+			return &errors.ScimError{
+				Detail: fmt.Sprintf("given value is not an integer: %v", i),
+				Status: http.StatusInternalServerError,
+			}
 		}
 		return cmp(value, ref)
 	}
@@ -457,7 +474,10 @@ func strComp(ref interface{}, attr schema.CoreAttribute, cmp func(v, ref string)
 		return func(i interface{}) error {
 			value, ok := i.(bool)
 			if !ok {
-				return fmt.Errorf("given value is not a boolean: %v", i)
+				return &errors.ScimError{
+					Detail: fmt.Sprintf("given value is not a boolean: %v", i),
+					Status: http.StatusInternalServerError,
+				}
 			}
 			return cmp(fmt.Sprintf("%t", value), fmt.Sprintf("%t", ref))
 		}, nil
@@ -469,7 +489,10 @@ func strComp(ref interface{}, attr schema.CoreAttribute, cmp func(v, ref string)
 		return func(i interface{}) error {
 			value, ok := toFloat(i)
 			if !ok {
-				return fmt.Errorf("given value is not a float: %v", i)
+				return &errors.ScimError{
+					Detail: fmt.Sprintf("given value is not a float: %v", i),
+					Status: http.StatusInternalServerError,
+				}
 			}
 			// fmt.Sprintf("%f") would give them both the same precision.
 			return cmp(fmt.Sprint(value), fmt.Sprint(ref))
@@ -482,7 +505,10 @@ func strComp(ref interface{}, attr schema.CoreAttribute, cmp func(v, ref string)
 		return func(i interface{}) error {
 			value, ok := toInt(i)
 			if !ok {
-				return fmt.Errorf("given value is not an integer: %v", i)
+				return &errors.ScimError{
+					Detail: fmt.Sprintf("given value is not an integer: %v", i),
+					Status: http.StatusInternalServerError,
+				}
 			}
 			return cmp(fmt.Sprintf("%d", value), fmt.Sprintf("%d", ref))
 		}, nil
@@ -495,7 +521,10 @@ func strComp(ref interface{}, attr schema.CoreAttribute, cmp func(v, ref string)
 			return func(i interface{}) error {
 				value, ok := i.(string)
 				if !ok {
-					return fmt.Errorf("given value is not a string: %v", i)
+					return &errors.ScimError{
+						Detail: fmt.Sprintf("given value is not a string: %v", i),
+						Status: http.StatusInternalServerError,
+					}
 				}
 				return cmp(value, ref)
 			}, nil
@@ -503,7 +532,10 @@ func strComp(ref interface{}, attr schema.CoreAttribute, cmp func(v, ref string)
 		return func(i interface{}) error {
 			value, ok := i.(string)
 			if !ok {
-				return fmt.Errorf("given value is not a string: %v", i)
+				return &errors.ScimError{
+					Detail: fmt.Sprintf("given value is not a string: %v", i),
+					Status: http.StatusInternalServerError,
+				}
 			}
 			return cmp(strings.ToLower(value), strings.ToLower(ref))
 		}, nil

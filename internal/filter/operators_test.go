@@ -2,6 +2,7 @@ package filter_test
 
 import (
 	"fmt"
+	"github.com/elimity-com/scim/errors"
 	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
@@ -196,6 +197,110 @@ func TestValidatorInteger(t *testing.T) {
 				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
 					t.Errorf("(%d) %s %v | actual %v, expected %v", i, f, attr, err, test.valid[i])
 				}
+			}
+		})
+	}
+}
+
+// TestValidatorInvalidResourceTypes contains all the cases where an *errors.ScimError gets returned.
+func TestValidatorInvalidResourceTypes(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		filter   string
+		attr     schema.CoreAttribute
+		resource map[string]interface{}
+	}{
+		{
+			"string", `attr eq "value"`,
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name: "attr",
+			})),
+			map[string]interface{}{
+				"attr": 1, // expects a string
+			},
+		},
+		{
+			"stringMv", `attr eq "value"`,
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:        "attr",
+				MultiValued: true,
+			})),
+			map[string]interface{}{
+				"attr": []interface{}{1}, // expects a []interface{string}
+			},
+		},
+		{
+			"stringMv",
+			`attr eq "value"`,
+			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+				Name:        "attr",
+				MultiValued: true,
+			})),
+			map[string]interface{}{
+				"attr": []string{"value"}, // expects a []interface{}
+			},
+		},
+		{
+			"dateTime", `attr eq "2006-01-02T15:04:05"`,
+			schema.SimpleCoreAttribute(schema.SimpleDateTimeParams(schema.DateTimeParams{
+				Name: "attr",
+			})),
+			map[string]interface{}{
+				"attr": 1, // expects a string
+			},
+		},
+		{
+			"dateTime", `attr eq "2006-01-02T15:04:05"`,
+			schema.SimpleCoreAttribute(schema.SimpleDateTimeParams(schema.DateTimeParams{
+				Name: "attr",
+			})),
+			map[string]interface{}{
+				"attr": "2006-01-02T", // expects a valid dateTime
+			},
+		},
+		{
+			"boolean", `attr eq true`,
+			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+				Name: "attr",
+			})),
+			map[string]interface{}{
+				"attr": 1, // expects a boolean
+			},
+		},
+		{
+			"decimal", `attr eq 0`,
+			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
+				Name: "attr",
+				Type: schema.AttributeTypeDecimal(),
+			})),
+			map[string]interface{}{
+				"attr": "0", // expects a boolean
+			},
+		},
+		{
+			"integer", `attr eq 0`,
+			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
+				Name: "attr",
+				Type: schema.AttributeTypeInteger(),
+			})),
+			map[string]interface{}{
+				"attr": 0.0, // expects an integer
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			validator, err := internal.NewValidator(test.filter, schema.Schema{
+				Attributes: []schema.CoreAttribute{test.attr},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			scimErr := validator.PassesFilter(test.resource)
+			if scimErr == nil {
+				t.Fatal()
+			}
+			if _, ok := scimErr.(*errors.ScimError); !ok {
+				t.Error(scimErr)
 			}
 		})
 	}
