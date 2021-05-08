@@ -2,10 +2,8 @@ package filter
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"net/http"
 )
 
 // validateAttributePath checks whether the given attribute path is a valid path within the given reference schema.
@@ -279,12 +277,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 
 		if !attr.MultiValued() {
 			if err := cmp(value); err != nil {
-				switch err := err.(type) {
-				case *errors.ScimError:
-					return err
-				default:
-					return fmt.Errorf("the resource does not pass the filter: %s", err)
-				}
+				return fmt.Errorf("the resource does not pass the filter: %s", err)
 			}
 			return nil
 		}
@@ -297,17 +290,9 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 					return nil
 				}
 			}
-			switch err := err.(type) {
-			case *errors.ScimError:
-				return err
-			default:
-				return fmt.Errorf("the resource does not pass the filter: %s", err)
-			}
+			return fmt.Errorf("the resource does not pass the filter: %s", err)
 		default:
-			return &errors.ScimError{
-				Detail: fmt.Sprintf("given value is not a []interface{}: %v", value),
-				Status: http.StatusInternalServerError,
-			}
+			panic(fmt.Sprintf("given value is not a []interface{}: %v", value))
 		}
 	case *filter.LogicalExpression:
 		switch e.Operator {

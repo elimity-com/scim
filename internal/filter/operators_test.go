@@ -2,7 +2,6 @@ package filter_test
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/errors"
 	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
@@ -104,7 +103,7 @@ func TestValidatorDateTime(t *testing.T) {
 func TestValidatorDecimal(t *testing.T) {
 	var (
 		exp = func(op filter.CompareOperator) string {
-			return fmt.Sprintf("dec %s 1", op)
+			return fmt.Sprintf("dec %s 1.0", op)
 		}
 		ref = schema.Schema{
 			Attributes: []schema.CoreAttribute{
@@ -114,27 +113,26 @@ func TestValidatorDecimal(t *testing.T) {
 				})),
 			},
 		}
-		attrs = [4]map[string]interface{}{
+		attrs = [3]map[string]interface{}{
 			{"dec": -0.1},       // less
 			{"dec": float64(1)}, // equal
-			{"dec": float32(1)}, // equal f32
 			{"dec": 1.1},        // greater
 		}
 	)
 
 	for _, test := range []struct {
 		op    filter.CompareOperator
-		valid [4]bool
+		valid [3]bool
 	}{
-		{filter.EQ, [4]bool{false, true, true, false}},
-		{filter.NE, [4]bool{true, false, false, true}},
-		{filter.CO, [4]bool{true, true, true, true}},
-		{filter.SW, [4]bool{false, true, true, true}},
-		{filter.EW, [4]bool{true, true, true, true}},
-		{filter.GT, [4]bool{false, false, false, true}},
-		{filter.LT, [4]bool{true, false, false, false}},
-		{filter.GE, [4]bool{false, true, true, true}},
-		{filter.LE, [4]bool{true, true, true, false}},
+		{filter.EQ, [3]bool{false, true, false}},
+		{filter.NE, [3]bool{true, false, true}},
+		{filter.CO, [3]bool{true, true, true}},
+		{filter.SW, [3]bool{false, true, true}},
+		{filter.EW, [3]bool{true, true, true}},
+		{filter.GT, [3]bool{false, false, true}},
+		{filter.LT, [3]bool{true, false, false}},
+		{filter.GE, [3]bool{false, true, true}},
+		{filter.LE, [3]bool{true, true, false}},
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
@@ -164,28 +162,26 @@ func TestValidatorInteger(t *testing.T) {
 				})),
 			},
 		}
-		attrs = [5]map[string]interface{}{
-			{"int": -1},       // less
-			{"int": int64(0)}, // equal i64
-			{"int": int32(0)}, // equal i32
-			{"int": 0},        // equal
-			{"int": 10},       // greater
+		attrs = [3]map[string]interface{}{
+			{"int": -1}, // less
+			{"int": 0},  // equal
+			{"int": 10}, // greater
 		}
 	)
 
 	for _, test := range []struct {
 		op    filter.CompareOperator
-		valid [5]bool
+		valid [3]bool
 	}{
-		{filter.EQ, [5]bool{false, true, true, true, false}},
-		{filter.NE, [5]bool{true, false, false, false, true}},
-		{filter.CO, [5]bool{false, true, true, true, true}},
-		{filter.SW, [5]bool{false, true, true, true, false}},
-		{filter.EW, [5]bool{false, true, true, true, true}},
-		{filter.GT, [5]bool{false, false, false, false, true}},
-		{filter.LT, [5]bool{true, false, false, false, false}},
-		{filter.GE, [5]bool{false, true, true, true, true}},
-		{filter.LE, [5]bool{true, true, true, true, false}},
+		{filter.EQ, [3]bool{false, true, false}},
+		{filter.NE, [3]bool{true, false, true}},
+		{filter.CO, [3]bool{false, true, true}},
+		{filter.SW, [3]bool{false, true, false}},
+		{filter.EW, [3]bool{false, true, true}},
+		{filter.GT, [3]bool{false, false, true}},
+		{filter.LT, [3]bool{true, false, false}},
+		{filter.GE, [3]bool{false, true, true}},
+		{filter.LE, [3]bool{true, true, false}},
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
@@ -268,13 +264,13 @@ func TestValidatorInvalidResourceTypes(t *testing.T) {
 			},
 		},
 		{
-			"decimal", `attr eq 0`,
+			"decimal", `attr eq 0.0`,
 			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
 				Name: "attr",
 				Type: schema.AttributeTypeDecimal(),
 			})),
 			map[string]interface{}{
-				"attr": "0", // expects a boolean
+				"attr": "0", // expects a decimal value
 			},
 		},
 		{
@@ -295,12 +291,13 @@ func TestValidatorInvalidResourceTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			scimErr := validator.PassesFilter(test.resource)
-			if scimErr == nil {
-				t.Fatal()
-			}
-			if _, ok := scimErr.(*errors.ScimError); !ok {
-				t.Error(scimErr)
+			defer func() {
+				if err := recover(); err == nil {
+					t.Fatal(test)
+				}
+			}()
+			if err := validator.PassesFilter(test.resource); err != nil {
+				t.Error(err)
 			}
 		})
 	}

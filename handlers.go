@@ -314,18 +314,16 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		validator  = f.NewFilterValidator(params.Filter, schema.Definition())
-		schemas    = s.getSchemas()
-		start, end = clamp(params.StartIndex-1, params.Count, len(schemas))
+		start, end = clamp(params.StartIndex-1, params.Count, len(s.getSchemas()))
 		resources  []interface{}
 	)
-
 	if params.Filter != nil {
 		if err := validator.Validate(); err != nil {
 			errorHandler(w, r, &errors.ScimErrorInvalidFilter)
 			return
 		}
 	}
-	for _, v := range schemas[start:end] {
+	for _, v := range s.getSchemas()[start:end] {
 		resource := v.ToMap()
 		if params.Filter != nil {
 			if err := validator.PassesFilter(resource); err != nil {
@@ -339,7 +337,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	raw, err := json.Marshal(listResponse{
-		TotalResults: len(schemas),
+		TotalResults: len(s.getSchemas()),
 		ItemsPerPage: params.Count,
 		StartIndex:   params.StartIndex,
 		Resources:    resources,
