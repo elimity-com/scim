@@ -119,53 +119,9 @@ func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *
 	return attributes, nil
 }
 
-func (t ResourceType) validateOperation(op PatchOperation) *errors.ScimError {
-	// Ensure the operation is a valid one. "add", "replace", or "remove".
-	if !contains(validOps, op.Op) {
-		return &errors.ScimErrorInvalidFilter
-	}
-
-	// "add" and "replace" operations must have a value.
-	if (op.Op == PatchOperationAdd || op.Op == PatchOperationReplace) && op.Value == nil {
-		return &errors.ScimErrorInvalidFilter
-	}
-
-	var (
-		validator filter.PathValidator
-		err       error
-	)
-	if op.Op == PatchOperationRemove {
-		// "remove" operations require a path.
-		validator, err = filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
-		if err != nil {
-			return &errors.ScimErrorInvalidPath
-		}
-	} else {
-		// "replace" and "add" can have implicit paths, which is part of the value.
-		validator, err = filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
-	}
-
-	if err == nil {
-		// Checks whether the path is a valid path within the given reference schemas.
-		if err := validator.Validate(); err != nil {
-			return &errors.ScimErrorInvalidPath
-		}
-		// Validates the operation value itself.
-		if err := t.validateOperationValue(op); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
-	validator, err := filter.NewPathValidator(op.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
-	if err != nil {
-		scimErr := errors.CheckScimError(err, http.MethodPatch)
-		return &scimErr
-	}
 	var (
-		path             = validator.Path()
+		path             = op.Path
 		attributeName    = path.AttributePath.AttributeName
 		subAttributeName = path.AttributePath.SubAttributeName()
 	)
@@ -173,12 +129,6 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 	// The path filter `x.y[].z` is impossible
 	if subAttributeName == "" {
 		subAttributeName = path.SubAttributeName()
-	}
-
-	if attributeName != "" {
-		if err := validator.Validate(); err != nil {
-			return &errors.ScimErrorInvalidPath
-		}
 	}
 
 	var mapValue map[string]interface{}
@@ -212,32 +162,70 @@ func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimErro
 
 // validatePatch parse and validate PATCH request.
 func (t ResourceType) validatePatch(r *http.Request) (PatchRequest, *errors.ScimError) {
-	var req PatchRequest
-
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return req, &errors.ScimErrorInvalidSyntax
+		return PatchRequest{}, &errors.ScimErrorInvalidSyntax
 	}
 
+	var req struct {
+		Schemas    []string
+		Operations []struct {
+			Op, Path string
+			Value    interface{}
+		}
+	}
 	if err := unmarshal(data, &req); err != nil {
-		return req, &errors.ScimErrorInvalidSyntax
+		return PatchRequest{}, &errors.ScimErrorInvalidSyntax
 	}
 
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
 	if len(req.Operations) < 1 {
-		return req, &errors.ScimErrorInvalidValue
+		return PatchRequest{}, &errors.ScimErrorInvalidValue
 	}
 
 	// Evaluation continues until all operations are successfully applied or until an error condition is encountered.
-	for i := range req.Operations {
-		req.Operations[i].Op = strings.ToLower(req.Operations[i].Op)
-		if err := t.validateOperation(req.Operations[i]); err != nil {
-			return req, err
+	patchReq := PatchRequest{
+		Schemas: req.Schemas,
+	}
+	for _, v := range req.Operations {
+		validator, err := filter.NewPathValidator(v.Path, t.schemaWithCommon(), t.getSchemaExtensions()...)
+		switch v.Op = strings.ToLower(v.Op); v.Op {
+		case PatchOperationAdd, PatchOperationReplace:
+			if v.Value == nil {
+				return PatchRequest{}, &errors.ScimErrorInvalidFilter
+			}
+			if v.Path != "" && err != nil {
+				return PatchRequest{}, &errors.ScimErrorInvalidPath
+			}
+		case PatchOperationRemove:
+			if err != nil {
+				return PatchRequest{}, &errors.ScimErrorInvalidPath
+			}
+		default:
+			return PatchRequest{}, &errors.ScimErrorInvalidFilter
 		}
+		op := PatchOperation{
+			Op:    strings.ToLower(v.Op),
+			Value: v.Value,
+		}
+
+		// If err is nil, then it means that there is a valid path.
+		if err == nil {
+			if err := validator.Validate(); err != nil {
+				return PatchRequest{}, &errors.ScimErrorInvalidPath
+			}
+			p := validator.Path()
+			op.Path = &p
+
+			if err := t.validateOperationValue(op); err != nil {
+				return PatchRequest{}, err
+			}
+		}
+		patchReq.Operations = append(patchReq.Operations, op)
 	}
 
-	return req, nil
+	return patchReq, nil
 }
 
 // SchemaExtension is one of the resource type's schema extensions.

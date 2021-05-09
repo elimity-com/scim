@@ -128,8 +128,8 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 	for _, op := range req.Operations {
 		switch op.Op {
 		case PatchOperationAdd:
-			if op.Path != "" {
-				h.data[id].resourceAttributes[op.Path] = op.Value
+			if op.Path != nil {
+				h.data[id].resourceAttributes[op.Path.String()] = op.Value
 			} else {
 				valueMap := op.Value.(map[string]interface{})
 				for k, v := range valueMap {
@@ -142,8 +142,8 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 				}
 			}
 		case PatchOperationReplace:
-			if op.Path != "" {
-				h.data[id].resourceAttributes[op.Path] = op.Value
+			if op.Path != nil {
+				h.data[id].resourceAttributes[op.Path.String()] = op.Value
 			} else {
 				valueMap := op.Value.(map[string]interface{})
 				for k, v := range valueMap {
@@ -151,7 +151,7 @@ func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest)
 				}
 			}
 		case PatchOperationRemove:
-			h.data[id].resourceAttributes[op.Path] = nil
+			h.data[id].resourceAttributes[op.Path.String()] = nil
 		}
 	}
 
@@ -210,7 +210,11 @@ func (h testResourceHandler) noContentOperation(id string, op PatchOperation) bo
 	if !ok {
 		return isRemoveOp
 	}
-	attrValue, ok := dataValue.resourceAttributes[op.Path]
+	var path string
+	if op.Path != nil {
+		path = op.Path.String()
+	}
+	attrValue, ok := dataValue.resourceAttributes[path]
 	if ok && attrValue == op.Value {
 		return true
 	}
