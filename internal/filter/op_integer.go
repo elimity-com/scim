@@ -2,7 +2,6 @@ package filter
 
 import (
 	"fmt"
-	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
 	"strings"
 )
@@ -31,7 +30,7 @@ func cmpIntStr(ref int, cmp func(v, ref string) error) (func(interface{}) error,
 //
 // Expects a integer attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpInteger(e *filter.AttributeExpression, attr schema.CoreAttribute, ref int) (func(interface{}) error, error) {
+func cmpInteger(e *filter.AttributeExpression, ref int) (func(interface{}) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpInt(ref, func(v, ref int) error {
