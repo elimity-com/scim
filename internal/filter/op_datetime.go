@@ -3,7 +3,6 @@ package filter
 import (
 	"fmt"
 	datetime "github.com/di-wu/xsd-datetime"
-	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
 	"strings"
 	"time"
@@ -14,7 +13,7 @@ import (
 //
 // Expects a dateTime attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpDateTime(e *filter.AttributeExpression, attr schema.CoreAttribute, date string, ref time.Time) (func(interface{}) error, error) {
+func cmpDateTime(e *filter.AttributeExpression, date string, ref time.Time) (func(interface{}) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpTime(ref, func(v, ref time.Time) error {

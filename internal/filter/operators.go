@@ -16,7 +16,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		if !ok {
 			return nil, fmt.Errorf("a binary attribute needs to be compared to a string")
 		}
-		return cmpBinary(e, attr, ref)
+		return cmpBinary(e, ref)
 	case "dateTime":
 		date, ok := e.CompareValue.(string)
 		if !ok {
@@ -26,7 +26,7 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		if err != nil {
 			return nil, fmt.Errorf("a dateTime attribute needs to be compared to a dateTime")
 		}
-		return cmpDateTime(e, attr, date, ref)
+		return cmpDateTime(e, date, ref)
 	case "reference", "string":
 		ref, ok := e.CompareValue.(string)
 		if !ok {
@@ -44,13 +44,13 @@ func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttrib
 		if !ok {
 			return nil, fmt.Errorf("a decimal attribute needs to be compared to a float/int")
 		}
-		return cmpDecimal(e, attr, ref)
+		return cmpDecimal(e, ref)
 	case "integer":
 		ref, ok := e.CompareValue.(int)
 		if !ok {
 			return nil, fmt.Errorf("a integer attribute needs to be compared to a int")
 		}
-		return cmpInteger(e, attr, ref)
+		return cmpInteger(e, ref)
 	default:
 		panic(fmt.Sprintf("unknown attribute type: %s", typ))
 	}

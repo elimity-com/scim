@@ -46,10 +46,12 @@ func validateExpression(ref schema.Schema, e filter.Expression) error {
 		); err != nil {
 			return err
 		}
+		return nil
 	case *filter.AttributeExpression:
 		if _, err := validateAttributePath(ref, e.AttributePath); err != nil {
 			return err
 		}
+		return nil
 	case *filter.LogicalExpression:
 		if err := validateExpression(ref, e.Left); err != nil {
 			return err
@@ -57,14 +59,15 @@ func validateExpression(ref schema.Schema, e filter.Expression) error {
 		if err := validateExpression(ref, e.Right); err != nil {
 			return err
 		}
+		return nil
 	case *filter.NotExpression:
 		if err := validateExpression(ref, e.Expression); err != nil {
 			return err
 		}
+		return nil
 	default:
-		panic(fmt.Sprintf("unknown expression type: %v", e))
+		panic(fmt.Sprintf("unknown expression type: %s", e))
 	}
-	return nil
 }
 
 // validateSubAttribute checks whether the given attribute name is a attribute within the given reference attribute.
@@ -148,6 +151,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 				}
 			}
 		}
+		return fmt.Errorf("the resource does not pass the filter")
 	case *filter.AttributeExpression:
 		ref, attr, ok := v.referenceContains(e.AttributePath)
 		if !ok {
@@ -256,6 +260,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 			}
 			return rightValidator.PassesFilter(resource)
 		}
+		return fmt.Errorf("the resource does not pass the filter")
 	case *filter.NotExpression:
 		validator := Validator{
 			e.Expression,
@@ -265,10 +270,10 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 		if err := validator.PassesFilter(resource); err != nil {
 			return nil
 		}
+		return fmt.Errorf("the resource does not pass the filter")
 	default:
-		panic(fmt.Sprintf("unknown expression type: %v", e))
+		panic(fmt.Sprintf("unknown expression type: %s", e))
 	}
-	return fmt.Errorf("the resource does not pass the filter")
 }
 
 // Validate checks whether the expression is a valid path within the given reference schemas.

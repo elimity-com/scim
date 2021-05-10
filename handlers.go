@@ -327,9 +327,6 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		resource := v.ToMap()
 		if params.Filter != nil {
 			if err := validator.PassesFilter(resource); err != nil {
-				if err, ok := err.(*errors.ScimError); ok {
-					panic(err)
-				}
 				continue
 			}
 		}
