@@ -2,6 +2,7 @@ package patch
 
 import (
 	"fmt"
+	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
 	"strings"
@@ -22,6 +23,14 @@ func (v OperationValidator) ValidateAdd() error {
 	if err != nil {
 		return err
 	}
+	if v.path.ValueExpression != nil {
+		fmt.Println(v.path.ValueExpression, refAttr.Name())
+		if err := f.NewFilterValidator(v.path.ValueExpression, schema.Schema{
+			Attributes: refAttr.SubAttributes(),
+		}).Validate(); err != nil {
+			return err
+		}
+	}
 	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
 		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
 		if err != nil {
@@ -29,11 +38,6 @@ func (v OperationValidator) ValidateAdd() error {
 		}
 		refAttr = refSubAttr
 	}
-
-	// TODO: fix this! We should validate the expression.
-	// if v.path.ValueExpression != nil {
-	//     return fmt.Errorf("an add operation does not support value expressions")
-	// }
 
 	if refAttr.MultiValued() {
 		if list, ok := v.value.([]interface{}); !ok {

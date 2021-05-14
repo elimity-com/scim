@@ -11,7 +11,6 @@ func TestNewPathValidator(t *testing.T) {
 		}
 	})
 	t.Run("Invalid Op", func(t *testing.T) {
-		// The quotes in the value filter are not escaped.
 		op := `{"op":"invalid","path":"attr1","value":"value"}`
 		validator, _ := NewValidator(op, patchSchema)
 		if err := validator.Validate(); err == nil {
