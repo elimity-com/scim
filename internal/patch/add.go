@@ -24,7 +24,6 @@ func (v OperationValidator) ValidateAdd() error {
 		return err
 	}
 	if v.path.ValueExpression != nil {
-		fmt.Println(v.path.ValueExpression, refAttr.Name())
 		if err := f.NewFilterValidator(v.path.ValueExpression, schema.Schema{
 			Attributes: refAttr.SubAttributes(),
 		}).Validate(); err != nil {
@@ -77,7 +76,7 @@ func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*sch
 	// Get the corresponding schema, this can be the main schema or an extension.
 	var refSchema = v.schema
 	if uri := attrPath.URI(); uri != "" {
-		// It can only be an extension if it has a uri prefix.
+		// It can also be an extension if it has a uri prefix.
 		var ok bool
 		if refSchema, ok = v.schemas[uri]; !ok {
 			return nil, fmt.Errorf("invalid uri prefix: %s", uri)
