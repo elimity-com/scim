@@ -79,7 +79,10 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 			valid:   `{"op":"add","path":"complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`,
 			invalid: `{"op":"add","path":"complexMultiValued[attr1 eq \"value\"].attr2","value":"value"}`,
 		},
-		{valid: `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`},
+		{
+			valid:   `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr1 eq \"value\"].attr1","value":"value"}`,
+			invalid: `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr2 eq \"value\"].attr1","value":"value"}`,
+		},
 
 		// Valid path, attribute not found.
 		{invalid: `{"op":"add","path":"invalid","value":"value"}`},
