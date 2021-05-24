@@ -79,6 +79,8 @@ func (v OperationValidator) Validate() (interface{}, error) {
 	switch v.op {
 	case OperationAdd:
 		return v.validateAdd()
+	case OperationRemove:
+		return nil, v.ValidateRemove()
 	default:
 		return nil, fmt.Errorf("invalid operation op: %s", v.op)
 	}
