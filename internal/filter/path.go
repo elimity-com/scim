@@ -5,6 +5,50 @@ import (
 	"github.com/scim2/filter-parser/v2"
 )
 
+// MultiValuedFilterAttributes returns the attributes of the given attribute on which can be filtered. In the case of a
+// complex attribute, the sub-attributes get returned. Otherwise if the given attribute is not complex, a "value" sub-
+// attribute gets created to filter against.
+func MultiValuedFilterAttributes(attr schema.CoreAttribute) schema.Attributes {
+	switch attr.AttributeType() {
+	case "decimal":
+		return schema.Attributes{
+			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
+				Name: "value",
+				Type: schema.AttributeTypeDecimal(),
+			})),
+		}
+	case "integer":
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleNumberParams(schema.NumberParams{
+				Name: "value",
+				Type: schema.AttributeTypeInteger(),
+			})),
+		}
+	case "binary":
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleBinaryParams(schema.BinaryParams{Name: "value"}),
+		)}
+	case "boolean":
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleBooleanParams(schema.BooleanParams{Name: "value"})),
+		}
+	case "complex":
+		return attr.SubAttributes()
+	case "dateTime":
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleDateTimeParams(schema.DateTimeParams{Name: "value"})),
+		}
+	case "reference":
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleReferenceParams(schema.ReferenceParams{Name: "value"})),
+		}
+	default:
+		return schema.Attributes{schema.SimpleCoreAttribute(
+			schema.SimpleStringParams(schema.StringParams{Name: "value"})),
+		}
+	}
+}
+
 // PathValidator represents a path validator.
 type PathValidator struct {
 	path       filter.Path
@@ -58,7 +102,7 @@ func (v PathValidator) validatePath(ref schema.Schema) error {
 		if err := validateExpression(
 			schema.Schema{
 				ID:         ref.ID,
-				Attributes: attr.SubAttributes(),
+				Attributes: MultiValuedFilterAttributes(attr),
 			},
 			v.path.ValueExpression,
 		); err != nil {
