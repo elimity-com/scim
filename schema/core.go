@@ -352,13 +352,13 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		attributes := make([]interface{}, len(arr))
-		for i, ele := range arr {
+		var attributes []interface{}
+		for _, ele := range arr {
 			attr, scimErr := a.ValidateSingular(ele)
 			if scimErr != nil {
 				return nil, scimErr
 			}
-			attributes[i] = attr
+			attributes = append(attributes, attr)
 		}
 		return attributes, nil
 

@@ -37,7 +37,6 @@ func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*sch
 		}
 	}
 	if refAttr == nil {
-		// This should not occur since the filter parser will validate this.
 		return nil, fmt.Errorf("could not find attribute %s", v.path)
 	}
 	if subAttrName := attrPath.SubAttributeName(); subAttrName != "" {
@@ -108,13 +107,13 @@ func (v OperationValidator) validateAdd() (interface{}, error) {
 	}
 
 	if list, ok := v.value.([]interface{}); ok {
-		attrs := make([]interface{}, len(list))
-		for i, value := range list {
+		var attrs []interface{}
+		for _, value := range list {
 			attr, scimErr := refAttr.ValidateSingular(value)
 			if scimErr != nil {
 				return nil, scimErr
 			}
-			attrs[i] = attr
+			attrs = append(attrs, attr)
 		}
 		return attrs, nil
 	}
