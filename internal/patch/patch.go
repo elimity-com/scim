@@ -3,6 +3,7 @@ package patch
 import (
 	"encoding/json"
 	"fmt"
+	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
 )
@@ -28,6 +29,7 @@ type OperationValidator struct {
 }
 
 // NewValidator creates an OperationValidator based on the given JSON string and reference schemas.
+// Returns an error if patchReq is not valid.
 func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (OperationValidator, error) {
 	var operation struct {
 		Op    string
@@ -39,7 +41,15 @@ func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (Oper
 	}
 
 	var path *filter.Path
-	if p, err := filter.ParsePath([]byte(operation.Path)); err == nil {
+	if operation.Path != "" {
+		validator, err := f.NewPathValidator(operation.Path, s, exts...)
+		if err != nil {
+			return OperationValidator{}, err
+		}
+		if err := validator.Validate(); err != nil {
+			return OperationValidator{}, err
+		}
+		p := validator.Path()
 		path = &p
 	}
 

@@ -118,7 +118,7 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 			if op := test.invalid; op != "" {
 				validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
 				if err != nil {
-					t.Fatal(err)
+					return
 				}
 				if _, err := validator.Validate(); err == nil {
 					t.Errorf("The following operatation should be an INVALID add operation:\n(case %d): %s", i, op)
