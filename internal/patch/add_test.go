@@ -110,7 +110,7 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := validator.Validate(); err != nil {
+				if _, err := validator.Validate(); err != nil {
 					t.Errorf("The following operatation should be an VALID add operation:\n(case %d): %s\n%v", i, op, err)
 				}
 			}
@@ -120,7 +120,7 @@ func TestOperationValidator_ValidateAdd(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := validator.Validate(); err == nil {
+				if _, err := validator.Validate(); err == nil {
 					t.Errorf("The following operatation should be an INVALID add operation:\n(case %d): %s", i, op)
 				}
 			}

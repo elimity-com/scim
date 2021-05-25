@@ -27,6 +27,7 @@ type OperationValidator struct {
 	schemas map[string]schema.Schema
 }
 
+// NewValidator creates an OperationValidator based on the given JSON string and reference schemas.
 func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (OperationValidator, error) {
 	var operation struct {
 		Op    string
@@ -58,11 +59,14 @@ func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (Oper
 	}, nil
 }
 
-func (v OperationValidator) Validate() error {
+// Validate validates the PATCH operation. Unknown attributes in complex values are ignored. The returned interface
+// contains a (sanitised) version of given value based on the attribute it targets. Multi-valued attributes will always
+// be returned wrapped in a slice, even if it is just one value that was defined within the operation.
+func (v OperationValidator) Validate() (interface{}, error) {
 	switch v.op {
 	case OperationAdd:
-		return v.ValidateAdd()
+		return v.validateAdd()
 	default:
-		return fmt.Errorf("invalid operation op: %s", v.op)
+		return nil, fmt.Errorf("invalid operation op: %s", v.op)
 	}
 }
