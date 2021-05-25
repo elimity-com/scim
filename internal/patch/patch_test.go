@@ -13,7 +13,7 @@ func TestNewPathValidator(t *testing.T) {
 	t.Run("Invalid Op", func(t *testing.T) {
 		op := `{"op":"invalid","path":"attr1","value":"value"}`
 		validator, _ := NewValidator(op, patchSchema)
-		if err := validator.Validate(); err == nil {
+		if _, err := validator.Validate(); err == nil {
 			t.Errorf("expected error, got none")
 		}
 	})

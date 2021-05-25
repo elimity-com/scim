@@ -8,64 +8,6 @@ import (
 	"strings"
 )
 
-func (v OperationValidator) ValidateAdd() error {
-	// The operation must contain a "value" member whose content specifies the value to be added.
-	if v.value == nil {
-		return fmt.Errorf("an add operation must contain a value member")
-	}
-
-	// If "path" is omitted, the target location is assumed to be the resource itself.
-	if v.path == nil {
-		return v.validateAddEmptyPath()
-	}
-
-	refAttr, err := v.getRefAttribute(v.path.AttributePath)
-	if err != nil {
-		return err
-	}
-	if v.path.ValueExpression != nil {
-		if err := f.NewFilterValidator(v.path.ValueExpression, schema.Schema{
-			Attributes: refAttr.SubAttributes(),
-		}).Validate(); err != nil {
-			return err
-		}
-	}
-	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
-		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
-		if err != nil {
-			return err
-		}
-		refAttr = refSubAttr
-	}
-
-	if refAttr.MultiValued() {
-		if list, ok := v.value.([]interface{}); !ok {
-			attr, err := refAttr.ValidateSingular(v.value)
-			if err != nil {
-				return err
-			}
-			v.value = []interface{}{attr}
-		} else {
-			var attrs []interface{}
-			for _, value := range list {
-				attr, err := refAttr.ValidateSingular(value)
-				if err != nil {
-					return err
-				}
-				attrs = append(attrs, attr)
-			}
-			v.value = attrs
-		}
-	} else {
-		attr, err := refAttr.ValidateSingular(v.value)
-		if err != nil {
-			return err
-		}
-		v.value = attr
-	}
-	return nil
-}
-
 // getRefAttribute returns the corresponding attribute based on the given attribute path.
 //
 // e.g.
@@ -127,16 +69,74 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 	return refSubAttr, nil
 }
 
-func (v OperationValidator) validateAddEmptyPath() error {
-	attributes, ok := v.value.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("the given value should be a complex attribute if path is empty")
+func (v OperationValidator) validateAdd() (interface{}, error) {
+	// The operation must contain a "value" member whose content specifies the value to be added.
+	if v.value == nil {
+		return nil, fmt.Errorf("an add operation must contain a value member")
 	}
 
+	// If "path" is omitted, the target location is assumed to be the resource itself.
+	if v.path == nil {
+		return v.validateAddEmptyPath()
+	}
+
+	refAttr, err := v.getRefAttribute(v.path.AttributePath)
+	if err != nil {
+		return nil, err
+	}
+	if v.path.ValueExpression != nil {
+		if err := f.NewFilterValidator(v.path.ValueExpression, schema.Schema{
+			Attributes: refAttr.SubAttributes(),
+		}).Validate(); err != nil {
+			return nil, err
+		}
+	}
+	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
+		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
+		if err != nil {
+			return nil, err
+		}
+		refAttr = refSubAttr
+	}
+
+	if !refAttr.MultiValued() {
+		attr, scimErr := refAttr.ValidateSingular(v.value)
+		if scimErr != nil {
+			return nil, scimErr
+		}
+		return attr, nil
+	}
+
+	if list, ok := v.value.([]interface{}); ok {
+		attrs := make([]interface{}, len(list))
+		for i, value := range list {
+			attr, scimErr := refAttr.ValidateSingular(value)
+			if scimErr != nil {
+				return nil, scimErr
+			}
+			attrs[i] = attr
+		}
+		return attrs, nil
+	}
+
+	attr, scimErr := refAttr.ValidateSingular(v.value)
+	if scimErr != nil {
+		return nil, scimErr
+	}
+	return []interface{}{attr}, nil
+}
+
+func (v OperationValidator) validateAddEmptyPath() (interface{}, error) {
+	attributes, ok := v.value.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
+	}
+
+	rootValue := make(map[string]interface{})
 	for p, value := range attributes {
 		path, err := filter.ParsePath([]byte(p))
 		if err != nil {
-			return fmt.Errorf("invalid attribute path: %s", p)
+			return nil, fmt.Errorf("invalid attribute path: %s", p)
 		}
 		validator := OperationValidator{
 			op:      v.op,
@@ -145,9 +145,11 @@ func (v OperationValidator) validateAddEmptyPath() error {
 			schema:  v.schema,
 			schemas: v.schemas,
 		}
-		if err := validator.ValidateAdd(); err != nil {
-			return err
+		v, err := validator.validateAdd()
+		if err != nil {
+			return nil, err
 		}
+		rootValue[p] = v
 	}
-	return nil
+	return rootValue, nil
 }
