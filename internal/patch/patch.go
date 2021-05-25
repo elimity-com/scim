@@ -80,7 +80,7 @@ func (v OperationValidator) Validate() (interface{}, error) {
 	case OperationAdd:
 		return v.validateAdd()
 	case OperationRemove:
-		return nil, v.ValidateRemove()
+		return nil, v.validateRemove()
 	default:
 		return nil, fmt.Errorf("invalid operation op: %s", v.op)
 	}

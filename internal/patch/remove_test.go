@@ -29,11 +29,11 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 		{valid: `{"op":"remove","path":"attr1"}`},
 		// If the target location is a multi-valued attribute and no filter is specified.
 		{valid: `{"op":"remove","path":"multiValued"}`},
-		// If the target location is a complex multi-valued attribute and a complex filter is specified comparing a
-		// "value".
-		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"]"}`},
+		// If the target location is a multi-valued attribute and a complex filter is specified comparing a "value".
+		{valid: `{"op":"remove","path":"multivalued[value eq \"value\"]"}`},
 		// If the target location is a complex multi-valued attribute and a complex filter is specified based on the
 		// attribute's sub-attributes
+		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"]"}`},
 		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"].attr1"}`},
 	} {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
