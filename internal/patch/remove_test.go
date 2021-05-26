@@ -43,7 +43,7 @@ func Example_removeSingleMember() {
 }
 
 // The following example shows how to replace all of the members of a group with a different members list.
-func Example_replaceMembers() {
+func Example_replaceAllMembers() {
 	operations := []string{`{
 	"op": "remove",
 	"path": "members"
@@ -68,7 +68,6 @@ func Example_replaceMembers() {
 		validator, _ := NewValidator(op, schema.CoreGroupSchema())
 		fmt.Println(validator.Validate())
 	}
-
 	// Output:
 	// <nil> <nil>
 	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001] map[$ref:https://example.com/v2/Users/0002 display:example type:<nil> value:0002]] <nil>

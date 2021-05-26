@@ -78,8 +78,8 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 // be returned wrapped in a slice, even if it is just one value that was defined within the operation.
 func (v OperationValidator) Validate() (interface{}, error) {
 	switch v.op {
-	case OperationAdd:
-		return v.validateAdd()
+	case OperationAdd, OperationReplace:
+		return v.validateUpdate()
 	case OperationRemove:
 		return nil, v.validateRemove()
 	default:
@@ -145,4 +145,34 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 		return nil, fmt.Errorf("could not find attribute %s", v.path)
 	}
 	return refSubAttr, nil
+}
+
+// validateEmptyPath validates paths that don't have a "path" value. In this case the target location is assumed to be
+// the resource itself. The "value" parameter contains a set of attributes to be added to the resource.
+func (v OperationValidator) validateEmptyPath() (interface{}, error) {
+	attributes, ok := v.value.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
+	}
+
+	rootValue := map[string]interface{}{}
+	for p, value := range attributes {
+		path, err := filter.ParsePath([]byte(p))
+		if err != nil {
+			return nil, fmt.Errorf("invalid attribute path: %s", p)
+		}
+		validator := OperationValidator{
+			op:      v.op,
+			path:    &path,
+			value:   value,
+			schema:  v.schema,
+			schemas: v.schemas,
+		}
+		v, err := validator.Validate()
+		if err != nil {
+			return nil, err
+		}
+		rootValue[p] = v
+	}
+	return rootValue, nil
 }
