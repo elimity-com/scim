@@ -4,20 +4,19 @@ import (
 	"fmt"
 	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser/v2"
 )
 
-// validateAdd validates the add operation contained within the validator based on on Section 3.5.2.1 in RFC 7644.
-// More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.1
-func (v OperationValidator) validateAdd() (interface{}, error) {
-	// The operation must contain a "value" member whose content specifies the value to be added.
+// validateUpdate validates the add/replace operation contained within the validator based on on Section 3.5.2.1 in
+// RFC 7644. More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.1
+func (v OperationValidator) validateUpdate() (interface{}, error) {
+	// The operation must contain a "value" member whose content specifies the value to be added/replaces.
 	if v.value == nil {
 		return nil, fmt.Errorf("an add operation must contain a value member")
 	}
 
 	// If "path" is omitted, the target location is assumed to be the resource itself.
 	if v.path == nil {
-		return v.validateAddEmptyPath()
+		return v.validateEmptyPath()
 	}
 
 	refAttr, err := v.getRefAttribute(v.path.AttributePath)
@@ -64,34 +63,4 @@ func (v OperationValidator) validateAdd() (interface{}, error) {
 		return nil, scimErr
 	}
 	return []interface{}{attr}, nil
-}
-
-// validateAddEmptyPath validates paths that don't have a "path" value. In this case the target location is assumed to
-// be the resource itself. The "value" parameter contains a set of attributes to be added to the resource.
-func (v OperationValidator) validateAddEmptyPath() (interface{}, error) {
-	attributes, ok := v.value.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
-	}
-
-	rootValue := map[string]interface{}{}
-	for p, value := range attributes {
-		path, err := filter.ParsePath([]byte(p))
-		if err != nil {
-			return nil, fmt.Errorf("invalid attribute path: %s", p)
-		}
-		validator := OperationValidator{
-			op:      v.op,
-			path:    &path,
-			value:   value,
-			schema:  v.schema,
-			schemas: v.schemas,
-		}
-		v, err := validator.validateAdd()
-		if err != nil {
-			return nil, err
-		}
-		rootValue[p] = v
-	}
-	return rootValue, nil
 }
