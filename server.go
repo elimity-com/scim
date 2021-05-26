@@ -2,6 +2,7 @@ package scim
 
 import (
 	"fmt"
+	f "github.com/elimity-com/scim/internal/filter"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -9,22 +10,12 @@ import (
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser/v2"
 )
 
 const (
 	defaultStartIndex = 1
 	fallbackCount     = 100
 )
-
-func getFilter(r *http.Request) (filter.Expression, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	decodedFilter, _ := url.QueryUnescape(rawFilter)
-	if decodedFilter != "" {
-		return filter.ParseFilter([]byte(decodedFilter))
-	}
-	return nil, nil
-}
 
 func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	strVal := r.URL.Query().Get(key)
@@ -155,7 +146,7 @@ func (s Server) getSchemas() []schema.Schema {
 	return schemas
 }
 
-func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.ScimError) {
+func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, refExtensions ...schema.Schema) (ListRequestParams, *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
 	defaultCount := s.Config.getItemsPerPage()
@@ -185,14 +176,20 @@ func (s Server) parseRequestParams(r *http.Request) (ListRequestParams, *errors.
 		return ListRequestParams{}, &scimErr
 	}
 
-	filterExpr, filterExprErr := getFilter(r)
-	if filterExprErr != nil {
-		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	decodedFilter, _ := url.QueryUnescape(rawFilter)
+	var validator f.Validator
+	if decodedFilter != "" {
+		var err error
+		if validator, err = f.NewValidator(decodedFilter, refSchema, refExtensions...); err != nil {
+			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
+		}
 	}
 
 	return ListRequestParams{
 		Count:      count,
-		Filter:     filterExpr,
+		Filter:     validator.GetFilter(),
 		StartIndex: startIndex,
+		validator:  validator,
 	}, nil
 }

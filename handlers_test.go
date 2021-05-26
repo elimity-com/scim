@@ -220,16 +220,6 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 }
 
-// Ensure we error when changing an immutable or readonly property while allowing adding of immutable properties.
-func TestServerResourcePatchHandlerFailOnImmutable(t *testing.T) {
-	runPatchImmutableTest(t, PatchOperationAdd, "immutableThing", http.StatusOK)
-	runPatchImmutableTest(t, PatchOperationRemove, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "immutableThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationRemove, "readonlyThing", http.StatusBadRequest)
-	runPatchImmutableTest(t, PatchOperationReplace, "readonlyThing", http.StatusBadRequest)
-}
-
 func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -914,29 +904,6 @@ func getUserSchema() schema.Schema {
 				},
 			}),
 		},
-	}
-}
-
-func runPatchImmutableTest(t *testing.T, op, path string, expectedStatus int) {
-	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(fmt.Sprintf(`{
-		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-		"Operations":[
-		  {
-		    "op":"%s",
-		    "path":"%s",
-		    "value":"test"
-		  }
-		]
-	}`, op, path)))
-	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
-
-	assertEqualStatusCode(t, expectedStatus, rr.Code)
-
-	var resource map[string]interface{}
-	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
-	if expectedStatus >= 400 {
-		assertEqual(t, errors.ScimErrorInvalidValue.Detail, resource["detail"])
 	}
 }
 

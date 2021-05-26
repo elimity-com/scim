@@ -8,8 +8,8 @@ import (
 // The following example shows how to add a member to a group.
 func Example_addMemberToGroup() {
 	operation := `{
-	"op": "add",
-	"path": "members",
+	"Op": "add",
+	"Path": "members",
 	"value": {
 		"display": "di-wu",
 		"$ref": "https://example.com/v2/Users/0001",
@@ -22,10 +22,10 @@ func Example_addMemberToGroup() {
 	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001]] <nil>
 }
 
-// The following example shows how to add one or more attributes to a User resource without using a "path" attribute.
+// The following example shows how to add one or more attributes to a User resource without using a "Path" attribute.
 func Example_addWithoutPath() {
 	operation := `{
-	"op": "add",
+	"Op": "add",
 	"value": {
 		"emails": [
 			{

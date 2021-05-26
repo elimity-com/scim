@@ -21,9 +21,3 @@ type PatchOperation struct {
 	// Value specifies the value to be added or replaced.
 	Value interface{}
 }
-
-// PatchRequest represents a resource PATCH request.
-type PatchRequest struct {
-	Schemas    []string
-	Operations []PatchOperation
-}
