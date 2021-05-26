@@ -286,9 +286,9 @@ func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
 		attributes["referenceTypes"] = a.referenceTypes
 	}
 
-	rawSubAttributes := make([]map[string]interface{}, len(a.subAttributes))
-	for i, subAttr := range a.subAttributes {
-		rawSubAttributes[i] = subAttr.getRawAttributes()
+	var rawSubAttributes []map[string]interface{}
+	for _, subAttr := range a.subAttributes {
+		rawSubAttributes = append(rawSubAttributes, subAttr.getRawAttributes())
 	}
 
 	if a.subAttributes != nil && len(a.subAttributes) != 0 {
@@ -331,7 +331,7 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
-		validMap := make(map[string]interface{}, len(arr))
+		validMap := map[string]interface{}{}
 		for k, v := range arr {
 			for _, sub := range a.subAttributes {
 				if !strings.EqualFold(sub.name, k) {
