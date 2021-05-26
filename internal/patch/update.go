@@ -14,23 +14,23 @@ func (v OperationValidator) validateUpdate() (interface{}, error) {
 		return nil, fmt.Errorf("an add operation must contain a value member")
 	}
 
-	// If "path" is omitted, the target location is assumed to be the resource itself.
-	if v.path == nil {
+	// If "Path" is omitted, the target location is assumed to be the resource itself.
+	if v.Path == nil {
 		return v.validateEmptyPath()
 	}
 
-	refAttr, err := v.getRefAttribute(v.path.AttributePath)
+	refAttr, err := v.getRefAttribute(v.Path.AttributePath)
 	if err != nil {
 		return nil, err
 	}
-	if v.path.ValueExpression != nil {
-		if err := f.NewFilterValidator(v.path.ValueExpression, schema.Schema{
+	if v.Path.ValueExpression != nil {
+		if err := f.NewFilterValidator(v.Path.ValueExpression, schema.Schema{
 			Attributes: refAttr.SubAttributes(),
 		}).Validate(); err != nil {
 			return nil, err
 		}
 	}
-	if subAttrName := v.path.SubAttributeName(); subAttrName != "" {
+	if subAttrName := v.Path.SubAttributeName(); subAttrName != "" {
 		refSubAttr, err := v.getRefSubAttribute(refAttr, subAttrName)
 		if err != nil {
 			return nil, err

@@ -8,7 +8,7 @@ import (
 // The following example shows how to replace all values of one or more specific attributes.
 func Example_replaceAnyAttribute() {
 	operation := `{
-	"op": "replace",
+	"Op": "replace",
 	"value": {
 		"emails": [
 			{
@@ -34,8 +34,8 @@ func Example_replaceAnyAttribute() {
 // replace operation.
 func Example_replaceMembers() {
 	operations := []string{`{
-	"op": "replace",
-	"path": "members",
+	"Op": "replace",
+	"Path": "members",
 	"value": [
 		{
 			"display": "di-wu",
@@ -62,8 +62,8 @@ func Example_replaceMembers() {
 // selected by a "valuePath" filter.
 func Example_replaceSpecificSubAttribute() {
 	operation := `{
-	"op": "replace",
-	"path": "addresses[type eq \"work\"].streetAddress",
+	"Op": "replace",
+	"Path": "addresses[type eq \"work\"].streetAddress",
 	"value": "ExampleStreet 100"
 }`
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
@@ -75,8 +75,8 @@ func Example_replaceSpecificSubAttribute() {
 // The following example shows how to change a User's entire "work" address, using a "valuePath" filter.
 func Example_replaceWorkAddress() {
 	operation := `{
-	"op": "replace",
-	"path": "addresses[type eq \"work\"]",
+	"Op": "replace",
+	"Path": "addresses[type eq \"work\"]",
 	"value": {
 		"type": "work",
 		"streetAddress": "ExampleStreet 1",

@@ -120,12 +120,12 @@ func (h testResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}, nil
 }
 
-func (h testResourceHandler) Patch(r *http.Request, id string, req PatchRequest) (Resource, error) {
-	if h.shouldReturnNoContent(id, req.Operations) {
+func (h testResourceHandler) Patch(r *http.Request, id string, operations []PatchOperation) (Resource, error) {
+	if h.shouldReturnNoContent(id, operations) {
 		return Resource{}, nil
 	}
 
-	for _, op := range req.Operations {
+	for _, op := range operations {
 		switch op.Op {
 		case PatchOperationAdd:
 			if op.Path != nil {

@@ -111,6 +111,11 @@ func NewValidator(exp string, s schema.Schema, exts ...schema.Schema) (Validator
 	}, nil
 }
 
+// GetFilter returns the filter contained within the validator.
+func (v Validator) GetFilter() filter.Expression {
+	return v.filter
+}
+
 // PassesFilter checks whether given resources passes the filter.
 func (v Validator) PassesFilter(resource map[string]interface{}) error {
 	switch e := v.filter.(type) {

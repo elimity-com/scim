@@ -10,23 +10,23 @@ import (
 func TestNewPathValidator(t *testing.T) {
 	t.Run("Invalid JSON", func(t *testing.T) {
 		// The quotes in the value filter are not escaped.
-		op := `{"op":"add","path":"complexMultiValued[attr1 eq "value"].attr1","value":"value"}`
+		op := `{"Op":"add","Path":"complexMultiValued[attr1 eq "value"].attr1","value":"value"}`
 		if _, err := NewValidator(op, patchSchema); err == nil {
 			t.Error("expected JSON error, got none")
 		}
 	})
 	t.Run("Invalid Op", func(t *testing.T) {
-		// "op" must be one of "add", "remove", or "replace".
-		op := `{"op":"invalid","path":"attr1","value":"value"}`
+		// "Op" must be one of "add", "remove", or "replace".
+		op := `{"Op":"invalid","Path":"attr1","value":"value"}`
 		validator, _ := NewValidator(op, patchSchema)
 		if _, err := validator.Validate(); err == nil {
 			t.Errorf("expected error, got none")
 		}
 	})
 	t.Run("Invalid Attribute", func(t *testing.T) {
-		// "invalid pr" is not a valid path filter.
-		// This error will be caught by the path filter validator.
-		op := `{"op":"add","path":"invalid pr","value":"value"}`
+		// "invalid pr" is not a valid Path filter.
+		// This error will be caught by the Path filter validator.
+		op := `{"Op":"add","Path":"invalid pr","value":"value"}`
 		if _, err := NewValidator(op, patchSchema); err == nil {
 			t.Error("expected JSON error, got none")
 		}
@@ -43,13 +43,13 @@ func TestOperationValidator_getRefAttribute(t *testing.T) {
 		{`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber`, `employeeNumber`},
 	} {
 		validator, err := NewValidator(
-			fmt.Sprintf(`{"op":"invalid","path":%q,"value":"value"}`, test.pathFilter),
+			fmt.Sprintf(`{"Op":"invalid","Path":%q,"value":"value"}`, test.pathFilter),
 			schema.CoreUserSchema(), schema.ExtensionEnterpriseUser(),
 		)
 		if err != nil {
 			t.Fatal(err)
 		}
-		attr, err := validator.getRefAttribute(validator.path.AttributePath)
+		attr, err := validator.getRefAttribute(validator.Path.AttributePath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +59,7 @@ func TestOperationValidator_getRefAttribute(t *testing.T) {
 	}
 
 	validator, _ := NewValidator(
-		`{"op":"invalid","path":"complex","value":"value"}`,
+		`{"Op":"invalid","Path":"complex","value":"value"}`,
 		schema.CoreUserSchema(), schema.ExtensionEnterpriseUser(),
 	)
 	if _, err := validator.getRefAttribute(filter.AttributePath{
@@ -78,7 +78,7 @@ func TestOperationValidator_getRefSubAttribute(t *testing.T) {
 		{`groups`, `display`},
 	} {
 		validator, err := NewValidator(
-			fmt.Sprintf(`{"op":"invalid","path":%q,"value":"value"}`, test.attributeName),
+			fmt.Sprintf(`{"Op":"invalid","Path":%q,"value":"value"}`, test.attributeName),
 			schema.CoreUserSchema(), schema.ExtensionEnterpriseUser(),
 		)
 		if err != nil {

@@ -2,6 +2,7 @@ package scim
 
 import (
 	"fmt"
+	f "github.com/elimity-com/scim/internal/filter"
 	"net/http"
 	"net/url"
 	"time"
@@ -23,6 +24,26 @@ type ListRequestParams struct {
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
 	StartIndex int
+
+	// An internal filter validator.
+	validator f.Validator
+}
+
+// PassesFilter checks whether given resources passes the filter.
+// The resource has to be in a very strict format (Go types). For more information check the internal filter package.
+func (p ListRequestParams) PassesFilter(resource map[string]interface{}) error {
+	if p.Filter == nil {
+		return nil
+	}
+	return p.validator.PassesFilter(resource)
+}
+
+// ValidateFilter checks whether the filter expression is a valid within the resource's reference schemas.
+func (p ListRequestParams) ValidateFilter() error {
+	if p.Filter == nil {
+		return nil
+	}
+	return p.validator.Validate()
 }
 
 // Meta represents the metadata of a resource.
@@ -106,5 +127,5 @@ type ResourceHandler interface {
 	// 1. the Add/Replace operation should return No Content only when the value already exists AND is the same.
 	// 2. the Remove operation should return No Content when the value to be remove is already absent.
 	// More information in Section 3.5.2 of RFC 7644: https://tools.ietf.org/html/rfc7644#section-3.5.2
-	Patch(r *http.Request, id string, request PatchRequest) (Resource, error)
+	Patch(r *http.Request, id string, operations []PatchOperation) (Resource, error)
 }

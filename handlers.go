@@ -210,7 +210,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 // resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
 // the core schema URI that defines the resource, and any supported schema extensions.
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
+	params, paramsErr := s.parseRequestParams(r, schema.ResourceTypeSchema())
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
@@ -243,7 +243,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 // resourcesGetHandler receives an HTTP GET request to the resource endpoint, e.g., "/Users" or "/Groups", to retrieve
 // all known resources.
 func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
-	params, paramsErr := s.parseRequestParams(r)
+	params, paramsErr := s.parseRequestParams(r, resourceType.Schema, resourceType.getSchemaExtensions()...)
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
@@ -257,7 +257,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	// return empty slice instead of null if there are no resources.
-	resources := []interface{}{}
+	var resources []interface{}
 	for _, v := range page.Resources {
 		resources = append(resources, v.response(resourceType))
 	}
@@ -306,7 +306,7 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 // schemasHandler receives an HTTP GET to retrieve information about resource schemas supported by a SCIM service
 // provider. An HTTP GET to the endpoint "/Schemas" returns all supported schemas in ListResponse format.
 func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	params, paramsErr := s.parseRequestParams(r)
+	params, paramsErr := s.parseRequestParams(r, schema.Definition())
 	if paramsErr != nil {
 		errorHandler(w, r, paramsErr)
 		return
