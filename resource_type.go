@@ -3,14 +3,12 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/elimity-com/scim/internal/patch"
-	"io/ioutil"
-	"net/http"
-	"strings"
-
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/internal/patch"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
+	"io/ioutil"
+	"net/http"
 )
 
 // unmarshal unifies the unmarshal of the requests.
@@ -117,47 +115,6 @@ func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *
 	}
 
 	return attributes, nil
-}
-
-func (t ResourceType) validateOperationValue(op PatchOperation) *errors.ScimError {
-	var (
-		path             = op.Path
-		attributeName    = path.AttributePath.AttributeName
-		subAttributeName = path.AttributePath.SubAttributeName()
-	)
-	// The sub attribute can come from: `emails.value` or `emails[type eq "work"].value`.
-	// The path filter `x.y[].z` is impossible
-	if subAttributeName == "" {
-		subAttributeName = path.SubAttributeName()
-	}
-
-	var mapValue map[string]interface{}
-	switch v := op.Value.(type) {
-	case map[string]interface{}:
-		mapValue = v
-
-	default:
-		if subAttributeName == "" {
-			mapValue = map[string]interface{}{attributeName: v}
-			break
-		}
-		mapValue = map[string]interface{}{attributeName: map[string]interface{}{
-			subAttributeName: v,
-		}}
-	}
-
-	// Check if it's a patch on an extension.
-	if attributeName != "" {
-		if id := path.AttributePath.URI(); id != "" {
-			for _, ext := range t.SchemaExtensions {
-				if strings.EqualFold(id, ext.Schema.ID) {
-					return ext.Schema.ValidatePatchOperation(op.Op, mapValue, true)
-				}
-			}
-		}
-	}
-
-	return t.schemaWithCommon().ValidatePatchOperationValue(op.Op, mapValue)
 }
 
 // validatePatch parse and validate PATCH request.
