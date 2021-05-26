@@ -8,6 +8,8 @@ import (
 	"github.com/scim2/filter-parser/v2"
 )
 
+// Op represents the possible value the operation is to perform.
+// Possible values are one of "add", "remove", or "replace".
 type Op string
 
 const (
@@ -19,6 +21,7 @@ const (
 	OperationReplace Op = "replace"
 )
 
+// OperationValidator represents a validator to validate PATCH requests.
 type OperationValidator struct {
 	op    Op
 	path  *filter.Path
@@ -30,7 +33,7 @@ type OperationValidator struct {
 
 // NewValidator creates an OperationValidator based on the given JSON string and reference schemas.
 // Returns an error if patchReq is not valid.
-func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (OperationValidator, error) {
+func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema) (OperationValidator, error) {
 	var operation struct {
 		Op    string
 		Path  string
@@ -42,7 +45,7 @@ func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (Oper
 
 	var path *filter.Path
 	if operation.Path != "" {
-		validator, err := f.NewPathValidator(operation.Path, s, exts...)
+		validator, err := f.NewPathValidator(operation.Path, s, extensions...)
 		if err != nil {
 			return OperationValidator{}, err
 		}
@@ -56,7 +59,7 @@ func NewValidator(patchReq string, s schema.Schema, exts ...schema.Schema) (Oper
 	schemas := map[string]schema.Schema{
 		s.ID: s,
 	}
-	for _, e := range exts {
+	for _, e := range extensions {
 		schemas[e.ID] = e
 	}
 	return OperationValidator{

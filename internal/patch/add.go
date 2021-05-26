@@ -11,9 +11,9 @@ import (
 // getRefAttribute returns the corresponding attribute based on the given attribute path.
 //
 // e.g.
-//  - `userName` would return the userNameAttribute.
+//  - `userName` would return the `userName` attribute.
 //	- `name.givenName` would return the `givenName` attribute.
-//  - `ext:employeeNumber` would return the `employeeNumber` from the extension.
+//  - `ext:employeeNumber` would return the `employeeNumber` attribute from the extension.
 func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*schema.CoreAttribute, error) {
 	// Get the corresponding schema, this can be the main schema or an extension.
 	var refSchema = v.schema
@@ -68,6 +68,8 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 	return refSubAttr, nil
 }
 
+// validateAdd validates the add operation contained within the validator based on on Section 3.5.2.1 in RFC 7644.
+// More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.1
 func (v OperationValidator) validateAdd() (interface{}, error) {
 	// The operation must contain a "value" member whose content specifies the value to be added.
 	if v.value == nil {
@@ -125,13 +127,15 @@ func (v OperationValidator) validateAdd() (interface{}, error) {
 	return []interface{}{attr}, nil
 }
 
+// validateAddEmptyPath validates paths that don't have a "path" value. In this case the target location is assumed to
+// be the resource itself. The "value" parameter contains a set of attributes to be added to the resource.
 func (v OperationValidator) validateAddEmptyPath() (interface{}, error) {
 	attributes, ok := v.value.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
 	}
 
-	rootValue := make(map[string]interface{})
+	rootValue := map[string]interface{}{}
 	for p, value := range attributes {
 		path, err := filter.ParsePath([]byte(p))
 		if err != nil {
