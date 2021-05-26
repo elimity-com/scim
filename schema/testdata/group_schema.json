@@ -64,7 +64,7 @@
           "caseExact": false,
           "description": "A human-readable name for the group member, primarily used for display purposes.",
           "multiValued": false,
-          "mutability": "readOnly",
+          "mutability": "immutable",
           "name": "display",
           "required": false,
           "returned": "default",

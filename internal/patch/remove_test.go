@@ -6,6 +6,74 @@ import (
 	"testing"
 )
 
+// The following example shows how remove all members of a group.
+func Example_removeAllMembers() {
+	operation := `{
+	"op": "remove",
+	"path": "members"
+}`
+	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
+	fmt.Println(validator.Validate())
+	// Output:
+	// <nil> <nil>
+}
+
+// The following example shows how remove a value from a complex multi-valued attribute.
+func Example_removeComplexMultiValuedAttributeValue() {
+	operation := `{
+	"op": "remove",
+	"path": "emails[type eq \"work\" and value ew \"elimity.com\"]"
+}`
+	validator, _ := NewValidator(operation, schema.CoreUserSchema())
+	fmt.Println(validator.Validate())
+	// Output:
+	// <nil> <nil>
+}
+
+// The following example shows how remove a single member from a group.
+func Example_removeSingleMember() {
+	operation := `{
+	"op": "remove",
+	"path": "members[value eq \"0001\"]"
+}`
+	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
+	fmt.Println(validator.Validate())
+	// Output:
+	// <nil> <nil>
+}
+
+// The following example shows how to replace all of the members of a group with a different members list.
+func Example_replaceMembers() {
+	operations := []string{`{
+	"op": "remove",
+	"path": "members"
+}`, `{
+	"op": "add",
+	"path": "members",
+	"value": [
+		{
+			"display": "di-wu",
+			"$ref": "https://example.com/v2/Users/0001",
+			"value": "0001"
+		},
+		{
+			"display": "example",
+			"$ref": "https://example.com/v2/Users/0002",
+			"value": "0002"
+		}
+	]
+}`,
+	}
+	for _, op := range operations {
+		validator, _ := NewValidator(op, schema.CoreGroupSchema())
+		fmt.Println(validator.Validate())
+	}
+
+	// Output:
+	// <nil> <nil>
+	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001] map[$ref:https://example.com/v2/Users/0002 display:example type:<nil> value:0002]] <nil>
+}
+
 func TestOperationValidator_ValidateRemove(t *testing.T) {
 	// The goal this test is to cover Section 3.5.2.2 of RFC7644.
 	// More info: https://tools.ietf.org/html/rfc7644#section-3.5.2.2
@@ -60,72 +128,4 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 			}
 		})
 	}
-}
-
-// The following example shows how remove a single member from a group.
-func Example_removeSingleMember() {
-	operation := `{
-	"op": "remove",
-	"path": "members[value eq \"0001\"]"
-}`
-	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
-	fmt.Println(validator.Validate())
-	// Output:
-	// <nil> <nil>
-}
-
-// The following example shows how remove all members of a group.
-func Example_removeAllMembers() {
-	operation := `{
-	"op": "remove",
-	"path": "members"
-}`
-	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
-	fmt.Println(validator.Validate())
-	// Output:
-	// <nil> <nil>
-}
-
-// The following example shows how remove a value from a complex multi-valued attribute.
-func Example_removeComplexMultiValuedAttributeValue() {
-	operation := `{
-	"op": "remove",
-	"path": "emails[type eq \"work\" and value ew \"elimity.com\"]"
-}`
-	validator, _ := NewValidator(operation, schema.CoreUserSchema())
-	fmt.Println(validator.Validate())
-	// Output:
-	// <nil> <nil>
-}
-
-// The following example shows how to replace all of the members of a group with a different members list.
-func Example_replaceMembers() {
-	operations := []string{`{
-	"op": "remove",
-	"path": "members"
-}`, `{
-	"op": "add",
-	"path": "members",
-	"value": [
-		{
-			"display": "di-wu",
-			"$ref": "https://example.com/v2/Users/0001",
-			"value": "0001"
-		},
-		{
-			"display": "example",
-			"$ref": "https://example.com/v2/Users/0002",
-			"value": "0002"
-		}
-	]
-}`,
-	}
-	for _, op := range operations {
-		validator, _ := NewValidator(op, schema.CoreGroupSchema())
-		fmt.Println(validator.Validate())
-	}
-
-	// Output:
-	// <nil> <nil>
-	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001] map[$ref:https://example.com/v2/Users/0002 display:example type:<nil> value:0002]] <nil>
 }
