@@ -202,7 +202,7 @@ func CoreGroupSchema() Schema {
 					}),
 					SimpleStringParams(StringParams{
 						Description: optional.NewString("A human-readable name for the group member, primarily used for display purposes."),
-						Mutability:  AttributeMutabilityReadOnly(),
+						Mutability:  AttributeMutabilityImmutable(),
 						Name:        "display",
 					}),
 				},
