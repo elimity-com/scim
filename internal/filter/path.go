@@ -10,42 +10,37 @@ import (
 // attribute gets created to filter against.
 func MultiValuedFilterAttributes(attr schema.CoreAttribute) schema.Attributes {
 	switch attr.AttributeType() {
-	case "decimal":
-		return schema.Attributes{
-			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
-				Name: "value",
-				Type: schema.AttributeTypeDecimal(),
-			})),
-		}
-	case "integer":
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleNumberParams(schema.NumberParams{
-				Name: "value",
-				Type: schema.AttributeTypeInteger(),
-			})),
-		}
-	case "binary":
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleBinaryParams(schema.BinaryParams{Name: "value"}),
-		)}
-	case "boolean":
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleBooleanParams(schema.BooleanParams{Name: "value"})),
-		}
 	case "complex":
 		return attr.SubAttributes()
-	case "dateTime":
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleDateTimeParams(schema.DateTimeParams{Name: "value"})),
-		}
-	case "reference":
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleReferenceParams(schema.ReferenceParams{Name: "value"})),
-		}
 	default:
-		return schema.Attributes{schema.SimpleCoreAttribute(
-			schema.SimpleStringParams(schema.StringParams{Name: "value"})),
-		}
+		return schema.Attributes{schema.SimpleCoreAttribute(getSimpleParams(attr))}
+	}
+}
+
+// getSimpleParams returns simple params based on the type of the attribute. The simple params only have their name
+// assigned to "value", everything else is left out (i.e. default values). Can not be used for complex attributes.
+func getSimpleParams(attr schema.CoreAttribute) schema.SimpleParams {
+	switch attr.AttributeType() {
+	case "decimal":
+		return schema.SimpleNumberParams(schema.NumberParams{
+			Name: "value",
+			Type: schema.AttributeTypeDecimal(),
+		})
+	case "integer":
+		return schema.SimpleNumberParams(schema.NumberParams{
+			Name: "value",
+			Type: schema.AttributeTypeInteger(),
+		})
+	case "binary":
+		return schema.SimpleBinaryParams(schema.BinaryParams{Name: "value"})
+	case "boolean":
+		return schema.SimpleBooleanParams(schema.BooleanParams{Name: "value"})
+	case "dateTime":
+		return schema.SimpleDateTimeParams(schema.DateTimeParams{Name: "value"})
+	case "reference":
+		return schema.SimpleReferenceParams(schema.ReferenceParams{Name: "value"})
+	default:
+		return schema.SimpleStringParams(schema.StringParams{Name: "value"})
 	}
 }
 
