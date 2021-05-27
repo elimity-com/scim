@@ -34,7 +34,7 @@ func TestOperationValidator_ValidateUpdate(t *testing.T) {
 			invalid: `{"op":"add","path":"attr1"}`,
 		},
 
-		// A URI prefix in the Path.
+		// A URI prefix in the path.
 		{
 			valid:   `{"op":"add","path":"test:PatchEntity:attr1","value":"value"}`,
 			invalid: `{"op":"add","path":"invalid:attr1","value":"value"}`,
@@ -46,8 +46,8 @@ func TestOperationValidator_ValidateUpdate(t *testing.T) {
 		//
 		// This is interpreted as:
 		// > The value MUST contain a value with the data type of the attribute specified in the operation's "path".
-		// The idea is that Path can be either fine-grained or point to a whole object.
-		// Thus value of "value" depends on what Path points to.
+		// The idea is that path can be either fine-grained or point to a whole object.
+		// Thus value of "value" depends on what path points to.
 		{
 			valid:   `{"op":"add","path":"complex.attr1","value":"value"}`,
 			invalid: `{"op":"add","path":"complex.attr1","value":{"attr1":"value"}}`,
@@ -86,7 +86,7 @@ func TestOperationValidator_ValidateUpdate(t *testing.T) {
 			invalid: `{"op":"add","path":"test:PatchEntity:complexMultiValued[attr2 eq \"value\"].attr1","value":"value"}`,
 		},
 
-		// Valid Path, attribute not found.
+		// Valid path, attribute not found.
 		{invalid: `{"op":"add","path":"invalid","value":"value"}`},
 		{invalid: `{"op":"add","path":"complex.invalid","value":"value"}`},
 

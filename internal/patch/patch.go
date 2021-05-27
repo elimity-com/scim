@@ -104,7 +104,7 @@ func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*sch
 		}
 	}
 
-	// Get the correct attribute corresponding to the given attribute Path.
+	// Get the correct attribute corresponding to the given attribute path.
 	var (
 		refAttr  *schema.CoreAttribute
 		attrName = attrPath.AttributeName
@@ -152,14 +152,14 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 func (v OperationValidator) validateEmptyPath() (interface{}, error) {
 	attributes, ok := v.value.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("the given value should be a complex attribute if Path is empty")
+		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
 	}
 
 	rootValue := map[string]interface{}{}
 	for p, value := range attributes {
 		path, err := filter.ParsePath([]byte(p))
 		if err != nil {
-			return nil, fmt.Errorf("invalid attribute Path: %s", p)
+			return nil, fmt.Errorf("invalid attribute path: %s", p)
 		}
 		validator := OperationValidator{
 			Op:      v.Op,

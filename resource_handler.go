@@ -29,23 +29,6 @@ type ListRequestParams struct {
 	validator f.Validator
 }
 
-// PassesFilter checks whether given resources passes the filter.
-// The resource has to be in a very strict format (Go types). For more information check the internal filter package.
-func (p ListRequestParams) PassesFilter(resource map[string]interface{}) error {
-	if p.Filter == nil {
-		return nil
-	}
-	return p.validator.PassesFilter(resource)
-}
-
-// ValidateFilter checks whether the filter expression is a valid within the resource's reference schemas.
-func (p ListRequestParams) ValidateFilter() error {
-	if p.Filter == nil {
-		return nil
-	}
-	return p.validator.Validate()
-}
-
 // Meta represents the metadata of a resource.
 type Meta struct {
 	// Created is the time that the resource was added to the service provider.
