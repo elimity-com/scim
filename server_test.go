@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
+	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
@@ -38,6 +39,7 @@ func newTestServer() scim.Server {
 					data: map[string]testData{
 						"0001": {attributes: map[string]interface{}{}},
 					},
+					schema: schema.CoreUserSchema(),
 				},
 			},
 			{
@@ -50,6 +52,7 @@ func newTestServer() scim.Server {
 					data: map[string]testData{
 						"0001": {attributes: map[string]interface{}{}},
 					},
+					schema: schema.CoreGroupSchema(),
 				},
 			},
 		},
@@ -69,6 +72,8 @@ type testResourceHandler struct {
 	nextID int
 	// data is a map[id]resource in which the resources are stored.
 	data map[string]testData
+	// schema is the reference schema of the resource handler.
+	schema schema.Schema
 }
 
 func (h *testResourceHandler) Create(_ *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
@@ -131,6 +136,11 @@ func (h testResourceHandler) GetAll(_ *http.Request, params scim.ListRequestPara
 		}
 		if len(resources) == params.Count {
 			break
+		}
+
+		validator := internal.NewFilterValidator(params.Filter, h.schema)
+		if err := validator.PassesFilter(v.attributes); err != nil {
+			continue
 		}
 
 		resources = append(resources, scim.Resource{

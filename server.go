@@ -176,12 +176,16 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		return ListRequestParams{}, &scimErr
 	}
 
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	decodedFilter, _ := url.QueryUnescape(rawFilter)
 	var validator f.Validator
-	if decodedFilter != "" {
-		var err error
+	if rawFilter := strings.TrimSpace(r.URL.Query().Get("filter")); rawFilter != "" {
+		decodedFilter, err := url.QueryUnescape(rawFilter)
+		if err != nil {
+			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
+		}
 		if validator, err = f.NewValidator(decodedFilter, refSchema, refExtensions...); err != nil {
+			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
+		}
+		if err := validator.Validate(); err != nil {
 			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 		}
 	}
@@ -190,6 +194,5 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		Count:      count,
 		Filter:     validator.GetFilter(),
 		StartIndex: startIndex,
-		validator:  validator,
 	}, nil
 }
