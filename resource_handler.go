@@ -2,7 +2,6 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/internal/filter"
 	"net/http"
 	"net/url"
 	"time"
@@ -24,9 +23,6 @@ type ListRequestParams struct {
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
 	StartIndex int
-
-	// An internal filter validator.
-	validator f.Validator
 }
 
 // Meta represents the metadata of a resource.
