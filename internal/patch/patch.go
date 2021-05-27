@@ -16,9 +16,9 @@ type Op string
 const (
 	// OperationAdd is used to add a new attribute value to an existing resource.
 	OperationAdd Op = "add"
-	// OperationRemove removes the value at the target location specified by the required attribute "Path".
+	// OperationRemove removes the value at the target location specified by the required attribute "path".
 	OperationRemove Op = "remove"
-	// OperationReplace replaces the value at the target location specified by the "Path".
+	// OperationReplace replaces the value at the target location specified by the "path".
 	OperationReplace Op = "replace"
 )
 
@@ -87,7 +87,7 @@ func (v OperationValidator) Validate() (interface{}, error) {
 	}
 }
 
-// getRefAttribute returns the corresponding attribute based on the given attribute Path.
+// getRefAttribute returns the corresponding attribute based on the given attribute path.
 //
 // e.g.
 //  - `userName` would return the `userName` attribute.
@@ -147,7 +147,7 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 	return refSubAttr, nil
 }
 
-// validateEmptyPath validates paths that don't have a "Path" value. In this case the target location is assumed to be
+// validateEmptyPath validates paths that don't have a "path" value. In this case the target location is assumed to be
 // the resource itself. The "value" parameter contains a set of attributes to be added to the resource.
 func (v OperationValidator) validateEmptyPath() (interface{}, error) {
 	attributes, ok := v.value.(map[string]interface{})
