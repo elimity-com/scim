@@ -10,7 +10,7 @@ import (
 // validateRemove validates the remove operation contained within the validator based on on Section 3.5.2.2 in RFC 7644.
 // More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.2
 func (v OperationValidator) validateRemove() error {
-	// If "Path" is unspecified, the operation fails with HTTP status code 400 and a "scimType" error code of "noTarget".
+	// If "path" is unspecified, the operation fails with HTTP status code 400 and a "scimType" error code of "noTarget".
 	if v.Path == nil {
 		return &errors.ScimError{
 			ScimType: errors.ScimTypeNoTarget,

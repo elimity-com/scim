@@ -14,7 +14,7 @@ func (v OperationValidator) validateUpdate() (interface{}, error) {
 		return nil, fmt.Errorf("an add operation must contain a value member")
 	}
 
-	// If "Path" is omitted, the target location is assumed to be the resource itself.
+	// If "path" is omitted, the target location is assumed to be the resource itself.
 	if v.Path == nil {
 		return v.validateEmptyPath()
 	}

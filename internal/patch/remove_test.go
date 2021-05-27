@@ -9,8 +9,8 @@ import (
 // The following example shows how remove all members of a group.
 func Example_removeAllMembers() {
 	operation := `{
-	"Op": "remove",
-	"Path": "members"
+	"op": "remove",
+	"path": "members"
 }`
 	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 	fmt.Println(validator.Validate())
@@ -21,8 +21,8 @@ func Example_removeAllMembers() {
 // The following example shows how remove a value from a complex multi-valued attribute.
 func Example_removeComplexMultiValuedAttributeValue() {
 	operation := `{
-	"Op": "remove",
-	"Path": "emails[type eq \"work\" and value ew \"elimity.com\"]"
+	"op": "remove",
+	"path": "emails[type eq \"work\" and value ew \"elimity.com\"]"
 }`
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
@@ -33,8 +33,8 @@ func Example_removeComplexMultiValuedAttributeValue() {
 // The following example shows how remove a single member from a group.
 func Example_removeSingleMember() {
 	operation := `{
-	"Op": "remove",
-	"Path": "members[value eq \"0001\"]"
+	"op": "remove",
+	"path": "members[value eq \"0001\"]"
 }`
 	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 	fmt.Println(validator.Validate())
@@ -45,11 +45,11 @@ func Example_removeSingleMember() {
 // The following example shows how to replace all of the members of a group with a different members list.
 func Example_replaceAllMembers() {
 	operations := []string{`{
-	"Op": "remove",
-	"Path": "members"
+	"op": "remove",
+	"path": "members"
 }`, `{
-	"Op": "add",
-	"Path": "members",
+	"op": "add",
+	"path": "members",
 	"value": [
 		{
 			"display": "di-wu",
@@ -90,19 +90,19 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 		valid   string
 		invalid string
 	}{
-		// If "Path" is unspecified, the operation fails.
-		{invalid: `{"Op":"remove"}`},
+		// If "path" is unspecified, the operation fails.
+		{invalid: `{"op":"remove"}`},
 
 		// If the target location is a single-value attribute.
-		{valid: `{"Op":"remove","Path":"attr1"}`},
+		{valid: `{"op":"remove","path":"attr1"}`},
 		// If the target location is a multi-valued attribute and no filter is specified.
-		{valid: `{"Op":"remove","Path":"multiValued"}`},
+		{valid: `{"op":"remove","path":"multiValued"}`},
 		// If the target location is a multi-valued attribute and a complex filter is specified comparing a "value".
-		{valid: `{"Op":"remove","Path":"multivalued[value eq \"value\"]"}`},
+		{valid: `{"op":"remove","path":"multivalued[value eq \"value\"]"}`},
 		// If the target location is a complex multi-valued attribute and a complex filter is specified based on the
 		// attribute's sub-attributes
-		{valid: `{"Op":"remove","Path":"complexMultiValued[attr1 eq \"value\"]"}`},
-		{valid: `{"Op":"remove","Path":"complexMultiValued[attr1 eq \"value\"].attr1"}`},
+		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"]"}`},
+		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"].attr1"}`},
 	} {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			// valid
