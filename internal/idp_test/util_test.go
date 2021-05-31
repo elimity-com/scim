@@ -46,7 +46,7 @@ func deepEqual(a, b interface{}) bool {
 }
 
 // equalsNil checks whether the given value is nil in terms of SCIM.
-// e.g. empty array "[]" == null
+// e.g. empty array "[]" == null.
 func equalsNil(a interface{}) bool {
 	switch a := a.(type) {
 	case []interface{}:
