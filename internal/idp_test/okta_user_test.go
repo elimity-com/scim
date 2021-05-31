@@ -1,4 +1,4 @@
-package idp
+package idp_test
 
 // These tests are based on: https://developer.okta.com/docs/reference/scim/scim-20/#scim-user-operations
 // Date: 31 May 2021
@@ -14,7 +14,15 @@ import (
 	"testing"
 )
 
-func TestCreateUser(t *testing.T) {
+func TestOktaUser(t *testing.T) {
+	t.Run("Determine User Exists", oktaDetermineUserExists)
+	t.Run("Create User", oktaCreateUser)
+	t.Run("Retrieve Specific User", oktaRetrieveSpecificUser)
+	t.Run("Update User", oktaUpdateUser)
+	t.Run("Update Specific User", oktaUpdateSpecificUser)
+}
+
+func oktaCreateUser(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/create_user.json")
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +53,7 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
-func TestDetermineUserExists(t *testing.T) {
+func oktaDetermineUserExists(t *testing.T) {
 	var (
 		filter = url.QueryEscape(`userName eq "test.user@okta.local"`)
 		req    = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/Users?filter=%s&startIndex=1&count=100", filter), nil)
@@ -78,7 +86,7 @@ func TestDetermineUserExists(t *testing.T) {
 	}
 }
 
-func TestRetrieveSpecificUser(t *testing.T) {
+func oktaRetrieveSpecificUser(t *testing.T) {
 	var (
 		req    = httptest.NewRequest(http.MethodGet, "/Users/23a35c27-23d3-4c03-b4c5-6443c09e7173", nil)
 		rr     = httptest.NewRecorder()
@@ -105,7 +113,7 @@ func TestRetrieveSpecificUser(t *testing.T) {
 	}
 }
 
-func TestUpdateSpecificUser(t *testing.T) {
+func oktaUpdateSpecificUser(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/update_user_patch.json")
 	if err != nil {
 		t.Fatal(err)
@@ -136,7 +144,7 @@ func TestUpdateSpecificUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser(t *testing.T) {
+func oktaUpdateUser(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/update_user.json")
 	if err != nil {
 		t.Fatal(err)

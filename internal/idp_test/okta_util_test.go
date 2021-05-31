@@ -1,4 +1,4 @@
-package idp
+package idp_test
 
 import (
 	"github.com/elimity-com/scim"

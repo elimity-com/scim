@@ -1,4 +1,4 @@
-package idp
+package idp_test
 
 // These tests are based on: https://developer.okta.com/docs/reference/scim/scim-20/#scim-group-operations
 // Date: 31 May 2021
@@ -12,7 +12,14 @@ import (
 	"testing"
 )
 
-func TestCreateGroup(t *testing.T) {
+func TestOktaGroup(t *testing.T) {
+	t.Run("Create Group", oktaCreateGroup)
+	t.Run("Retrieve Specific Group", oktaRetrieveSpecificGroup)
+	t.Run("Update Specific Group Name", oktaUpdateSpecificGroupName)
+	t.Run("Update Specific Group Membership", oktaUpdateSpecificGroupMembership)
+}
+
+func oktaCreateGroup(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/create_group.json")
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +50,7 @@ func TestCreateGroup(t *testing.T) {
 	}
 }
 
-func TestRetrieveSpecificGroup(t *testing.T) {
+func oktaRetrieveSpecificGroup(t *testing.T) {
 	var (
 		req    = httptest.NewRequest(http.MethodGet, "/Groups/abf4dd94-a4c0-4f67-89c9-76b03340cb9b", nil)
 		rr     = httptest.NewRecorder()
@@ -70,7 +77,7 @@ func TestRetrieveSpecificGroup(t *testing.T) {
 	}
 }
 
-func TestUpdateSpecificGroupMembership(t *testing.T) {
+func oktaUpdateSpecificGroupMembership(t *testing.T) {
 	rawReqs, err := ioutil.ReadFile("testdata/okta/update_group_membership.json")
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +99,7 @@ func TestUpdateSpecificGroupMembership(t *testing.T) {
 	}
 }
 
-func TestUpdateSpecificGroupName(t *testing.T) {
+func oktaUpdateSpecificGroupName(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/update_group_name.json")
 	if err != nil {
 		t.Fatal(err)
