@@ -47,7 +47,8 @@ func azureADCreateGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !deepEqual(reference, response) {
-		t.Error(reference, response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -74,7 +75,8 @@ func azureADGetGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !deepEqual(reference, response) {
-		t.Error(reference, response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -103,7 +105,8 @@ func azureADGetGroupByDisplayName(t *testing.T) {
 	}
 
 	if !deepEqual(reference, response) {
-		t.Error(reference, response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -134,7 +137,7 @@ func azureADUpdateGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !deepEqual(reference, response) {
-		t.Error(reference)
-		t.Error(response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
