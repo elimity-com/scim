@@ -49,6 +49,10 @@ type Resource struct {
 
 func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response := r.Attributes
+	if response == nil {
+		response = ResourceAttributes{}
+	}
+
 	response[schema.CommonAttributeID] = r.ID
 	if r.ExternalID.Present() {
 		response[schema.CommonAttributeExternalID] = r.ExternalID.Value()

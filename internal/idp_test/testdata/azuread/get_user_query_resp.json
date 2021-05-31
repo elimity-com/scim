@@ -1,0 +1,37 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+  ],
+  "totalResults": 1,
+  "Resources": [
+    {
+      "schemas": [
+        "urn:ietf:params:scim:schemas:core:2.0:User",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+      ],
+      "id": "2441309d85324e7793ae",
+      "externalId": "7fce0092-d52e-4f76-b727-3955bd72c939",
+      "meta": {
+        "resourceType": "User",
+        "created": "2018-03-27T19:59:26Z",
+        "lastModified": "2018-03-27T19:59:26Z",
+        "location": "Users/2441309d85324e7793ae"
+      },
+      "userName": "Test_User_dfeef4c5-5681-4387-b016-bdf221e82081",
+      "name": {
+        "familyName": "familyName",
+        "givenName": "givenName"
+      },
+      "active": true,
+      "emails": [
+        {
+          "value": "Test_User_91b67701-697b-46de-b864-bd0bbe4f99c1@testuser.com",
+          "type": "work",
+          "primary": true
+        }
+      ]
+    }
+  ],
+  "startIndex": 1,
+  "itemsPerPage": 20
+}

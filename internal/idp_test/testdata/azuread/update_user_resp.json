@@ -1,0 +1,28 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+  ],
+  "id": "6764549bef60420686bc",
+  "externalId": "6c75de36-30fa-4d2d-a196-6bdcdb6b6539",
+  "meta": {
+    "resourceType": "User",
+    "created": "2018-03-27T19:59:26Z",
+    "lastModified": "2018-03-27T19:59:26Z",
+    "location": "Users/6764549bef60420686bc"
+  },
+  "userName": "5b50642d-79fc-4410-9e90-4c077cdd1a59@testuser.com",
+  "name": {
+    "formatted": "givenName updatedFamilyName",
+    "familyName": "updatedFamilyName",
+    "givenName": "givenName"
+  },
+  "active": false,
+  "emails": [
+    {
+      "value": "updatedEmail@microsoft.com",
+      "type": "work",
+      "primary": true
+    }
+  ]
+}
