@@ -44,6 +44,15 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 		return OperationValidator{}, err
 	}
 
+	switch v := operation.Value.(type) {
+	// Okta also send the ID on PATCH requests.
+	// See: internal/idp_test/testdata/okta/update_group_name.json
+	// https://developer.okta.com/docs/reference/scim/scim-20/#update-a-specific-group-name
+	case map[string]interface{}:
+		delete(v, "id")
+		operation.Value = v
+	}
+
 	var path *filter.Path
 	if operation.Path != "" {
 		validator, err := f.NewPathValidator(operation.Path, s, extensions...)

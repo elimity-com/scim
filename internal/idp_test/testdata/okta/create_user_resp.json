@@ -1,0 +1,26 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User"
+  ],
+  "id": "23a35c27-23d3-4c03-b4c5-6443c09e7173",
+  "userName": "test.user@okta.local",
+  "name": {
+    "givenName": "Test",
+    "familyName": "User"
+  },
+  "emails": [
+    {
+      "primary": true,
+      "value": "test.user@okta.local",
+      "type": "work"
+    }
+  ],
+  "displayName": "Test User",
+  "locale": "en-US",
+  "externalId": "00ujl29u0le5T6Aj10h7",
+  "active": true,
+  "groups": [],
+  "meta": {
+    "resourceType": "User"
+  }
+}
