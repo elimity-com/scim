@@ -77,7 +77,8 @@ func azureADGetUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !deepEqual(reference, response) {
-		t.Error(reference, response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -118,7 +119,8 @@ func azureGetUserByQuery(t *testing.T) {
 	}
 
 	if !deepEqual(reference, response) {
-		t.Error(reference, response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -147,8 +149,8 @@ func azureGetUserByQuery0(t *testing.T) {
 	}
 
 	if !deepEqual(reference, response) {
-		t.Error(reference)
-		t.Error(response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
 
@@ -179,7 +181,7 @@ func azureUpdateUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !deepEqual(reference, response) {
-		t.Error(reference)
-		t.Error(response)
+		t.Error(nonNilAttributes(reference))
+		t.Error(nonNilAttributes(response))
 	}
 }
