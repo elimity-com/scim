@@ -18,6 +18,27 @@ const (
 	fallbackCount     = 100
 )
 
+// getFilter returns a validated filter if present in the url query, nil otherwise.
+func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if rawFilter == "" {
+		return nil, nil // No filter present.
+	}
+
+	decodedFilter, err := url.QueryUnescape(rawFilter)
+	if err != nil {
+		return nil, err
+	}
+	validator, err := f.NewValidator(decodedFilter, s, extensions...)
+	if err != nil {
+		return nil, err
+	}
+	if validator, err = f.NewValidator(decodedFilter, s, extensions...); err != nil {
+		return nil, err
+	}
+	return validator.GetFilter(), nil
+}
+
 func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	strVal := r.URL.Query().Get(key)
 
@@ -187,25 +208,4 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		Filter:     reqFilter,
 		StartIndex: startIndex,
 	}, nil
-}
-
-// getFilter returns a validated filter if present in the url query, nil otherwise.
-func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter == "" {
-		return nil, nil // No filter present.
-	}
-
-	decodedFilter, err := url.QueryUnescape(rawFilter)
-	if err != nil {
-		return nil, err
-	}
-	validator, err := f.NewValidator(decodedFilter, s, extensions...)
-	if err != nil {
-		return nil, err
-	}
-	if validator, err = f.NewValidator(decodedFilter, s, extensions...); err != nil {
-		return nil, err
-	}
-	return validator.GetFilter(), nil
 }
