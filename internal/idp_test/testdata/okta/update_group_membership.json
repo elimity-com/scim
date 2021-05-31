@@ -1,0 +1,44 @@
+[
+  {
+    "schemas": [
+      "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+    ],
+    "Operations": [
+      {
+        "op": "remove",
+        "path": "members[value eq \"89bb1940-b905-4575-9e7f-6f887cfb368e\"]"
+      },
+      {
+        "op": "add",
+        "path": "members",
+        "value": [
+          {
+            "value": "23a35c27-23d3-4c03-b4c5-6443c09e7173",
+            "display": "test.user@okta.local"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "schemas": [
+      "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+    ],
+    "Operations": [
+      {
+        "op": "replace",
+        "path": "members",
+        "value": [
+          {
+            "value": "23a35c27-23d3-4c03-b4c5-6443c09e7173",
+            "display": "test.user@okta.local"
+          },
+          {
+            "value": "89bb1940-b905-4575-9e7f-6f887cfb368e",
+            "display": "test.user@okta.local"
+          }
+        ]
+      }
+    ]
+  }
+]
