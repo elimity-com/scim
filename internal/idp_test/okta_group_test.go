@@ -70,6 +70,28 @@ func TestRetrieveSpecificGroup(t *testing.T) {
 	}
 }
 
+func TestUpdateSpecificGroupMembership(t *testing.T) {
+	rawReqs, err := ioutil.ReadFile("testdata/okta/update_group_membership.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var requests []json.RawMessage
+	if err := unmarshal(rawReqs, &requests); err != nil {
+		t.Fatal(err)
+	}
+	for _, rawReq := range requests {
+		var (
+			req    = httptest.NewRequest(http.MethodPatch, "/Groups/abf4dd94-a4c0-4f67-89c9-76b03340cb9b", bytes.NewReader(rawReq))
+			rr     = httptest.NewRecorder()
+			server = newOktaTestServer()
+		)
+		server.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatal(rr.Code, rr.Body.String())
+		}
+	}
+}
+
 func TestUpdateSpecificGroupName(t *testing.T) {
 	rawReq, err := ioutil.ReadFile("testdata/okta/update_group_name.json")
 	if err != nil {
@@ -98,27 +120,5 @@ func TestUpdateSpecificGroupName(t *testing.T) {
 	}
 	if !deepEqual(reference, response) {
 		t.Error(reference, response)
-	}
-}
-
-func TestUpdateSpecificGroupMembership(t *testing.T) {
-	rawReqs, err := ioutil.ReadFile("testdata/okta/update_group_membership.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var requests []json.RawMessage
-	if err := unmarshal(rawReqs, &requests); err != nil {
-		t.Fatal(err)
-	}
-	for _, rawReq := range requests {
-		var (
-			req    = httptest.NewRequest(http.MethodPatch, "/Groups/abf4dd94-a4c0-4f67-89c9-76b03340cb9b", bytes.NewReader(rawReq))
-			rr     = httptest.NewRecorder()
-			server = newOktaTestServer()
-		)
-		server.ServeHTTP(rr, req)
-		if rr.Code != http.StatusOK {
-			t.Fatal(rr.Code, rr.Body.String())
-		}
 	}
 }
