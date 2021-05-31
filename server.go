@@ -33,7 +33,7 @@ func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (f
 	if err != nil {
 		return nil, err
 	}
-	if validator, err = f.NewValidator(decodedFilter, s, extensions...); err != nil {
+	if err := validator.Validate(); err != nil {
 		return nil, err
 	}
 	return validator.GetFilter(), nil
