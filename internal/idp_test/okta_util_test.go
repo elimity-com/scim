@@ -40,6 +40,10 @@ func (o oktaGroupResourceHandler) Create(r *http.Request, attributes scim.Resour
 	}, nil
 }
 
+func (o oktaGroupResourceHandler) Delete(r *http.Request, id string) error {
+	panic("implement me")
+}
+
 func (o oktaGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
 	return scim.Resource{
 		ID: id,
@@ -59,14 +63,6 @@ func (o oktaGroupResourceHandler) GetAll(r *http.Request, params scim.ListReques
 	panic("implement me")
 }
 
-func (o oktaGroupResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	panic("implement me")
-}
-
-func (o oktaGroupResourceHandler) Delete(r *http.Request, id string) error {
-	panic("implement me")
-}
-
 func (o oktaGroupResourceHandler) Patch(r *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
 	return scim.Resource{
 		ID: id,
@@ -74,6 +70,10 @@ func (o oktaGroupResourceHandler) Patch(r *http.Request, id string, operations [
 			"displayName": "Test SCIMv20",
 		},
 	}, nil
+}
+
+func (o oktaGroupResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
+	panic("implement me")
 }
 
 type oktaUserResourceHandler struct{}
