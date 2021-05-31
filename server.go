@@ -3,6 +3,7 @@ package scim
 import (
 	"fmt"
 	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -176,23 +177,35 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		return ListRequestParams{}, &scimErr
 	}
 
-	var validator f.Validator
-	if rawFilter := strings.TrimSpace(r.URL.Query().Get("filter")); rawFilter != "" {
-		decodedFilter, err := url.QueryUnescape(rawFilter)
-		if err != nil {
-			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
-		}
-		if validator, err = f.NewValidator(decodedFilter, refSchema, refExtensions...); err != nil {
-			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
-		}
-		if err := validator.Validate(); err != nil {
-			return ListRequestParams{}, &errors.ScimErrorInvalidFilter
-		}
+	reqFilter, err := getFilter(r, refSchema, refExtensions...)
+	if err != nil {
+		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
 
 	return ListRequestParams{
 		Count:      count,
-		Filter:     validator.GetFilter(),
+		Filter:     reqFilter,
 		StartIndex: startIndex,
 	}, nil
+}
+
+// getFilter returns a validated filter if present in the url query, nil otherwise.
+func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
+	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if rawFilter == "" {
+		return nil, nil // No filter present.
+	}
+
+	decodedFilter, err := url.QueryUnescape(rawFilter)
+	if err != nil {
+		return nil, err
+	}
+	validator, err := f.NewValidator(decodedFilter, s, extensions...)
+	if err != nil {
+		return nil, err
+	}
+	if validator, err = f.NewValidator(decodedFilter, s, extensions...); err != nil {
+		return nil, err
+	}
+	return validator.GetFilter(), nil
 }
