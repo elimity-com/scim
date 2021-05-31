@@ -1,0 +1,15 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:Group"
+  ],
+  "id": "927fa2c08dcb4a7fae9e",
+  "externalId": "8aa1a0c0-c4c3-4bc0-b4a5-2ef676900159",
+  "meta": {
+    "resourceType": "Group",
+    "created": "2018-03-27T19:59:26Z",
+    "lastModified": "2018-03-27T19:59:26Z",
+    "location": "Groups/927fa2c08dcb4a7fae9e"
+  },
+  "displayName": "displayName",
+  "members": []
+}

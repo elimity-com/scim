@@ -1,0 +1,32 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+  ],
+  "Operations": [
+    {
+      "op": "Replace",
+      "path": "displayName",
+      "value": "1879db59-3bdf-4490-ad68-ab880a269474updatedDisplayName"
+    },
+    {
+      "op": "Add",
+      "path": "members",
+      "value": [
+        {
+          "$ref": null,
+          "value": "f648f8d5ea4e4cd38e9c"
+        }
+      ]
+    },
+    {
+      "op": "Remove",
+      "path": "members",
+      "value": [
+        {
+          "$ref": null,
+          "value": "f648f8d5ea4e4cd38e9c"
+        }
+      ]
+    }
+  ]
+}

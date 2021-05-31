@@ -1,5 +1,8 @@
 package idp_test
 
+// These tests are based on: https://docs.microsoft.com/en-us/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#user-operations
+// Date: 31 May 2021
+
 import (
 	"bytes"
 	"fmt"
