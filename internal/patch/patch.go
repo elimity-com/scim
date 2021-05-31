@@ -44,6 +44,8 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 		return OperationValidator{}, err
 	}
 
+	operation.Op = strings.ToLower(operation.Op)
+
 	switch v := operation.Value.(type) {
 	// Okta also send the ID on PATCH requests.
 	// See: internal/idp_test/testdata/okta/update_group_name.json

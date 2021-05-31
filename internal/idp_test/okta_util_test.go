@@ -102,7 +102,7 @@ func (t oktaUserResourceHandler) Delete(r *http.Request, id string) error {
 
 func (t oktaUserResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
 	return scim.Resource{
-		ID: "23a35c27-23d3-4c03-b4c5-6443c09e7173",
+		ID: id,
 		Attributes: scim.ResourceAttributes{
 			"userName": "test.user@okta.local",
 			"name": map[string]interface{}{
