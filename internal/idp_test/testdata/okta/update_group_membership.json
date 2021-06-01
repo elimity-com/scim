@@ -1,5 +1,5 @@
-[
-  {
+{
+  "request": {
     "schemas": [
       "urn:ietf:params:scim:api:messages:2.0:PatchOp"
     ],
@@ -17,14 +17,7 @@
             "display": "test.user@okta.local"
           }
         ]
-      }
-    ]
-  },
-  {
-    "schemas": [
-      "urn:ietf:params:scim:api:messages:2.0:PatchOp"
-    ],
-    "Operations": [
+      },
       {
         "op": "replace",
         "path": "members",
@@ -40,5 +33,8 @@
         ]
       }
     ]
-  }
-]
+  },
+  "method": "PATCH",
+  "path": "/Groups/abf4dd94-a4c0-4f67-89c9-76b03340cb9b",
+  "statusCode": 200
+}

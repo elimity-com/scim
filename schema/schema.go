@@ -157,7 +157,9 @@ func (s Schema) validate(resource interface{}, checkMutability bool) (map[string
 		if scimErr != nil {
 			return nil, scimErr
 		}
-		attributes[attribute.name] = attr
+		if attr != nil {
+			attributes[attribute.name] = attr
+		}
 	}
 	return attributes, nil
 }

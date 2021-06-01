@@ -109,7 +109,7 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(data, http.MethodPost)
+	attributes, scimErr := resourceType.validate(data)
 	if scimErr != nil {
 		errorHandler(w, r, scimErr)
 		return
@@ -146,7 +146,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id string, resourceType ResourceType) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	attributes, scimErr := resourceType.validate(data, http.MethodPut)
+	attributes, scimErr := resourceType.validate(data)
 	if scimErr != nil {
 		errorHandler(w, r, scimErr)
 		return

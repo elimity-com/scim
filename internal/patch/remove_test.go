@@ -70,7 +70,7 @@ func Example_replaceAllMembers() {
 	}
 	// Output:
 	// <nil> <nil>
-	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001] map[$ref:https://example.com/v2/Users/0002 display:example type:<nil> value:0002]] <nil>
+	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu value:0001] map[$ref:https://example.com/v2/Users/0002 display:example value:0002]] <nil>
 }
 
 func TestOperationValidator_ValidateRemove(t *testing.T) {

@@ -86,7 +86,7 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 	return s
 }
 
-func (t ResourceType) validate(raw []byte, method string) (ResourceAttributes, *errors.ScimError) {
+func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax

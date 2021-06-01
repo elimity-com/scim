@@ -2,6 +2,7 @@ package idp_test
 
 import (
 	"github.com/elimity-com/scim"
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"net/http"
@@ -41,7 +42,9 @@ func (o oktaGroupResourceHandler) Create(r *http.Request, attributes scim.Resour
 }
 
 func (o oktaGroupResourceHandler) Delete(r *http.Request, id string) error {
-	panic("implement me")
+	return errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 func (o oktaGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
@@ -60,7 +63,9 @@ func (o oktaGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource
 }
 
 func (o oktaGroupResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) (scim.Page, error) {
-	panic("implement me")
+	return scim.Page{}, errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 func (o oktaGroupResourceHandler) Patch(r *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
@@ -73,7 +78,9 @@ func (o oktaGroupResourceHandler) Patch(r *http.Request, id string, operations [
 }
 
 func (o oktaGroupResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	panic("implement me")
+	return scim.Resource{}, errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 type oktaUserResourceHandler struct{}
@@ -88,7 +95,9 @@ func (t oktaUserResourceHandler) Create(r *http.Request, attributes scim.Resourc
 }
 
 func (t oktaUserResourceHandler) Delete(r *http.Request, id string) error {
-	panic("implement me")
+	return errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 func (t oktaUserResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
