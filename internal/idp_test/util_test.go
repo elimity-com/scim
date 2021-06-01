@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 )
 
 // deepEqual is the same as reflect.DeepEqual, but taking "null" attributes into account.
@@ -62,6 +63,7 @@ func equalsNil(a interface{}) bool {
 func nonNilAttributes(a map[string]interface{}) map[string]interface{} {
 	m := map[string]interface{}{}
 	for k, v := range a {
+		k := strings.ToLower(k)
 		if !equalsNil(v) {
 			switch v := v.(type) {
 			case []interface{}:
