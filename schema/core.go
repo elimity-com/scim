@@ -196,13 +196,11 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 		for _, sub := range a.subAttributes {
 			var hit interface{}
 			var found bool
-
 			for k, v := range obj {
 				if strings.EqualFold(sub.name, k) {
 					if found {
 						return nil, &errors.ScimErrorInvalidSyntax
 					}
-
 					found = true
 					hit = v
 				}
@@ -212,8 +210,9 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 			if scimErr != nil {
 				return nil, scimErr
 			}
-
-			attributes[sub.name] = attr
+			if attr != nil {
+				attributes[sub.name] = attr
+			}
 		}
 		return attributes, nil
 	case attributeDataTypeDateTime:

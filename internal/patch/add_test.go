@@ -19,7 +19,7 @@ func Example_addMemberToGroup() {
 	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 	fmt.Println(validator.Validate())
 	// Output:
-	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu type:<nil> value:0001]] <nil>
+	// [map[$ref:https://example.com/v2/Users/0001 display:di-wu value:0001]] <nil>
 }
 
 // The following example shows how to add one or more attributes to a User resource without using a "path" attribute.
@@ -39,5 +39,5 @@ func Example_addWithoutPath() {
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:
-	// map[emails:[map[display:<nil> primary:<nil> type:work value:quint@elimity.com]] nickname:di-wu] <nil>
+	// map[emails:[map[type:work value:quint@elimity.com]] nickname:di-wu] <nil>
 }

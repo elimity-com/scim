@@ -1,23 +1,54 @@
 {
-  "schemas": [
-    "urn:ietf:params:scim:schemas:core:2.0:User"
-  ],
-  "userName": "test.user@okta.local",
-  "name": {
-    "givenName": "Test",
-    "familyName": "User"
+  "request": {
+    "schemas": [
+      "urn:ietf:params:scim:schemas:core:2.0:User"
+    ],
+    "userName": "test.user@okta.local",
+    "name": {
+      "givenName": "Test",
+      "familyName": "User"
+    },
+    "emails": [
+      {
+        "primary": true,
+        "value": "test.user@okta.local",
+        "type": "work"
+      }
+    ],
+    "displayName": "Test User",
+    "locale": "en-US",
+    "externalId": "00ujl29u0le5T6Aj10h7",
+    "groups": [],
+    "password": "1mz050nq",
+    "active": true
   },
-  "emails": [
-    {
-      "primary": true,
-      "value": "test.user@okta.local",
-      "type": "work"
+  "response": {
+    "schemas": [
+      "urn:ietf:params:scim:schemas:core:2.0:User"
+    ],
+    "id": "23a35c27-23d3-4c03-b4c5-6443c09e7173",
+    "userName": "test.user@okta.local",
+    "name": {
+      "givenName": "Test",
+      "familyName": "User"
+    },
+    "emails": [
+      {
+        "primary": true,
+        "value": "test.user@okta.local",
+        "type": "work"
+      }
+    ],
+    "displayName": "Test User",
+    "locale": "en-US",
+    "externalId": "00ujl29u0le5T6Aj10h7",
+    "active": true,
+    "meta": {
+      "resourceType": "User",
+      "location": "Users/23a35c27-23d3-4c03-b4c5-6443c09e7173"
     }
-  ],
-  "displayName": "Test User",
-  "locale": "en-US",
-  "externalId": "00ujl29u0le5T6Aj10h7",
-  "groups": [],
-  "password": "1mz050nq",
-  "active": true
+  },
+  "method": "POST",
+  "path": "/Users",
+  "statusCode": 201
 }

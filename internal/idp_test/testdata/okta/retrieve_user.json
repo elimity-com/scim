@@ -1,17 +1,4 @@
 {
-  "request": {
-    "schemas": [
-      "urn:ietf:params:scim:api:messages:2.0:PatchOp"
-    ],
-    "Operations": [
-      {
-        "op": "replace",
-        "value": {
-          "active": false
-        }
-      }
-    ]
-  },
   "response": {
     "schemas": [
       "urn:ietf:params:scim:schemas:core:2.0:User"
@@ -19,9 +6,10 @@
     "id": "23a35c27-23d3-4c03-b4c5-6443c09e7173",
     "userName": "test.user@okta.local",
     "name": {
-      "givenName": "Another",
+      "givenName": "Test",
       "familyName": "User"
     },
+    "active": true,
     "emails": [
       {
         "primary": true,
@@ -30,13 +18,12 @@
         "display": "test.user@okta.local"
       }
     ],
-    "active": false,
     "meta": {
       "resourceType": "User",
       "location": "Users/23a35c27-23d3-4c03-b4c5-6443c09e7173"
     }
   },
-  "method": "PATCH",
+  "method": "GET",
   "path": "/Users/23a35c27-23d3-4c03-b4c5-6443c09e7173",
   "statusCode": 200
 }
