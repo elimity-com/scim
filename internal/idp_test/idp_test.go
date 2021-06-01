@@ -16,11 +16,11 @@ import (
 //go:embed testdata
 var testdata embed.FS
 
-func TestIdP(t *testing.T) {
-	idPs, _ := testdata.ReadDir("testdata")
-	for _, idP := range idPs {
-		t.Run(idP.Name(), func(t *testing.T) {
-			idpPath := fmt.Sprintf("testdata/%s", idP.Name())
+func TestIDP(t *testing.T) {
+	idps, _ := testdata.ReadDir("testdata")
+	for _, idp := range idps {
+		t.Run(idp.Name(), func(t *testing.T) {
+			idpPath := fmt.Sprintf("testdata/%s", idp.Name())
 			de, _ := fs.ReadDir(testdata, idpPath)
 			for _, f := range de {
 				path := fmt.Sprintf("%s/%s", idpPath, f.Name())
