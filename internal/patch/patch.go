@@ -51,7 +51,7 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 	case map[string]interface{}:
 		for k := range v {
 			if strings.ToLower(k) == "id" {
-				delete(v, "id")
+				delete(v, k)
 				break
 			}
 		}
