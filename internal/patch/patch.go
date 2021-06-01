@@ -49,12 +49,18 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 	// See: internal/idp_test/testdata/okta/update_group_name.json
 	// https://developer.okta.com/docs/reference/scim/scim-20/#update-a-specific-group-name
 	case map[string]interface{}:
+		var key string
+		var found bool
 		for k := range v {
 			if strings.ToLower(k) == "id" {
-				delete(v, k)
-				break
+				if found {
+					return OperationValidator{}, fmt.Errorf("duplicate attributes: %s and %s", k, key)
+				}
+				found = true
+				key = k
 			}
 		}
+		delete(v, key)
 	}
 
 	var path *filter.Path
