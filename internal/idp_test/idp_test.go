@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http/httptest"
 	"path/filepath"
@@ -22,30 +21,18 @@ func TestIdP(t *testing.T) {
 	for _, idP := range idPs {
 		t.Run(idP.Name(), func(t *testing.T) {
 			idpPath := fmt.Sprintf("testdata/%s", idP.Name())
-			if err := fs.WalkDir(testdata, idpPath, func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if d.IsDir() {
-					return nil
-				}
-				raw, err := fs.ReadFile(testdata, path)
-				if err != nil {
-					return fmt.Errorf("%s: %v", path, err)
-				}
+			de, _ := fs.ReadDir(testdata, idpPath)
+			for _, f := range de {
+				path := fmt.Sprintf("%s/%s", idpPath, f.Name())
+				raw, _ := fs.ReadFile(testdata, path)
 				var test testCase
-				if err := json.Unmarshal(raw, &test); err != nil {
-					return fmt.Errorf("%s: %v", path, err)
-				}
+				_ = unmarshal(raw, &test)
 				fileName, _ := filepath.Rel(idpPath, path)
 				t.Run(strings.TrimSuffix(fileName, ".json"), func(t *testing.T) {
 					if err := testRequest(test); err != nil {
 						t.Error(err)
 					}
 				})
-				return nil
-			}); err != nil {
-				t.Error(err)
 			}
 		})
 	}
@@ -53,10 +40,7 @@ func TestIdP(t *testing.T) {
 
 func testRequest(t testCase) error {
 	rr := httptest.NewRecorder()
-	var br io.Reader
-	if len(t.Request) != 0 {
-		br = bytes.NewReader(t.Request)
-	}
+	br := bytes.NewReader(t.Request)
 	newOktaTestServer().ServeHTTP(
 		rr,
 		httptest.NewRequest(t.Method, t.Path, br),
@@ -69,12 +53,8 @@ func testRequest(t testCase) error {
 		if err := unmarshal(rr.Body.Bytes(), &response); err != nil {
 			return err
 		}
-		var reference map[string]interface{}
-		if err := unmarshal(t.Response, &reference); err != nil {
-			return err
-		}
-		if !reflect.DeepEqual(reference, response) {
-			return fmt.Errorf("expected, got:\n%v\n%v", reference, response)
+		if !reflect.DeepEqual(t.Response, response) {
+			return fmt.Errorf("expected, got:\n%v\n%v", t.Response, response)
 		}
 	}
 	return nil
@@ -82,7 +62,7 @@ func testRequest(t testCase) error {
 
 type testCase struct {
 	Request    json.RawMessage
-	Response   json.RawMessage
+	Response   map[string]interface{}
 	Method     string
 	Path       string
 	StatusCode int
