@@ -35,6 +35,9 @@ func deepEqual(a, b interface{}) bool {
 	case map[string]interface{}:
 		am := nonNilAttributes(a)
 		bm := nonNilAttributes(b.(map[string]interface{}))
+		if len(am) != len(bm) {
+			return false
+		}
 		for k, v := range am {
 			if !deepEqual(v, bm[k]) {
 				return false

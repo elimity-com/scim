@@ -79,6 +79,7 @@ func (o oktaGroupResourceHandler) Replace(r *http.Request, id string, attributes
 type oktaUserResourceHandler struct{}
 
 func (t oktaUserResourceHandler) Create(r *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
+	delete(attributes, "password")
 	return scim.Resource{
 		ID:         "23a35c27-23d3-4c03-b4c5-6443c09e7173",
 		ExternalID: optional.NewString("00ujl29u0le5T6Aj10h7"),
