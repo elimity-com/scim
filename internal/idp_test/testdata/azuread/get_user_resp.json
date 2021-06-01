@@ -1,28 +1,33 @@
 {
-  "schemas": [
-    "urn:ietf:params:scim:schemas:core:2.0:User",
-    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
-  ],
-  "id": "5d48a0a8e9f04aa38008",
-  "externalId": "58342554-38d6-4ec8-948c-50044d0a33fd",
-  "meta": {
-    "resourceType": "User",
-    "created": "2018-03-27T19:59:26Z",
-    "lastModified": "2018-03-27T19:59:26Z",
-    "location": "Users/5d48a0a8e9f04aa38008"
+  "response": {
+    "schemas": [
+      "urn:ietf:params:scim:schemas:core:2.0:User",
+      "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+    ],
+    "id": "5d48a0a8e9f04aa38008",
+    "externalId": "58342554-38d6-4ec8-948c-50044d0a33fd",
+    "meta": {
+      "resourceType": "User",
+      "created": "2018-03-27T19:59:26Z",
+      "lastModified": "2018-03-27T19:59:26Z",
+      "location": "Users/5d48a0a8e9f04aa38008"
+    },
+    "userName": "Test_User_feed3ace-693c-4e5a-82e2-694be1b39934",
+    "name": {
+      "formatted": "givenName familyName",
+      "familyName": "familyName",
+      "givenName": "givenName"
+    },
+    "active": true,
+    "emails": [
+      {
+        "value": "Test_User_22370c1a-9012-42b2-bf64-86099c2a1c22@testuser.com",
+        "type": "work",
+        "primary": true
+      }
+    ]
   },
-  "userName": "Test_User_feed3ace-693c-4e5a-82e2-694be1b39934",
-  "name": {
-    "formatted": "givenName familyName",
-    "familyName": "familyName",
-    "givenName": "givenName"
-  },
-  "active": true,
-  "emails": [
-    {
-      "value": "Test_User_22370c1a-9012-42b2-bf64-86099c2a1c22@testuser.com",
-      "type": "work",
-      "primary": true
-    }
-  ]
+  "method": "GET",
+  "path": "/Users/5d48a0a8e9f04aa38008",
+  "statusCode": 200
 }

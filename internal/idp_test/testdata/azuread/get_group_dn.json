@@ -1,0 +1,29 @@
+{
+  "response": {
+    "schemas": [
+      "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+    ],
+    "totalResults": 1,
+    "Resources": [
+      {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:Group"
+        ],
+        "id": "8c601452cc934a9ebef9",
+        "externalId": "0db508eb-91e2-46e4-809c-30dcbda0c685",
+        "meta": {
+          "resourceType": "Group",
+          "created": "2018-03-27T22:02:32Z",
+          "lastModified": "2018-03-27T22:02:32Z",
+          "location": "Groups/8c601452cc934a9ebef9"
+        },
+        "displayName": "displayName"
+      }
+    ],
+    "startIndex": 1,
+    "itemsPerPage": 20
+  },
+  "method": "GET",
+  "path": "/Groups?filter=displayName+eq+%22displayName%22",
+  "statusCode": 200
+}

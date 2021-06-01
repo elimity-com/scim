@@ -5,19 +5,29 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/elimity-com/scim"
 )
 
 //go:embed testdata
 var testdata embed.FS
 
-func TestIDP(t *testing.T) {
+func TestIdP(t *testing.T) {
 	idps, _ := testdata.ReadDir("testdata")
 	for _, idp := range idps {
+		var newServer func() scim.Server
+		switch idp.Name() {
+		case "okta":
+			newServer = newOktaTestServer
+		case "azuread":
+			newServer = newAzureADTestServer
+		}
 		t.Run(idp.Name(), func(t *testing.T) {
 			idpPath := fmt.Sprintf("testdata/%s", idp.Name())
 			de, _ := fs.ReadDir(testdata, idpPath)
@@ -27,7 +37,7 @@ func TestIDP(t *testing.T) {
 				var test testCase
 				_ = unmarshal(raw, &test)
 				t.Run(strings.TrimSuffix(f.Name(), ".json"), func(t *testing.T) {
-					if err := testRequest(test); err != nil {
+					if err := testRequest(test, newServer); err != nil {
 						t.Error(err)
 					}
 				})
@@ -36,10 +46,13 @@ func TestIDP(t *testing.T) {
 	}
 }
 
-func testRequest(t testCase) error {
+func testRequest(t testCase, newServer func() scim.Server) error {
 	rr := httptest.NewRecorder()
-	br := bytes.NewReader(t.Request)
-	newOktaTestServer().ServeHTTP(
+	var br io.Reader
+	if len(t.Request) != 0 {
+		br = bytes.NewReader(t.Request)
+	}
+	newServer().ServeHTTP(
 		rr,
 		httptest.NewRequest(t.Method, t.Path, br),
 	)
