@@ -17,20 +17,15 @@ import (
 //go:embed testdata
 var testdata embed.FS
 
-type testCase struct {
-	Request    json.RawMessage
-	Response   json.RawMessage
-	Method     string
-	Path       string
-	StatusCode int
-}
-
 func TestIdP(t *testing.T) {
 	idPs, _ := testdata.ReadDir("testdata")
 	for _, idP := range idPs {
 		t.Run(idP.Name(), func(t *testing.T) {
 			idpPath := fmt.Sprintf("testdata/%s", idP.Name())
 			if err := fs.WalkDir(testdata, idpPath, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
 				if d.IsDir() {
 					return nil
 				}
@@ -83,4 +78,12 @@ func testRequest(t testCase) error {
 		}
 	}
 	return nil
+}
+
+type testCase struct {
+	Request    json.RawMessage
+	Response   json.RawMessage
+	Method     string
+	Path       string
+	StatusCode int
 }

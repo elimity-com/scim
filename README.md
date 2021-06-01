@@ -1,6 +1,10 @@
 ![scim-logo](LOGO.png)
 
-[![GoDoc](https://godoc.org/github.com/elimity-com/scim?status.svg)](https://godoc.org/github.com/elimity-com/scim)
+[![GoVersion](https://img.shields.io/github/go-mod/go-version/elimity-com/scim.svg)](https://github.com/elimity-com/scim)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://pkg.go.dev/github.com/elimity-com/scim)
+
+
+[![Tag](https://img.shields.io/github/tag/elimity-com/scim.svg)](https://gitHub.com/elimity-com/scim/releases)
 
 This is an open source implementation of the [SCIM v2.0](http://www.simplecloud.info/#Specification) specification for use in Golang.
 SCIM defines a flexible schema mechanism and REST API for managing identity data.
@@ -121,18 +125,20 @@ If you have ideas how we could enforce these rules in the server itself do not h
 Note: These attributes usually also has a returned setting of "never".
 
 ## Contributing
+[![Contributors](https://img.shields.io/github/contributors/elimity-com/scim.svg)](https://gitHub.com/elimity-com/scim/contributors/)
+
 We are happy to review pull requests,
 but please first discuss the change you wish to make via issue, email,
 or any other method with the owners of this repository before making a change.
 
 If you would like to propose a change please ensure the following:
-- all checks of CircleCI are passing ([GolangCI-Lint](https://github.com/golangci/golangci-lint): `goimports` and `golint`)
-- all already existing tests are passing
-- you have written tests that cover the code you are making
-- there is documentation for at least all public functions you have added
-- new public functions and structures are kept to a minimum
-- the same practices are applied (such as the anatomy of methods, names, etc.)
-- your changes are compliant with SCIM v2.0 (released as
+- All checks of GitHub Actions are passing ([GolangCI-Lint](https://github.com/golangci/golangci-lint): `misspell`, `godot` and `whitespace`)
+- All already existing tests are passing.
+- You have written tests that cover the code you are making, make sure to include edge cases.
+- There is documentation for at least all public functions you have added.
+- New public functions and structures are kept to a minimum.
+- The same practices are applied (such as the anatomy of methods, names, etc.)
+- Your changes are compliant with SCIM v2.0 (released as
 [RFC7642](https://tools.ietf.org/html/rfc7642),
 [RFC7643](https://tools.ietf.org/html/rfc7643) and
-[RFC7644](https://tools.ietf.org/html/rfc7644) under [IETF](https://ietf.org/))
+[RFC7644](https://tools.ietf.org/html/rfc7644) under [IETF](https://ietf.org/)).
