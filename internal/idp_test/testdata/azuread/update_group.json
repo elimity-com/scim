@@ -1,32 +1,51 @@
 {
-  "schemas": [
-    "urn:ietf:params:scim:api:messages:2.0:PatchOp"
-  ],
-  "Operations": [
-    {
-      "op": "Replace",
-      "path": "displayName",
-      "value": "1879db59-3bdf-4490-ad68-ab880a269474updatedDisplayName"
+  "request": {
+    "schemas": [
+      "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+    ],
+    "Operations": [
+      {
+        "op": "Replace",
+        "path": "displayName",
+        "value": "1879db59-3bdf-4490-ad68-ab880a269474updatedDisplayName"
+      },
+      {
+        "op": "Add",
+        "path": "members",
+        "value": [
+          {
+            "$ref": null,
+            "value": "f648f8d5ea4e4cd38e9c"
+          }
+        ]
+      },
+      {
+        "op": "Remove",
+        "path": "members",
+        "value": [
+          {
+            "$ref": null,
+            "value": "f648f8d5ea4e4cd38e9c"
+          }
+        ]
+      }
+    ]
+  },
+  "response": {
+    "schemas": [
+      "urn:ietf:params:scim:schemas:core:2.0:Group"
+    ],
+    "id": "fa2ce26709934589afc5",
+    "externalId": "60f1bb27-2e1e-402d-bcc4-ec999564a194",
+    "meta": {
+      "resourceType": "Group",
+      "created": "2018-03-27T19:59:26Z",
+      "lastModified": "2018-03-27T19:59:26Z",
+      "location": "Groups/fa2ce26709934589afc5"
     },
-    {
-      "op": "Add",
-      "path": "members",
-      "value": [
-        {
-          "$ref": null,
-          "value": "f648f8d5ea4e4cd38e9c"
-        }
-      ]
-    },
-    {
-      "op": "Remove",
-      "path": "members",
-      "value": [
-        {
-          "$ref": null,
-          "value": "f648f8d5ea4e4cd38e9c"
-        }
-      ]
-    }
-  ]
+    "displayName": "1879db59-3bdf-4490-ad68-ab880a269474updatedDisplayName"
+  },
+  "method": "PATCH",
+  "path": "/Groups/fa2ce26709934589afc5",
+  "statusCode": 200
 }
