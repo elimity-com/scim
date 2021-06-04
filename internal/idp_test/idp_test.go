@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http/httptest"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -27,8 +26,7 @@ func TestIDP(t *testing.T) {
 				raw, _ := fs.ReadFile(testdata, path)
 				var test testCase
 				_ = unmarshal(raw, &test)
-				fileName, _ := filepath.Rel(idpPath, path)
-				t.Run(strings.TrimSuffix(fileName, ".json"), func(t *testing.T) {
+				t.Run(strings.TrimSuffix(f.Name(), ".json"), func(t *testing.T) {
 					if err := testRequest(test); err != nil {
 						t.Error(err)
 					}
