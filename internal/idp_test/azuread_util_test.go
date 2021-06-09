@@ -1,13 +1,14 @@
 package idp_test
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"net/http"
-	"time"
 )
 
 func newAzureADTestServer() scim.Server {
@@ -56,7 +57,9 @@ func (a azureADGroupResourceHandler) Create(r *http.Request, attributes scim.Res
 }
 
 func (a azureADGroupResourceHandler) Delete(r *http.Request, id string) error {
-	panic("implement me")
+	return errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 func (a azureADGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
@@ -110,7 +113,9 @@ func (a azureADGroupResourceHandler) Patch(r *http.Request, id string, operation
 }
 
 func (a azureADGroupResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	panic("implement me")
+	return scim.Resource{}, errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 type azureADUserResourceHandler struct{}
@@ -129,7 +134,9 @@ func (a azureADUserResourceHandler) Create(r *http.Request, attributes scim.Reso
 }
 
 func (a azureADUserResourceHandler) Delete(r *http.Request, id string) error {
-	panic("implement me")
+	return errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
 
 func (a azureADUserResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
@@ -230,5 +237,7 @@ func (a azureADUserResourceHandler) Patch(r *http.Request, id string, operations
 }
 
 func (a azureADUserResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	panic("implement me")
+	return scim.Resource{}, errors.ScimError{
+		Status: http.StatusNotImplemented,
+	}
 }
