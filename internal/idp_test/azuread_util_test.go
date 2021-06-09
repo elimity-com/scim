@@ -11,6 +11,11 @@ import (
 	"github.com/scim2/filter-parser/v2"
 )
 
+var azureCreatedTime = time.Date(
+	2018, time.Month(3), 27,
+	19, 59, 26, 0, time.UTC,
+)
+
 func newAzureADTestServer() scim.Server {
 	return scim.Server{
 		Config: scim.ServiceProviderConfig{
@@ -44,14 +49,13 @@ func newAzureADTestServer() scim.Server {
 type azureADGroupResourceHandler struct{}
 
 func (a azureADGroupResourceHandler) Create(r *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         "927fa2c08dcb4a7fae9e",
 		ExternalID: optional.NewString(attributes["externalId"].(string)),
 		Attributes: attributes,
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
@@ -63,7 +67,6 @@ func (a azureADGroupResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (a azureADGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         id,
 		ExternalID: optional.NewString("60f1bb27-2e1e-402d-bcc4-ec999564a194"),
@@ -71,14 +74,13 @@ func (a azureADGroupResourceHandler) Get(r *http.Request, id string) (scim.Resou
 			"displayName": "displayName",
 		},
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
 
 func (a azureADGroupResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) (scim.Page, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T22:02:32.000Z")
 	return scim.Page{
 		TotalResults: 1,
 		Resources: []scim.Resource{
@@ -89,8 +91,8 @@ func (a azureADGroupResourceHandler) GetAll(r *http.Request, params scim.ListReq
 					"displayName": "displayName",
 				},
 				Meta: scim.Meta{
-					Created:      &created,
-					LastModified: &created,
+					Created:      &azureCreatedTime,
+					LastModified: &azureCreatedTime,
 				},
 			},
 		},
@@ -98,7 +100,6 @@ func (a azureADGroupResourceHandler) GetAll(r *http.Request, params scim.ListReq
 }
 
 func (a azureADGroupResourceHandler) Patch(r *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         id,
 		ExternalID: optional.NewString("60f1bb27-2e1e-402d-bcc4-ec999564a194"),
@@ -106,8 +107,8 @@ func (a azureADGroupResourceHandler) Patch(r *http.Request, id string, operation
 			"displayName": "1879db59-3bdf-4490-ad68-ab880a269474updatedDisplayName",
 		},
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
@@ -121,14 +122,13 @@ func (a azureADGroupResourceHandler) Replace(r *http.Request, id string, attribu
 type azureADUserResourceHandler struct{}
 
 func (a azureADUserResourceHandler) Create(r *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         "48af03ac28ad4fb88478",
 		ExternalID: optional.NewString(attributes["externalId"].(string)),
 		Attributes: attributes,
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
@@ -144,7 +144,6 @@ func (a azureADUserResourceHandler) Get(r *http.Request, id string) (scim.Resour
 		return scim.Resource{}, errors.ScimErrorResourceNotFound(id)
 	}
 
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         id,
 		ExternalID: optional.NewString("58342554-38d6-4ec8-948c-50044d0a33fd"),
@@ -165,8 +164,8 @@ func (a azureADUserResourceHandler) Get(r *http.Request, id string) (scim.Resour
 			},
 		},
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
@@ -177,7 +176,6 @@ func (a azureADUserResourceHandler) GetAll(r *http.Request, params scim.ListRequ
 		return scim.Page{}, nil
 	}
 
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Page{
 		TotalResults: 1,
 		Resources: []scim.Resource{
@@ -200,8 +198,8 @@ func (a azureADUserResourceHandler) GetAll(r *http.Request, params scim.ListRequ
 					},
 				},
 				Meta: scim.Meta{
-					Created:      &created,
-					LastModified: &created,
+					Created:      &azureCreatedTime,
+					LastModified: &azureCreatedTime,
 				},
 			},
 		},
@@ -209,7 +207,6 @@ func (a azureADUserResourceHandler) GetAll(r *http.Request, params scim.ListRequ
 }
 
 func (a azureADUserResourceHandler) Patch(r *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
-	created, _ := time.Parse(time.RFC3339, "2018-03-27T19:59:26.000Z")
 	return scim.Resource{
 		ID:         id,
 		ExternalID: optional.NewString("6c75de36-30fa-4d2d-a196-6bdcdb6b6539"),
@@ -230,8 +227,8 @@ func (a azureADUserResourceHandler) Patch(r *http.Request, id string, operations
 			},
 		},
 		Meta: scim.Meta{
-			Created:      &created,
-			LastModified: &created,
+			Created:      &azureCreatedTime,
+			LastModified: &azureCreatedTime,
 		},
 	}, nil
 }
