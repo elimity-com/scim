@@ -93,6 +93,8 @@ type ResourceHandler interface {
 	// Get returns the resource corresponding with the given identifier.
 	Get(r *http.Request, id string) (Resource, error)
 	// GetAll returns a paginated list of resources.
+	// An empty list of resources will be represented as `null` in the JSON response if `nil` is assigned to the
+	// Page.Resources. Otherwise, is an empty slice is assigned, an empty list will be represented as `[]`.
 	GetAll(r *http.Request, params ListRequestParams) (Page, error)
 	// Replace replaces ALL existing attributes of the resource with given identifier. Given attributes that are empty
 	// are to be deleted. Returns a resource with the attributes that are stored.

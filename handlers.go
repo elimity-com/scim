@@ -256,15 +256,9 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	// return empty slice instead of null if there are no resources.
-	var resources []interface{}
-	for _, v := range page.Resources {
-		resources = append(resources, v.response(resourceType))
-	}
-
 	raw, err := json.Marshal(listResponse{
 		TotalResults: page.TotalResults,
-		Resources:    resources,
+		Resources:    page.resources(resourceType),
 		StartIndex:   params.StartIndex,
 		ItemsPerPage: params.Count,
 	})

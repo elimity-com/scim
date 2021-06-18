@@ -12,6 +12,26 @@ type Page struct {
 	Resources []Resource
 }
 
+func (p Page) resources(resourceType ResourceType) []interface{} {
+	// If the page.Resources is nil, then it will also be represented as a `null` in the response.
+	// Otherwise is it is an empty slice then it will result in an empty array `[]`.
+	if len(p.Resources) == 0 {
+		if p.Resources != nil {
+			return []interface{}{}
+		}
+		return nil
+	}
+
+	var resources []interface{}
+	for _, v := range p.Resources {
+		resources = append(
+			resources,
+			v.response(resourceType),
+		)
+	}
+	return resources
+}
+
 // listResponse identifies a query response.
 type listResponse struct {
 	// TotalResults is the total number of results returned by the list or query operation.
