@@ -39,11 +39,7 @@ func TestIdP(t *testing.T) {
 func testRequest(t testCase, idpName string) error {
 	rr := httptest.NewRecorder()
 	br := bytes.NewReader(t.Request)
-	server, err := getNewServer(idpName)
-	if err != nil {
-		return err
-	}
-	server.ServeHTTP(
+	getNewServer(idpName).ServeHTTP(
 		rr,
 		httptest.NewRequest(t.Method, t.Path, br),
 	)

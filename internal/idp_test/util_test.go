@@ -7,12 +7,12 @@ import (
 	"github.com/elimity-com/scim"
 )
 
-func getNewServer(idpName string) (scim.Server, error) {
+func getNewServer(idpName string) scim.Server {
 	switch idpName {
 	case "okta":
-		return newOktaTestServer(), nil
+		return newOktaTestServer()
 	case "azuread":
-		return newAzureADTestServer(), nil
+		return newAzureADTestServer()
 	default:
 		panic("unreachable")
 	}
