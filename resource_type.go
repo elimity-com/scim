@@ -134,7 +134,7 @@ func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.
 
 	// The body of each request MUST contain the "schemas" attribute with the URI value of
 	// "urn:ietf:params:scim:api:messages:2.0:PatchOp".
-	if len(req.Schemas) != 1 && req.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:PatchOp" {
+	if len(req.Schemas) < 1 || req.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:PatchOp" {
 		return nil, &errors.ScimErrorInvalidValue
 	}
 
