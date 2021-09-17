@@ -65,8 +65,11 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 	response["schemas"] = schemas
 
 	m := meta{
-		ResourceType: resourceType.Name,
-		Location:     fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
+		Location: fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
+	}
+
+	if !resourceType.ExcludeResourceTypeMeta {
+		m.ResourceType = resourceType.Name
 	}
 
 	if r.Meta.Created != nil {

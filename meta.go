@@ -5,7 +5,7 @@ package scim
 // "default". This attribute SHALL be ignored when provided by clients.
 type meta struct {
 	// ResourceType is the name of the resource type of the resource.
-	ResourceType string `json:"resourceType"`
+	ResourceType string `json:"resourceType,omitempty"`
 	// Created is the "DateTime" that the resource was added to the service provider.
 	Created string `json:"created,omitempty"`
 	// LastModified is the most recent DateTime that the details of this resource were updated at the service provider.

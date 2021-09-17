@@ -4,6 +4,8 @@ import (
 	"github.com/elimity-com/scim/optional"
 )
 
+const defaultServiceProviderConfigSchema string = "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
+
 // AuthenticationScheme specifies a supported authentication scheme property.
 type AuthenticationScheme struct {
 	// Type is the authentication scheme. This specification defines the values "oauth", "oauth2", "oauthbearertoken",
@@ -37,6 +39,31 @@ const (
 	AuthenticationTypeHTTPDigest AuthenticationType = "httpdigest"
 )
 
+// ServiceCapability is a single keyword indicating a capability supported by this service.
+type ServiceCapability string
+
+// ServiceCapability constants
+const (
+	ServiceCapabilityImportNewUsers       ServiceCapability = "IMPORT_NEW_USERS"
+	ServiceCapabilityImportProfileUpdates ServiceCapability = "IMPORT_PROFILE_UPDATES"
+	ServiceCapabilityPushNewUsers         ServiceCapability = "PUSH_NEW_USERS"
+	ServiceCapabilityPushPasswordUpdates  ServiceCapability = "PUSH_PASSWORD_UPDATES"
+	ServiceCapabilityPushUserDeactivation ServiceCapability = "PUSH_USER_DEACTIVATION"
+	ServiceCapabilityReactivateUsers      ServiceCapability = "REACTIVATE_USERS"
+	ServiceCapabilityGroupPush            ServiceCapability = "GROUP_PUSH"
+)
+
+// This is for backwards compatibility to not break existing code.
+// it is also intended to not be directly referenced, use instead GetDefaultCapabilities
+var defaultServiceCapabilities = []ServiceCapability{
+	ServiceCapabilityImportNewUsers,
+	ServiceCapabilityImportProfileUpdates,
+	ServiceCapabilityPushNewUsers,
+	ServiceCapabilityPushPasswordUpdates,
+	ServiceCapabilityPushUserDeactivation,
+	ServiceCapabilityReactivateUsers,
+}
+
 // ServiceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
 // well as provide additional implementation details to clients.
 type ServiceProviderConfig struct {
@@ -45,6 +72,10 @@ type ServiceProviderConfig struct {
 	DocumentationURI optional.String
 	// AuthenticationSchemes is a multi-valued complex type that specifies supported authentication scheme properties.
 	AuthenticationSchemes []AuthenticationScheme
+	// Capabilities is multi-valued string type that specifies what capabilities this service supports.
+	Capabilities []ServiceCapability
+	// SchemaExtensions allows to augment the returned schema of ServiceProviderConfigs
+	SchemaExtensions []SchemaExtension
 	// MaxResults denotes the the integer value specifying the maximum number of resources returned in a response. It defaults to 100.
 	MaxResults int
 	// SupportFiltering whether you SCIM implementation will support filtering.
@@ -61,9 +92,19 @@ func (config ServiceProviderConfig) getItemsPerPage() int {
 	return config.MaxResults
 }
 
+// getServiceCapabilities gets the default capabilities if no capabilties were set in the service config.
+// This is for backwards compatibility so that code that wasn't setting capabilities before still works as
+// expected
+func (config ServiceProviderConfig) getServiceCapabilities() []ServiceCapability {
+	if len(config.Capabilities) == 0 {
+		return defaultServiceCapabilities
+	}
+	return config.Capabilities
+}
+
 func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	return map[string]interface{}{
-		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
+		"schemas":          config.getRawSchemas(),
 		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
 			"supported": config.SupportPatch,
@@ -87,7 +128,18 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 			"supported": false,
 		},
 		"authenticationSchemes": config.getRawAuthenticationSchemes(),
+		"urn:okta:schemas:scim:providerconfig:1.0": map[string]interface{}{
+			"userManagementCapabilities": config.getServiceCapabilities(),
+		},
 	}
+}
+
+func (config ServiceProviderConfig) getRawSchemas() []string {
+	schemas := []string{defaultServiceProviderConfigSchema}
+	for _, s := range config.SchemaExtensions {
+		schemas = append(schemas, s.Schema.ID)
+	}
+	return schemas
 }
 
 func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]interface{} {

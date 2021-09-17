@@ -2,12 +2,13 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/internal/filter"
-	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/scim2/filter-parser/v2"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
@@ -88,7 +89,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == http.MethodGet:
 		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
 		return
-	case path == "/ServiceProviderConfig":
+	case path == "/ServiceProviderConfig" || path == "/ServiceProviderConfigs":
 		s.serviceProviderConfigHandler(w, r)
 		return
 	}

@@ -36,6 +36,9 @@ type ResourceType struct {
 
 	// Handler is the set of callback method that connect the SCIM server with a provider of the resource type.
 	Handler ResourceHandler
+
+	// ExcludeResourceTypeMeta controls whether the meta block will contain the resource_type key
+	ExcludeResourceTypeMeta bool
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
