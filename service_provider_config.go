@@ -6,6 +6,16 @@ import (
 
 const defaultServiceProviderConfigSchema string = "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
 
+// This is for backwards compatibility to not break existing code.
+var defaultServiceCapabilities = []ServiceCapability{
+	ServiceCapabilityImportNewUsers,
+	ServiceCapabilityImportProfileUpdates,
+	ServiceCapabilityPushNewUsers,
+	ServiceCapabilityPushPasswordUpdates,
+	ServiceCapabilityPushUserDeactivation,
+	ServiceCapabilityReactivateUsers,
+}
+
 // AuthenticationScheme specifies a supported authentication scheme property.
 type AuthenticationScheme struct {
 	// Type is the authentication scheme. This specification defines the values "oauth", "oauth2", "oauthbearertoken",
@@ -42,7 +52,7 @@ const (
 // ServiceCapability is a single keyword indicating a capability supported by this service.
 type ServiceCapability string
 
-// ServiceCapability constants
+// ServiceCapability constants for specifying which capabilities the service supports.
 const (
 	ServiceCapabilityImportNewUsers       ServiceCapability = "IMPORT_NEW_USERS"
 	ServiceCapabilityImportProfileUpdates ServiceCapability = "IMPORT_PROFILE_UPDATES"
@@ -52,17 +62,6 @@ const (
 	ServiceCapabilityReactivateUsers      ServiceCapability = "REACTIVATE_USERS"
 	ServiceCapabilityGroupPush            ServiceCapability = "GROUP_PUSH"
 )
-
-// This is for backwards compatibility to not break existing code.
-// it is also intended to not be directly referenced, use instead GetDefaultCapabilities
-var defaultServiceCapabilities = []ServiceCapability{
-	ServiceCapabilityImportNewUsers,
-	ServiceCapabilityImportProfileUpdates,
-	ServiceCapabilityPushNewUsers,
-	ServiceCapabilityPushPasswordUpdates,
-	ServiceCapabilityPushUserDeactivation,
-	ServiceCapabilityReactivateUsers,
-}
 
 // ServiceProviderConfig enables a service provider to discover SCIM specification features in a standardized form as
 // well as provide additional implementation details to clients.
@@ -90,16 +89,6 @@ func (config ServiceProviderConfig) getItemsPerPage() int {
 		return fallbackCount
 	}
 	return config.MaxResults
-}
-
-// getServiceCapabilities gets the default capabilities if no capabilties were set in the service config.
-// This is for backwards compatibility so that code that wasn't setting capabilities before still works as
-// expected
-func (config ServiceProviderConfig) getServiceCapabilities() []ServiceCapability {
-	if len(config.Capabilities) == 0 {
-		return defaultServiceCapabilities
-	}
-	return config.Capabilities
 }
 
 func (config ServiceProviderConfig) getRaw() map[string]interface{} {
@@ -134,14 +123,6 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	}
 }
 
-func (config ServiceProviderConfig) getRawSchemas() []string {
-	schemas := []string{defaultServiceProviderConfigSchema}
-	for _, s := range config.SchemaExtensions {
-		schemas = append(schemas, s.Schema.ID)
-	}
-	return schemas
-}
-
 func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]interface{} {
 	rawAuthScheme := make([]map[string]interface{}, 0)
 	for _, auth := range config.AuthenticationSchemes {
@@ -155,4 +136,22 @@ func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]i
 		})
 	}
 	return rawAuthScheme
+}
+
+func (config ServiceProviderConfig) getRawSchemas() []string {
+	schemas := []string{defaultServiceProviderConfigSchema}
+	for _, s := range config.SchemaExtensions {
+		schemas = append(schemas, s.Schema.ID)
+	}
+	return schemas
+}
+
+// getServiceCapabilities gets the default capabilities if no capabilties were set in the service config.
+// This is for backwards compatibility so that code that wasn't setting capabilities before still works as
+// expected.
+func (config ServiceProviderConfig) getServiceCapabilities() []ServiceCapability {
+	if len(config.Capabilities) == 0 {
+		return defaultServiceCapabilities
+	}
+	return config.Capabilities
 }
