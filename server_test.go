@@ -14,6 +14,18 @@ import (
 	"github.com/scim2/filter-parser/v2"
 )
 
+func checkBodyNotEmpty(r *http.Request) error {
+	// Check whether the request body is empty.
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("passed body is empty")
+	}
+	return nil
+}
+
 // externalID extracts the external identifier of the given attributes.
 func externalID(attributes scim.ResourceAttributes) optional.String {
 	if eID, ok := attributes["externalId"]; ok {
@@ -376,16 +388,4 @@ func (h *testResourceHandler) createID() string {
 	id := fmt.Sprintf("%04d", h.nextID)
 	h.nextID++
 	return id
-}
-
-func checkBodyNotEmpty(r *http.Request) error {
-	// Check whether the request body is empty.
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	if len(data) == 0 {
-		return fmt.Errorf("passed body is empty")
-	}
-	return nil
 }
