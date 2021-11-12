@@ -2,14 +2,16 @@ package scim_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
 	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"net/http"
-	"time"
 )
 
 // externalID extracts the external identifier of the given attributes.
@@ -76,7 +78,11 @@ type testResourceHandler struct {
 	schema schema.Schema
 }
 
-func (h *testResourceHandler) Create(_ *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
+func (h *testResourceHandler) Create(r *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return scim.Resource{}, err
+	}
+
 	var (
 		id   = h.createID()
 		now  = time.Now()
@@ -98,7 +104,11 @@ func (h *testResourceHandler) Create(_ *http.Request, attributes scim.ResourceAt
 	}, nil
 }
 
-func (h *testResourceHandler) Delete(_ *http.Request, id string) error {
+func (h *testResourceHandler) Delete(r *http.Request, id string) error {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return err
+	}
+
 	if _, ok := h.data[id]; !ok {
 		return errors.ScimErrorResourceNotFound(id)
 	}
@@ -106,7 +116,11 @@ func (h *testResourceHandler) Delete(_ *http.Request, id string) error {
 	return nil
 }
 
-func (h testResourceHandler) Get(_ *http.Request, id string) (scim.Resource, error) {
+func (h testResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return scim.Resource{}, err
+	}
+
 	resource, ok := h.data[id]
 	if !ok {
 		return scim.Resource{}, errors.ScimErrorResourceNotFound(id)
@@ -119,7 +133,11 @@ func (h testResourceHandler) Get(_ *http.Request, id string) (scim.Resource, err
 	}, nil
 }
 
-func (h testResourceHandler) GetAll(_ *http.Request, params scim.ListRequestParams) (scim.Page, error) {
+func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) (scim.Page, error) {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return scim.Page{}, err
+	}
+
 	if params.Count == 0 {
 		return scim.Page{
 			TotalResults: len(h.data),
@@ -156,7 +174,11 @@ func (h testResourceHandler) GetAll(_ *http.Request, params scim.ListRequestPara
 	}, nil
 }
 
-func (h *testResourceHandler) Patch(_ *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
+func (h *testResourceHandler) Patch(r *http.Request, id string, operations []scim.PatchOperation) (scim.Resource, error) {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return scim.Resource{}, err
+	}
+
 	if _, ok := h.data[id]; !ok {
 		return scim.Resource{}, errors.ScimErrorResourceNotFound(id)
 	}
@@ -320,7 +342,11 @@ func (h *testResourceHandler) Patch(_ *http.Request, id string, operations []sci
 	}, nil
 }
 
-func (h *testResourceHandler) Replace(_ *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
+func (h *testResourceHandler) Replace(r *http.Request, id string, attributes scim.ResourceAttributes) (scim.Resource, error) {
+	if err := checkBodyNotEmpty(r); err != nil {
+		return scim.Resource{}, err
+	}
+
 	resource, ok := h.data[id]
 	if !ok {
 		return scim.Resource{}, errors.ScimErrorResourceNotFound(id)
@@ -350,4 +376,16 @@ func (h *testResourceHandler) createID() string {
 	id := fmt.Sprintf("%04d", h.nextID)
 	h.nextID++
 	return id
+}
+
+func checkBodyNotEmpty(r *http.Request) error {
+	// Check whether the request body is empty.
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("passed body is empty")
+	}
+	return nil
 }

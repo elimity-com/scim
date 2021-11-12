@@ -3,12 +3,12 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/internal/patch"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
-	"io/ioutil"
-	"net/http"
 )
 
 // unmarshal unifies the unmarshal of the requests.
@@ -119,7 +119,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 
 // validatePatch parse and validate PATCH request.
 func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.ScimError) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := readBody(r)
 	if err != nil {
 		return nil, &errors.ScimErrorInvalidSyntax
 	}
