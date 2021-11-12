@@ -1,5 +1,20 @@
 package scim
 
+import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
+)
+
+func readBody(r *http.Request) ([]byte, error) {
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	return data, nil
+}
+
 func clamp(offset, limit, length int) (int, int) {
 	start := length
 	if offset < length {
