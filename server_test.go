@@ -117,10 +117,6 @@ func (h *testResourceHandler) Create(r *http.Request, attributes scim.ResourceAt
 }
 
 func (h *testResourceHandler) Delete(r *http.Request, id string) error {
-	if err := checkBodyNotEmpty(r); err != nil {
-		return err
-	}
-
 	if _, ok := h.data[id]; !ok {
 		return errors.ScimErrorResourceNotFound(id)
 	}
@@ -129,10 +125,6 @@ func (h *testResourceHandler) Delete(r *http.Request, id string) error {
 }
 
 func (h testResourceHandler) Get(r *http.Request, id string) (scim.Resource, error) {
-	if err := checkBodyNotEmpty(r); err != nil {
-		return scim.Resource{}, err
-	}
-
 	resource, ok := h.data[id]
 	if !ok {
 		return scim.Resource{}, errors.ScimErrorResourceNotFound(id)
@@ -146,10 +138,6 @@ func (h testResourceHandler) Get(r *http.Request, id string) (scim.Resource, err
 }
 
 func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) (scim.Page, error) {
-	if err := checkBodyNotEmpty(r); err != nil {
-		return scim.Page{}, err
-	}
-
 	if params.Count == 0 {
 		return scim.Page{
 			TotalResults: len(h.data),
