@@ -20,16 +20,12 @@ const (
 
 // getFilter returns a validated filter if present in the url query, nil otherwise.
 func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
-	rawFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if rawFilter == "" {
+	filter := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if filter == "" {
 		return nil, nil // No filter present.
 	}
 
-	decodedFilter, err := url.QueryUnescape(rawFilter)
-	if err != nil {
-		return nil, err
-	}
-	validator, err := f.NewValidator(decodedFilter, s, extensions...)
+	validator, err := f.NewValidator(filter, s, extensions...)
 	if err != nil {
 		return nil, err
 	}
