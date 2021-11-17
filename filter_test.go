@@ -49,7 +49,6 @@ func newTestServerForFilter() scim.Server {
 }
 
 func Test_User_Filter(t *testing.T) {
-
 	s := newTestServerForFilter()
 
 	tests := []struct {
@@ -83,10 +82,13 @@ func Test_User_Filter(t *testing.T) {
 
 			resources, ok := result["Resources"].([]interface{})
 			if !ok {
-				t.Fatal("Resources not found")
+				t.Fatal("Resources is not the right type or missing")
 			}
 
 			firstResource, ok := resources[0].(map[string]interface{})
+			if !ok {
+				t.Fatal("first Resource is not the right type or missing")
+			}
 
 			userName, ok := firstResource["userName"].(string)
 			if !ok {
@@ -95,6 +97,60 @@ func Test_User_Filter(t *testing.T) {
 
 			if userName != tt.expectedUserName {
 				t.Fatal("userName not eq " + userName)
+			}
+		})
+	}
+}
+
+func Test_Group_Filter(t *testing.T) {
+	s := newTestServerForFilter()
+
+	tests := []struct {
+		name                string
+		filter              string
+		expectedDisplayName string
+	}{
+		{name: "Happy path", filter: "displayName eq \"testUser\"", expectedDisplayName: "testGroup"},
+		{name: "Happy path with plus sign", filter: "displayName eq \"testUser+test\"", expectedDisplayName: "testGroup+test"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/Groups?filter="+url.QueryEscape(tt.filter), nil)
+			w := httptest.NewRecorder()
+			s.ServeHTTP(w, r)
+
+			bytes, err := ioutil.ReadAll(w.Result().Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if w.Result().StatusCode != http.StatusOK {
+				t.Fatal(w.Result().StatusCode, string(bytes))
+			}
+
+			var result map[string]interface{}
+			if err := json.Unmarshal(bytes, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			resources, ok := result["Resources"].([]interface{})
+			if !ok {
+				t.Fatal("Resources is not the right type or missing")
+			}
+
+			firstResource, ok := resources[0].(map[string]interface{})
+			if !ok {
+				t.Fatal("first Resource is not the right type or missing")
+			}
+
+			userName, ok := firstResource["userName"].(string)
+			if !ok {
+				t.Fatal("displayName is not a string")
+			}
+
+			if userName != tt.expectedDisplayName {
+				t.Fatal("displayName not eq " + userName)
 			}
 		})
 	}
