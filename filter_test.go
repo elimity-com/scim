@@ -144,13 +144,13 @@ func Test_Group_Filter(t *testing.T) {
 				t.Fatal("first Resource is not the right type or missing")
 			}
 
-			userName, ok := firstResource["displayName"].(string)
+			displayName, ok := firstResource["displayName"].(string)
 			if !ok {
 				t.Fatal("displayName is not the right type or missing")
 			}
 
-			if userName != tt.expectedDisplayName {
-				t.Fatal("displayName not eq " + userName)
+			if displayName != tt.expectedDisplayName {
+				t.Fatal("displayName not eq " + displayName)
 			}
 		})
 	}
