@@ -50,6 +50,10 @@ func Test_Group_Filter(t *testing.T) {
 				t.Fatal("Resources is not the right type or missing")
 			}
 
+			if len(resources) != 1 {
+				t.Fatal("one Resource expected")
+			}
+
 			firstResource, ok := resources[0].(map[string]interface{})
 			if !ok {
 				t.Fatal("first Resource is not the right type or missing")
@@ -102,6 +106,10 @@ func Test_User_Filter(t *testing.T) {
 			resources, ok := result["Resources"].([]interface{})
 			if !ok {
 				t.Fatal("Resources is not the right type or missing")
+			}
+
+			if len(resources) != 1 {
+				t.Fatal("one Resource expected")
 			}
 
 			firstResource, ok := resources[0].(map[string]interface{})
