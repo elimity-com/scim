@@ -92,7 +92,7 @@ func Test_User_Filter(t *testing.T) {
 
 			userName, ok := firstResource["userName"].(string)
 			if !ok {
-				t.Fatal("userName is not a string")
+				t.Fatal("userName is not the right type or missing")
 			}
 
 			if userName != tt.expectedUserName {
@@ -110,8 +110,8 @@ func Test_Group_Filter(t *testing.T) {
 		filter              string
 		expectedDisplayName string
 	}{
-		{name: "Happy path", filter: "displayName eq \"testUser\"", expectedDisplayName: "testGroup"},
-		{name: "Happy path with plus sign", filter: "displayName eq \"testUser+test\"", expectedDisplayName: "testGroup+test"},
+		{name: "Happy path", filter: "displayName eq \"testGroup\"", expectedDisplayName: "testGroup"},
+		{name: "Happy path with plus sign", filter: "displayName eq \"testGroup+test\"", expectedDisplayName: "testGroup+test"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -144,9 +144,9 @@ func Test_Group_Filter(t *testing.T) {
 				t.Fatal("first Resource is not the right type or missing")
 			}
 
-			userName, ok := firstResource["userName"].(string)
+			userName, ok := firstResource["displayName"].(string)
 			if !ok {
-				t.Fatal("displayName is not a string")
+				t.Fatal("displayName is not the right type or missing")
 			}
 
 			if userName != tt.expectedDisplayName {
