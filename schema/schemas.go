@@ -570,7 +570,7 @@ func Definition() Schema {
 		},
 		Description: optional.String{},
 		ID:          "urn:ietf:params:scim:schemas:core:2.0:Schema",
-		Name:        optional.String{},
+		Name:        optional.NewString("Schema"),
 	}
 }
 
