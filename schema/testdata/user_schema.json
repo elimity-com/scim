@@ -757,6 +757,7 @@
       "type": "complex"
     }
   ],
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
   "description": "User Account",
   "id": "urn:ietf:params:scim:schemas:core:2.0:User",
   "name": "User"

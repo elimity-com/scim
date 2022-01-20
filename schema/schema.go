@@ -61,6 +61,7 @@ func (s Schema) ToMap() map[string]interface{} {
 		"name":        s.Name.Value(),
 		"description": s.Description.Value(),
 		"attributes":  s.getRawAttributes(),
+		"schemas":     []string{"urn:ietf:params:scim:schemas:core:2.0:Schema"},
 	}
 }
 

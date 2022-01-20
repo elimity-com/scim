@@ -120,6 +120,7 @@
       "uniqueness": "none"
     }
   ],
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
   "description": "",
   "id": "empty",
   "name": "test"

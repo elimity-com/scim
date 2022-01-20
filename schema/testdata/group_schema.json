@@ -75,6 +75,7 @@
       "type": "complex"
     }
   ],
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
   "description": "Group",
   "id": "urn:ietf:params:scim:schemas:core:2.0:Group",
   "name": "Group"
