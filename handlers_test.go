@@ -762,11 +762,11 @@ func TestServerSchemasEndpoint(t *testing.T) {
 			var response listResponse
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 
-			expectedLen := 3
+			expectedLen := 6
 			assertEqual(t, expectedLen, response.TotalResults)
 			assertLen(t, response.Resources, expectedLen)
 
-			resourceIDs := make([]string, 3)
+			resourceIDs := make([]string, 6)
 			for i, resource := range response.Resources {
 				resourceType, ok := resource.(map[string]interface{})
 				assertTypeOk(t, ok, "object")
@@ -774,6 +774,9 @@ func TestServerSchemasEndpoint(t *testing.T) {
 			}
 
 			assertEqualStrings(t, []string{
+				"urn:ietf:params:scim:schemas:core:2.0:Schema",
+				"urn:ietf:params:scim:schemas:core:2.0:ResourceType",
+				"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
 				"urn:ietf:params:scim:schemas:core:2.0:User",
 				"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
 				"urn:ietf:params:scim:schemas:core:2.0:Group",
@@ -798,7 +801,7 @@ func TestServerSchemasEndpointFilter(t *testing.T) {
 	var response listResponse
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	assertLen(t, response.Resources, 1)
-	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 6, response.TotalResults)
 }
 
 func TestServerServiceProviderConfigHandler(t *testing.T) {

@@ -132,6 +132,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // getSchema extracts the schemas from the resources types defined in the server with given id.
 func (s Server) getSchema(id string) schema.Schema {
+	switch id {
+	case "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig":
+		return schema.ServiceProviderConfigSchema()
+	case "urn:ietf:params:scim:schemas:core:2.0:ResourceType":
+		return schema.ResourceTypeSchema()
+	case "urn:ietf:params:scim:schemas:core:2.0:Schema":
+		return schema.Definition()
+	}
 	for _, resourceType := range s.ResourceTypes {
 		if resourceType.Schema.ID == id {
 			return resourceType.Schema
@@ -148,7 +156,9 @@ func (s Server) getSchema(id string) schema.Schema {
 // getSchemas extracts all the schemas from the resources types defined in the server. Duplicate IDs will be ignored.
 func (s Server) getSchemas() []schema.Schema {
 	ids := make([]string, 0)
-	schemas := make([]schema.Schema, 0)
+	schemas := []schema.Schema{
+		schema.Definition(), schema.ResourceTypeSchema(), schema.ServiceProviderConfigSchema(),
+	}
 	for _, resourceType := range s.ResourceTypes {
 		if !contains(ids, resourceType.Schema.ID) {
 			schemas = append(schemas, resourceType.Schema)
