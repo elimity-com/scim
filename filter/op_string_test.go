@@ -2,10 +2,11 @@ package filter_test
 
 import (
 	"fmt"
-	internal "github.com/elimity-com/scim/internal/filter"
+	"testing"
+
+	scimFilter "github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"testing"
 )
 
 func TestValidatorString(t *testing.T) {
@@ -38,7 +39,7 @@ func TestValidatorString(t *testing.T) {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
 			for i, attr := range attrs {
-				validator, err := internal.NewValidator(f, schema.Schema{
+				validator, err := scimFilter.NewValidator(f, schema.Schema{
 					Attributes: []schema.CoreAttribute{
 						schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 							Name: "str",
@@ -51,7 +52,7 @@ func TestValidatorString(t *testing.T) {
 				if err := validator.PassesFilter(attr); (err == nil) != test.valid[i] {
 					t.Errorf("(0.%d) %s %s | actual %v, expected %v", i, f, attr, err, test.valid[i])
 				}
-				validatorCE, err := internal.NewValidator(f, schema.Schema{
+				validatorCE, err := scimFilter.NewValidator(f, schema.Schema{
 					Attributes: []schema.CoreAttribute{
 						schema.SimpleCoreAttribute(schema.SimpleReferenceParams(schema.ReferenceParams{
 							Name: "str",

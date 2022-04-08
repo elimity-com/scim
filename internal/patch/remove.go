@@ -1,10 +1,11 @@
 package patch
 
 import (
-	"github.com/elimity-com/scim/errors"
-	f "github.com/elimity-com/scim/internal/filter"
-	"github.com/elimity-com/scim/schema"
 	"net/http"
+
+	"github.com/elimity-com/scim/errors"
+	f "github.com/elimity-com/scim/filter"
+	"github.com/elimity-com/scim/schema"
 )
 
 // validateRemove validates the remove operation contained within the validator based on on Section 3.5.2.2 in RFC 7644.

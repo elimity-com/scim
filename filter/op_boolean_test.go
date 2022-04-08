@@ -2,10 +2,11 @@ package filter_test
 
 import (
 	"fmt"
-	internal "github.com/elimity-com/scim/internal/filter"
+	"testing"
+
+	scimFilter "github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"testing"
 )
 
 func TestValidatorBoolean(t *testing.T) {
@@ -41,7 +42,7 @@ func TestValidatorBoolean(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			validator, err := internal.NewValidator(f, ref)
+			validator, err := scimFilter.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}

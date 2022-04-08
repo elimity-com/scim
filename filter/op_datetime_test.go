@@ -2,29 +2,29 @@ package filter_test
 
 import (
 	"fmt"
-	internal "github.com/elimity-com/scim/internal/filter"
+	"testing"
+
+	scimFilter "github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"testing"
 )
 
-func TestValidatorInteger(t *testing.T) {
+func TestValidatorDateTime(t *testing.T) {
 	var (
 		exp = func(op filter.CompareOperator) string {
-			return fmt.Sprintf("int %s 0", op)
+			return fmt.Sprintf("time %s \"2021-01-01T12:00:00Z\"", op)
 		}
 		ref = schema.Schema{
 			Attributes: []schema.CoreAttribute{
-				schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
-					Name: "int",
-					Type: schema.AttributeTypeInteger(),
+				schema.SimpleCoreAttribute(schema.SimpleDateTimeParams(schema.DateTimeParams{
+					Name: "time",
 				})),
 			},
 		}
 		attrs = [3]map[string]interface{}{
-			{"int": -1}, // less
-			{"int": 0},  // equal
-			{"int": 10}, // greater
+			{"time": "2021-01-01T08:00:00Z"}, // before
+			{"time": "2021-01-01T12:00:00Z"}, // equal
+			{"time": "2021-01-01T16:00:00Z"}, // after
 		}
 	)
 
@@ -34,9 +34,9 @@ func TestValidatorInteger(t *testing.T) {
 	}{
 		{filter.EQ, [3]bool{false, true, false}},
 		{filter.NE, [3]bool{true, false, true}},
-		{filter.CO, [3]bool{false, true, true}},
+		{filter.CO, [3]bool{false, true, false}},
 		{filter.SW, [3]bool{false, true, false}},
-		{filter.EW, [3]bool{false, true, true}},
+		{filter.EW, [3]bool{false, true, false}},
 		{filter.GT, [3]bool{false, false, true}},
 		{filter.LT, [3]bool{true, false, false}},
 		{filter.GE, [3]bool{false, true, true}},
@@ -44,7 +44,7 @@ func TestValidatorInteger(t *testing.T) {
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			f := exp(test.op)
-			validator, err := internal.NewValidator(f, ref)
+			validator, err := scimFilter.NewValidator(f, ref)
 			if err != nil {
 				t.Fatal(err)
 			}

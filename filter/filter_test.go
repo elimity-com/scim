@@ -1,9 +1,10 @@
 package filter_test
 
 import (
-	internal "github.com/elimity-com/scim/internal/filter"
-	"github.com/elimity-com/scim/schema"
 	"testing"
+
+	"github.com/elimity-com/scim/filter"
+	"github.com/elimity-com/scim/schema"
 )
 
 func TestPathValidator_Validate(t *testing.T) {
@@ -25,7 +26,7 @@ func TestPathValidator_Validate(t *testing.T) {
 			`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber`,
 			`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName`,
 		} {
-			validator, err := internal.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
+			validator, err := filter.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -47,7 +48,7 @@ func TestPathValidator_Validate(t *testing.T) {
 			`urn:ietf:params:scim:schemas:core:2.0:User:employeeNumber`,
 			`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userName`,
 		} {
-			validator, err := internal.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
+			validator, err := filter.NewPathValidator(f, schema.CoreUserSchema(), schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -92,7 +93,7 @@ func TestValidator_PassesFilter(t *testing.T) {
 				},
 			},
 		} {
-			validator, err := internal.NewValidator(test.filter, schema.CoreUserSchema())
+			validator, err := filter.NewValidator(test.filter, schema.CoreUserSchema())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -137,7 +138,7 @@ func TestValidator_PassesFilter(t *testing.T) {
 			userSchema := schema.CoreUserSchema()
 			userSchema.Attributes = append(userSchema.Attributes, schema.SchemasAttributes())
 			userSchema.Attributes = append(userSchema.Attributes, schema.CommonAttributes()...)
-			validator, err := internal.NewValidator(test.filter, userSchema)
+			validator, err := filter.NewValidator(test.filter, userSchema)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -168,7 +169,7 @@ func TestValidator_PassesFilter(t *testing.T) {
 				filter: `urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization eq "Elimity"`,
 			},
 		} {
-			validator, err := internal.NewValidator(test.filter, schema.ExtensionEnterpriseUser())
+			validator, err := filter.NewValidator(test.filter, schema.ExtensionEnterpriseUser())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -212,7 +213,7 @@ func TestValidator_Validate(t *testing.T) {
 		`userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`,
 		`emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]`,
 	} {
-		validator, err := internal.NewValidator(f, userSchema)
+		validator, err := filter.NewValidator(f, userSchema)
 		if err != nil {
 			t.Fatal(err)
 		}
