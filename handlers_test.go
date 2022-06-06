@@ -660,6 +660,32 @@ func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
 	assertEqual(t, 0, len(response.Resources))
 }
 
+func TestServerResourcesGetAllHandlerNonIntCount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=BadBanana", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var response errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, http.StatusBadRequest, response.Status)
+	assertEqual(t, "Bad Request. Invalid parameter provided in request: count.", response.Detail)
+}
+
+func TestServerResourcesGetAllHandlerNonIntStartIndex(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?startIndex=BadBanana", nil)
+	rr := httptest.NewRecorder()
+	newTestServer().ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var response errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, http.StatusBadRequest, response.Status)
+	assertEqual(t, "Bad Request. Invalid parameter provided in request: startIndex.", response.Detail)
+}
+
 func TestServerResourcesGetHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
