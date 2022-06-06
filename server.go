@@ -67,24 +67,24 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/Me":
-		errorHandler(w, r, &errors.ScimError{
+		ErrorHandler(w, r, &errors.ScimError{
 			Status: http.StatusNotImplemented,
 		})
 		return
 	case path == "/Schemas" && r.Method == http.MethodGet:
-		s.schemasHandler(w, r)
+		s.SchemasHandler(w, r)
 		return
 	case strings.HasPrefix(path, "/Schemas/") && r.Method == http.MethodGet:
-		s.schemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
+		s.SchemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
 		return
 	case path == "/ResourceTypes" && r.Method == http.MethodGet:
-		s.resourceTypesHandler(w, r)
+		s.ResourceTypesHandler(w, r)
 		return
 	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == http.MethodGet:
-		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
+		s.ResourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
 		return
 	case path == "/ServiceProviderConfig":
-		s.serviceProviderConfigHandler(w, r)
+		s.ServiceProviderConfigHandler(w, r)
 		return
 	}
 
@@ -92,10 +92,10 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if path == resourceType.Endpoint {
 			switch r.Method {
 			case http.MethodPost:
-				s.resourcePostHandler(w, r, resourceType)
+				s.ResourcePostHandler(w, r, resourceType)
 				return
 			case http.MethodGet:
-				s.resourcesGetHandler(w, r, resourceType)
+				s.ResourcesGetHandler(w, r, resourceType)
 				return
 			}
 		}
@@ -108,22 +108,22 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			switch r.Method {
 			case http.MethodGet:
-				s.resourceGetHandler(w, r, id, resourceType)
+				s.ResourceGetHandler(w, r, id, resourceType)
 				return
 			case http.MethodPut:
-				s.resourcePutHandler(w, r, id, resourceType)
+				s.ResourcePutHandler(w, r, id, resourceType)
 				return
 			case http.MethodPatch:
-				s.resourcePatchHandler(w, r, id, resourceType)
+				s.ResourcePatchHandler(w, r, id, resourceType)
 				return
 			case http.MethodDelete:
-				s.resourceDeleteHandler(w, r, id, resourceType)
+				s.ResourceDeleteHandler(w, r, id, resourceType)
 				return
 			}
 		}
 	}
 
-	errorHandler(w, r, &errors.ScimError{
+	ErrorHandler(w, r, &errors.ScimError{
 		Detail: "Specified endpoint does not exist.",
 		Status: http.StatusNotFound,
 	})
