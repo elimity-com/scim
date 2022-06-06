@@ -3,7 +3,6 @@ package scim
 import (
 	"fmt"
 	f "github.com/elimity-com/scim/internal/filter"
-	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,7 +18,7 @@ const (
 )
 
 // getFilter returns a validated filter if present in the url query, nil otherwise.
-func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
+func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (*f.Validator, error) {
 	filter := strings.TrimSpace(r.URL.Query().Get("filter"))
 	if filter == "" {
 		return nil, nil // No filter present.
@@ -32,7 +31,7 @@ func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (f
 	if err := validator.Validate(); err != nil {
 		return nil, err
 	}
-	return validator.GetFilter(), nil
+	return &validator, nil
 }
 
 func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
@@ -200,8 +199,8 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 	}
 
 	return ListRequestParams{
-		Count:      count,
-		Filter:     reqFilter,
-		StartIndex: startIndex,
+		Count:           count,
+		FilterValidator: reqFilter,
+		StartIndex:      startIndex,
 	}, nil
 }

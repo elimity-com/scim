@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/elimity-com/scim/errors"
-	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -306,20 +305,13 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		validator  = f.NewFilterValidator(params.Filter, schema.Definition())
 		start, end = clamp(params.StartIndex-1, params.Count, len(s.getSchemas()))
 		resources  []interface{}
 	)
-	if params.Filter != nil {
-		if err := validator.Validate(); err != nil {
-			errorHandler(w, r, &errors.ScimErrorInvalidFilter)
-			return
-		}
-	}
 	for _, v := range s.getSchemas()[start:end] {
 		resource := v.ToMap()
-		if params.Filter != nil {
-			if err := validator.PassesFilter(resource); err != nil {
+		if params.FilterValidator != nil {
+			if err := params.FilterValidator.PassesFilter(resource); err != nil {
 				continue
 			}
 		}

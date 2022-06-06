@@ -171,7 +171,7 @@ func (a azureADUserResourceHandler) Get(r *http.Request, id string) (scim.Resour
 }
 
 func (a azureADUserResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) (scim.Page, error) {
-	f := params.Filter.(*filter.AttributeExpression)
+	f := params.FilterValidator.GetFilter().(*filter.AttributeExpression)
 	if f.CompareValue.(string) == "non-existent user" {
 		return scim.Page{}, nil
 	}

@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"time"
 
+	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
-	"github.com/scim2/filter-parser/v2"
 )
 
 // ListRequestParams request parameters sent to the API via a "GetAll" route.
@@ -17,9 +17,9 @@ type ListRequestParams struct {
 	// A value of "0" indicates that no resource results are to be returned except for "totalResults".
 	Count int
 
-	// Filter represents the parsed and tokenized filter query parameter.
+	// FilterValidator represents the parsed and tokenized filter query parameter.
 	// It is an optional parameter and thus will be nil when the parameter is not present.
-	Filter filter.Expression
+	FilterValidator *f.Validator
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
 	StartIndex int

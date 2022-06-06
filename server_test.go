@@ -8,7 +8,6 @@ import (
 
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
-	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
@@ -156,8 +155,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestPara
 			break
 		}
 
-		validator := internal.NewFilterValidator(params.Filter, h.schema)
-		if err := validator.PassesFilter(v.attributes); err != nil {
+		if err := params.FilterValidator.PassesFilter(v.attributes); err != nil {
 			continue
 		}
 
