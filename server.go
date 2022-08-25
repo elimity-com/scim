@@ -3,6 +3,7 @@ package scim
 import (
 	"fmt"
 	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/elimity-com/scim/logging"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -52,22 +53,36 @@ func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
 }
 
+// NewServer instantiates a new Server with all the required attributes.
+func NewServer(config ServiceProviderConfig, resourceTypes []ResourceType, log logging.Logger) Server {
+	return Server{Config: config, ResourceTypes: resourceTypes, Log: log}
+}
+
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
 // domain scenarios easier to support via a standardized service.
 type Server struct {
 	Config        ServiceProviderConfig
 	ResourceTypes []ResourceType
+	Log           logging.Logger
+}
+
+// EnsureLogger instantiates a Logger interface if one was not set up
+func (s Server) EnsureLogger() {
+	if s.Log == nil {
+		panic("logger not instantiated")
+	}
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.EnsureLogger()
 	w.Header().Set("Content-Type", "application/scim+json")
 
 	path := strings.TrimPrefix(r.URL.Path, "/v2")
 
 	switch {
 	case path == "/Me":
-		ErrorHandler(w, r, &errors.ScimError{
+		s.ErrorHandler(w, r, &errors.ScimError{
 			Status: http.StatusNotImplemented,
 		})
 		return
@@ -123,7 +138,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ErrorHandler(w, r, &errors.ScimError{
+	s.ErrorHandler(w, r, &errors.ScimError{
 		Detail: "Specified endpoint does not exist.",
 		Status: http.StatusNotFound,
 	})

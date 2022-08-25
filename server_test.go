@@ -2,6 +2,7 @@ package scim_test
 
 import (
 	"fmt"
+	"github.com/elimity-com/scim/logging"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -40,8 +41,8 @@ func externalID(attributes scim.ResourceAttributes) optional.String {
 //   e.g. if a member gets added, does this entity exist?
 
 func newTestServer() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
+	return scim.NewServer(scim.ServiceProviderConfig{},
+		[]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -69,7 +70,8 @@ func newTestServer() scim.Server {
 				},
 			},
 		},
-	}
+		logging.NullLogger{},
+	)
 }
 
 // testData represents a resource entity.

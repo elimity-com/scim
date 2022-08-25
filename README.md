@@ -102,11 +102,9 @@ resourceTypes := []ResourceType{
 
 ### 4. Create Server
 ```go
-server := Server{
-    Config:        config,
-    ResourceTypes: resourceTypes,
-}
+server := NewServer(config, resourceTypes, logging.NullLogger{})
 ```
+To log messages to standard error, you can use `logging.NewSimpleLogger(os.Stderr)` as the third argument to `NewServer`.
 
 ## Addition Checks/Tests
 Not everything can be checked by the SCIM server itself.

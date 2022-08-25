@@ -1,6 +1,7 @@
 package idp_test
 
 import (
+	"github.com/elimity-com/scim/logging"
 	"net/http"
 	"time"
 
@@ -17,11 +18,11 @@ var azureCreatedTime = time.Date(
 )
 
 func newAzureADTestServer() scim.Server {
-	return scim.Server{
-		Config: scim.ServiceProviderConfig{
+	return scim.NewServer(
+		scim.ServiceProviderConfig{
 			MaxResults: 20,
 		},
-		ResourceTypes: []scim.ResourceType{
+		[]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -43,7 +44,8 @@ func newAzureADTestServer() scim.Server {
 				Handler:     azureADGroupResourceHandler{},
 			},
 		},
-	}
+		logging.NullLogger{},
+	)
 }
 
 type azureADGroupResourceHandler struct{}

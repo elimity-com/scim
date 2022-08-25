@@ -3,6 +3,7 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/elimity-com/scim/logging"
 	"net/http"
 
 	"github.com/elimity-com/scim/errors"
@@ -36,6 +37,9 @@ type ResourceType struct {
 
 	// Handler is the set of callback method that connect the SCIM server with a provider of the resource type.
 	Handler ResourceHandler
+
+	// Log is a Logger instance that various methods can invoke
+	Log logging.Logger
 }
 
 func (t ResourceType) getRaw() map[string]interface{} {
@@ -86,7 +90,8 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 	return s
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
+func (t ResourceType) validate(raw []byte, log logging.Logger) (ResourceAttributes, *errors.ScimError) {
+	log.Debugf("validating payload '%s'", string(raw))
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
 		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
@@ -118,11 +123,12 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 }
 
 // validatePatch parse and validate PATCH request.
-func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.ScimError) {
+func (t ResourceType) validatePatch(r *http.Request, log logging.Logger) ([]PatchOperation, *errors.ScimError) {
 	data, err := readBody(r)
 	if err != nil {
 		return nil, &errors.ScimErrorInvalidSyntax
 	}
+	log.Debugf("validating patch payload '%s'", string(data))
 
 	var req struct {
 		Schemas    []string
