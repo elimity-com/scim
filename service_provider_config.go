@@ -61,7 +61,7 @@ func (config ServiceProviderConfig) getItemsPerPage() int {
 	return config.MaxResults
 }
 
-func (config ServiceProviderConfig) getRaw() map[string]interface{} {
+func (config ServiceProviderConfig) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
 		"documentationUri": config.DocumentationURI.Value(),

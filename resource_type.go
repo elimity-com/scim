@@ -38,7 +38,7 @@ type ResourceType struct {
 	Handler ResourceHandler
 }
 
-func (t ResourceType) getRaw() map[string]interface{} {
+func (t ResourceType) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ResourceType"},
 		"id":               t.ID.Value(),

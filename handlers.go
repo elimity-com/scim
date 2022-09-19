@@ -192,7 +192,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 		return
 	}
 
-	raw, err := json.Marshal(resourceType.getRaw())
+	raw, err := json.Marshal(resourceType.ToMap())
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling resource type: %v", err)
@@ -218,7 +218,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	start, end := clamp(params.StartIndex-1, params.Count, len(s.ResourceTypes))
 	var resources []interface{}
 	for _, v := range s.ResourceTypes[start:end] {
-		resources = append(resources, v.getRaw())
+		resources = append(resources, v.ToMap())
 	}
 
 	raw, err := json.Marshal(listResponse{
@@ -347,7 +347,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
 // SCIM specification features available on a service provider.
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := json.Marshal(s.Config.getRaw())
+	raw, err := json.Marshal(s.Config.ToMap())
 	if err != nil {
 		errorHandler(w, r, &errors.ScimErrorInternal)
 		log.Fatalf("failed marshaling service provider config: %v", err)
