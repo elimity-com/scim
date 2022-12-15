@@ -3,10 +3,11 @@ package patch
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"strings"
 )
 
 // Op represents the possible value the operation is to perform.
@@ -102,7 +103,7 @@ func (v OperationValidator) Validate() (interface{}, error) {
 	case OperationAdd, OperationReplace:
 		return v.validateUpdate()
 	case OperationRemove:
-		return nil, v.validateRemove()
+		return v.validateRemove()
 	default:
 		return nil, fmt.Errorf("invalid operation Op: %s", v.Op)
 	}
@@ -111,9 +112,9 @@ func (v OperationValidator) Validate() (interface{}, error) {
 // getRefAttribute returns the corresponding attribute based on the given attribute path.
 //
 // e.g.
-//  - `userName` would return the `userName` attribute.
-//	- `name.givenName` would return the `givenName` attribute.
-//  - `ext:employeeNumber` would return the `employeeNumber` attribute from the extension.
+//   - `userName` would return the `userName` attribute.
+//   - `name.givenName` would return the `givenName` attribute.
+//   - `ext:employeeNumber` would return the `employeeNumber` attribute from the extension.
 func (v OperationValidator) getRefAttribute(attrPath filter.AttributePath) (*schema.CoreAttribute, error) {
 	// Get the corresponding schema, this can be the main schema or an extension.
 	var refSchema = v.schema
