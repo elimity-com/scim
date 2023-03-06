@@ -530,6 +530,15 @@
           "returned": "default",
           "type": "string",
           "uniqueness": "none"
+        },
+        {
+          "description": "A Boolean value indicating the 'primary' or preferred attribute value for this attribute, e.g., the preferred address. The primary attribute value 'true' MUST appear no more than once.",
+          "multiValued": false,
+          "mutability": "readWrite",
+          "name": "primary",
+          "required": false,
+          "returned": "default",
+          "type": "boolean"
         }
       ],
       "type": "complex"

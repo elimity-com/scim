@@ -89,5 +89,5 @@ func Example_replaceWorkAddress() {
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:
-	// [map[country:BE locality:ExampleCity postalCode:0001 streetAddress:ExampleStreet 1 type:work]] <nil>
+	// [map[country:BE locality:ExampleCity postalCode:0001 primary:true streetAddress:ExampleStreet 1 type:work]] <nil>
 }
