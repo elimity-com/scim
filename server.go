@@ -2,12 +2,13 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/internal/filter"
-	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	f "github.com/elimity-com/scim/internal/filter"
+	"github.com/scim2/filter-parser/v2"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
@@ -64,7 +65,7 @@ type Server struct {
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 
-	path := strings.TrimPrefix(r.URL.Path, "/v2")
+	path := strings.TrimPrefix(r.URL.Path, s.Config.PathPrefix)
 
 	switch {
 	case path == "/Me":
