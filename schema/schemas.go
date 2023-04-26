@@ -429,6 +429,10 @@ func CoreUserSchema() Schema {
 						Description:     optional.NewString("A label indicating the attribute's function, e.g., 'work' or 'home'."),
 						Name:            "type",
 					}),
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value indicating the 'primary' or preferred attribute value for this attribute, e.g., the preferred address. The primary attribute value 'true' MUST appear no more than once."),
+						Name:        "primary",
+					}),
 				},
 			}),
 			ComplexCoreAttribute(ComplexParams{
