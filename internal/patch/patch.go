@@ -33,6 +33,13 @@ type OperationValidator struct {
 	schemas map[string]schema.Schema
 }
 
+// unmarshall forces the correct unmarshalling of numbers to json.Number instead of float64
+func unmarshal(data string, v interface{}) error {
+	d := json.NewDecoder(strings.NewReader(data))
+	d.UseNumber()
+	return d.Decode(v)
+}
+
 // NewValidator creates an OperationValidator based on the given JSON string and reference schemas.
 // Returns an error if patchReq is not valid.
 func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema) (OperationValidator, error) {
@@ -41,7 +48,7 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 		Path  string
 		Value interface{}
 	}
-	if err := json.Unmarshal([]byte(patchReq), &operation); err != nil {
+	if err := unmarshal(patchReq, &operation); err != nil {
 		return OperationValidator{}, err
 	}
 
