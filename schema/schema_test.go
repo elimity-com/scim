@@ -17,6 +17,11 @@ var testSchema = Schema{
 			Name:     "required",
 			Required: true,
 		})),
+		SimpleCoreAttribute(SimpleStringParams(StringParams{
+			Name:       "requiredReadOnly",
+			Required:   true,
+			Mutability: AttributeMutabilityReadOnly(),
+		})),
 		SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
 			MultiValued: true,
 			Name:        "booleans",
@@ -110,7 +115,8 @@ func TestResourceInvalid(t *testing.T) {
 func TestValidValidation(t *testing.T) {
 	for _, test := range []map[string]interface{}{
 		{
-			"required": "present",
+			"required":         "present",
+			"requiredReadOnly": "ignoreme",
 			"booleans": []interface{}{
 				true,
 			},
@@ -125,6 +131,17 @@ func TestValidValidation(t *testing.T) {
 			"decimal":       -2.1e5,
 			"integerNumber": json.Number("11"),
 			"decimalNumber": json.Number("11.12"),
+		},
+		{
+			"required": "present",
+			"booleans": []interface{}{
+				true,
+			},
+			"complex": []interface{}{
+				map[string]interface{}{
+					"sub": "present",
+				},
+			},
 		},
 	} {
 		if _, scimErr := testSchema.Validate(test); scimErr != nil {
