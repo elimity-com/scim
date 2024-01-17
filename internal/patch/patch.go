@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -41,7 +42,11 @@ func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema)
 		Path  string
 		Value interface{}
 	}
-	if err := json.Unmarshal([]byte(patchReq), &operation); err != nil {
+
+	// Decode a number into a json.Number instead of floag64
+	d := json.NewDecoder(bytes.NewBufferString(patchReq))
+	d.UseNumber()
+	if err := d.Decode(&operation); err != nil {
 		return OperationValidator{}, err
 	}
 

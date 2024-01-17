@@ -2,9 +2,10 @@ package patch
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
-	"testing"
 )
 
 func TestNewPathValidator(t *testing.T) {
@@ -29,6 +30,51 @@ func TestNewPathValidator(t *testing.T) {
 		op := `{"op":"add","path":"invalid pr","value":"value"}`
 		if _, err := NewValidator(op, patchSchema); err == nil {
 			t.Error("expected JSON error, got none")
+		}
+	})
+	t.Run("Valid integer", func(t *testing.T) {
+		op := `{"op":"add","path":"attr2","value":1234}`
+		validator, err := NewValidator(op, patchSchema)
+		if err != nil {
+			t.Errorf("unexpected error, got %v", err)
+			return
+		}
+		v, err := validator.Validate()
+		if err != nil {
+			t.Errorf("unexpected error, got %v", err)
+			return
+		}
+		n, ok := v.(int64)
+		if !ok {
+			t.Errorf("unexpected type, got %T", v)
+			return
+		}
+		if n != 1234 {
+			t.Errorf("unexpected integer, got %d", n)
+			return
+		}
+	})
+
+	t.Run("Valid float64", func(t *testing.T) {
+		op := `{"op":"add","path":"attr3","value":12.34}`
+		validator, err := NewValidator(op, patchSchema)
+		if err != nil {
+			t.Errorf("unexpected error, got %v", err)
+			return
+		}
+		v, err := validator.Validate()
+		if err != nil {
+			t.Errorf("unexpected error, got %v", err)
+			return
+		}
+		n, ok := v.(float64)
+		if !ok {
+			t.Errorf("unexpected type, got %T", v)
+			return
+		}
+		if n != 12.34 {
+			t.Errorf("unexpected integer, got %f", n)
+			return
 		}
 	})
 }
