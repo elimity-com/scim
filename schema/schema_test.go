@@ -229,7 +229,7 @@ func TestValidationInvalid(t *testing.T) {
 			"booleans": []interface{}{
 				true,
 			},
-			"decimal": "1.1",
+			"decimal": "1,000",
 		},
 		{ // invalid type integer (json.Number)
 			"required": "present",

@@ -33,48 +33,91 @@ func TestNewPathValidator(t *testing.T) {
 		}
 	})
 	t.Run("Valid integer", func(t *testing.T) {
-		op := `{"op":"add","path":"attr2","value":1234}`
-		validator, err := NewValidator(op, patchSchema)
-		if err != nil {
-			t.Errorf("unexpected error, got %v", err)
-			return
+		ops := []string{
+			`{"op":"add","path":"attr2","value":1234}`,
+			`{"op":"add","path":"attr2","value":"1234"}`,
 		}
-		v, err := validator.Validate()
-		if err != nil {
-			t.Errorf("unexpected error, got %v", err)
-			return
-		}
-		n, ok := v.(int64)
-		if !ok {
-			t.Errorf("unexpected type, got %T", v)
-			return
-		}
-		if n != 1234 {
-			t.Errorf("unexpected integer, got %d", n)
-			return
+		for _, op := range ops {
+			validator, err := NewValidator(op, patchSchema)
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			v, err := validator.Validate()
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			n, ok := v.(int64)
+			if !ok {
+				t.Errorf("unexpected type, got %T", v)
+				return
+			}
+			if n != 1234 {
+				t.Errorf("unexpected integer, got %d", n)
+				return
+			}
 		}
 	})
 
 	t.Run("Valid float64", func(t *testing.T) {
-		op := `{"op":"add","path":"attr3","value":12.34}`
-		validator, err := NewValidator(op, patchSchema)
-		if err != nil {
-			t.Errorf("unexpected error, got %v", err)
-			return
+		ops := []string{
+			`{"op":"add","path":"attr3","value":12.34}`,
+			`{"op":"add","path":"attr3","value":"12.34"}`,
 		}
-		v, err := validator.Validate()
-		if err != nil {
-			t.Errorf("unexpected error, got %v", err)
-			return
+		for _, op := range ops {
+			validator, err := NewValidator(op, patchSchema)
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			v, err := validator.Validate()
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			n, ok := v.(float64)
+			if !ok {
+				t.Errorf("unexpected type, got %T", v)
+				return
+			}
+			if n != 12.34 {
+				t.Errorf("unexpected integer, got %f", n)
+				return
+			}
 		}
-		n, ok := v.(float64)
-		if !ok {
-			t.Errorf("unexpected type, got %T", v)
-			return
+	})
+
+	t.Run("Valid Booleans", func(t *testing.T) {
+		tests := []struct {
+			op       string
+			expected bool
+		}{
+			{`{"op":"add","path":"attr4","value":true}`, true},
+			{`{"op":"add","path":"attr4","value":"True"}`, true},
+			{`{"op":"add","path":"attr4","value":false}`, false},
+			{`{"op":"add","path":"attr4","value":"False"}`, false},
 		}
-		if n != 12.34 {
-			t.Errorf("unexpected integer, got %f", n)
-			return
+		for _, tc := range tests {
+			validator, err := NewValidator(tc.op, patchSchema)
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			v, err := validator.Validate()
+			if err != nil {
+				t.Errorf("unexpected error, got %v", err)
+				return
+			}
+			b, ok := v.(bool)
+			if !ok {
+				t.Errorf("unexpected type, got %T", v)
+				return
+			}
+			if b != tc.expected {
+				t.Errorf("unexpected integer, got %v", b)
+				return
+			}
 		}
 	})
 }

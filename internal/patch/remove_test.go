@@ -31,18 +31,6 @@ func Example_removeComplexMultiValuedAttributeValue() {
 	// <nil> <nil>
 }
 
-// The following example shows how remove a single member from a group.
-func Example_removeSingleMember() {
-	operation := `{
-	"op": "remove",
-	"path": "members[value eq \"0001\"]"
-}`
-	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
-	fmt.Println(validator.Validate())
-	// Output:
-	// <nil> <nil>
-}
-
 // The following example shows how remove a single group from a user.
 func Example_removeSingleGroup() {
 	operation := `{
@@ -57,6 +45,18 @@ func Example_removeSingleGroup() {
 	fmt.Println(validator.Validate())
 	// Output:
 	// [map[]] <nil>
+}
+
+// The following example shows how remove a single member from a group.
+func Example_removeSingleMember() {
+	operation := `{
+	"op": "remove",
+	"path": "members[value eq \"0001\"]"
+}`
+	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
+	fmt.Println(validator.Validate())
+	// Output:
+	// <nil> <nil>
 }
 
 // The following example shows how to replace all of the members of a group with a different members list.

@@ -22,6 +22,9 @@ var (
 				Name: "attr3",
 				Type: schema.AttributeTypeDecimal(),
 			})),
+			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+				Name: "attr4",
+			})),
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name:        "multiValued",
 				MultiValued: true,

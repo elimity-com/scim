@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	datetime "github.com/di-wu/xsd-datetime"
@@ -179,12 +180,19 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 
 		return bin, nil
 	case attributeDataTypeBoolean:
-		b, ok := attribute.(bool)
-		if !ok {
+		switch b := attribute.(type) {
+		case bool:
+			return b, nil
+		case string:
+			bb, err := strconv.ParseBool(b)
+			if err != nil {
+				return nil, &errors.ScimErrorInvalidValue
+			}
+
+			return bb, nil
+		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}
-
-		return b, nil
 	case attributeDataTypeComplex:
 		obj, ok := attribute.(map[string]interface{})
 		if !ok {
@@ -237,6 +245,13 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 			return f, nil
 		case float64:
 			return n, nil
+		case string:
+			f, err := strconv.ParseFloat(n, 64)
+			if err != nil {
+				return nil, &errors.ScimErrorInvalidValue
+			}
+
+			return f, nil
 		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}
@@ -251,6 +266,13 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 			return i, nil
 		case int, int8, int16, int32, int64:
 			return n, nil
+		case string:
+			i, err := strconv.ParseInt(n, 10, 64)
+			if err != nil {
+				return nil, &errors.ScimErrorInvalidValue
+			}
+
+			return i, nil
 		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}
