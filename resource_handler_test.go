@@ -30,8 +30,8 @@ type testResourceHandler struct {
 
 func (h testResourceHandler) Create(r *http.Request, attributes ResourceAttributes) (Resource, error) {
 	// create unique identifier
-	rand.Seed(time.Now().UnixNano())
-	id := fmt.Sprintf("%04d", rand.Intn(9999))
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	id := fmt.Sprintf("%04d", rng.Intn(9999))
 
 	// store resource
 	h.data[id] = testData{

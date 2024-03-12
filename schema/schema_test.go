@@ -2,7 +2,7 @@ package schema
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/elimity-com/scim/optional"
@@ -76,16 +76,14 @@ func TestInvalidAttributeName(t *testing.T) {
 }
 
 func TestJSONMarshalling(t *testing.T) {
-	expectedJSON, err := ioutil.ReadFile("./testdata/schema_test.json")
+	expectedJSON, err := os.ReadFile("./testdata/schema_test.json")
 	if err != nil {
-		t.Errorf("failed to acquire test data")
-		return
+		t.Fatal("failed to acquire test data")
 	}
 
 	actualJSON, err := testSchema.MarshalJSON()
 	if err != nil {
-		t.Errorf("failed to marshal schema into JSON")
-		return
+		t.Fatal("failed to marshal schema into JSON")
 	}
 
 	normalizedActual, err := normalizeJSON(actualJSON)
@@ -94,7 +92,6 @@ func TestJSONMarshalling(t *testing.T) {
 		t.Errorf("failed to normalize test JSON")
 		return
 	}
-
 	if normalizedActual != normalizedExpected {
 		t.Errorf("schema output by MarshalJSON did not match the expected output. want %s, got %s", normalizedExpected, normalizedActual)
 	}

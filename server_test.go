@@ -2,7 +2,7 @@ package scim_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 
 func checkBodyNotEmpty(r *http.Request) error {
 	// Check whether the request body is empty.
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}

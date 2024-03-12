@@ -1,29 +1,30 @@
 package patch
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/elimity-com/scim/schema"
 )
 
 // The following example shows how to replace all values of one or more specific attributes.
 func Example_replaceAnyAttribute() {
-	operation := `{
-	"op": "replace",
-	"value": {
-		"emails": [
-			{
-				"value": "quint",
-				"type": "work",
-				"primary": true
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op": "replace",
+		"value": map[string]interface{}{
+			"emails": []map[string]interface{}{
+				{
+					"value":   "quint",
+					"type":    "work",
+					"primary": true,
+				},
+				{
+					"value": "me@di-wu.be",
+					"type":  "home",
+				},
 			},
-			{
-				"value": "me@di-wu.be",
-				"type": "home"
-			}
-		],
-		"nickname": "di-wu"
-	}
-}`
+			"nickname": "di-wu",
+		},
+	})
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:
@@ -33,25 +34,27 @@ func Example_replaceAnyAttribute() {
 // The following example shows how to replace all of the members of a group with a different members list in a single
 // replace operation.
 func Example_replaceMembers() {
-	operations := []string{`{
-	"op": "replace",
-	"path": "members",
-	"value": [
+	operations := []map[string]interface{}{
 		{
-			"display": "di-wu",
-			"$ref": "https://example.com/v2/Users/0001",
-			"value": "0001"
+			"op":   "replace",
+			"path": "members",
+			"value": []interface{}{
+				map[string]interface{}{
+					"display": "di-wu",
+					"$ref":    "https://example.com/v2/Users/0001",
+					"value":   "0001",
+				},
+				map[string]interface{}{
+					"display": "example",
+					"$ref":    "https://example.com/v2/Users/0002",
+					"value":   "0002",
+				},
+			},
 		},
-		{
-			"display": "example",
-			"$ref": "https://example.com/v2/Users/0002",
-			"value": "0002"
-		}
-	]
-}`,
 	}
 	for _, op := range operations {
-		validator, _ := NewValidator(op, schema.CoreGroupSchema())
+		operation, _ := json.Marshal(op)
+		validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 		fmt.Println(validator.Validate())
 	}
 	// Output:
@@ -61,11 +64,11 @@ func Example_replaceMembers() {
 // The following example shows how to change a specific sub-attribute "streetAddress" of complex attribute "emails"
 // selected by a "valuePath" filter.
 func Example_replaceSpecificSubAttribute() {
-	operation := `{
-	"op": "replace",
-	"path": "addresses[type eq \"work\"].streetAddress",
-	"value": "ExampleStreet 100"
-}`
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":    "replace",
+		"path":  `addresses[type eq "work"].streetAddress`,
+		"value": "ExampleStreet 100",
+	})
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:
@@ -74,18 +77,18 @@ func Example_replaceSpecificSubAttribute() {
 
 // The following example shows how to change a User's entire "work" address, using a "valuePath" filter.
 func Example_replaceWorkAddress() {
-	operation := `{
-	"op": "replace",
-	"path": "addresses[type eq \"work\"]",
-	"value": {
-		"type": "work",
-		"streetAddress": "ExampleStreet 1",
-		"locality": "ExampleCity",
-		"postalCode": "0001",
-		"country": "BE",
-		"primary": true
-	}
-}`
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":   "replace",
+		"path": `addresses[type eq "work"]`,
+		"value": map[string]interface{}{
+			"type":          "work",
+			"streetAddress": "ExampleStreet 1",
+			"locality":      "ExampleCity",
+			"postalCode":    "0001",
+			"country":       "BE",
+			"primary":       true,
+		},
+	})
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:

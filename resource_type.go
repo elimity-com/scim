@@ -148,7 +148,7 @@ func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.
 	var operations []PatchOperation
 	for _, v := range req.Operations {
 		validator, err := patch.NewValidator(
-			string(v),
+			v,
 			t.schemaWithCommon(),
 			t.getSchemaExtensions()...,
 		)

@@ -2,7 +2,7 @@ package scim_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -31,7 +31,7 @@ func Test_Group_Filter(t *testing.T) {
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, r)
 
-			bytes, err := ioutil.ReadAll(w.Result().Body)
+			bytes, err := io.ReadAll(w.Result().Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -89,7 +89,7 @@ func Test_User_Filter(t *testing.T) {
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, r)
 
-			bytes, err := ioutil.ReadAll(w.Result().Body)
+			bytes, err := io.ReadAll(w.Result().Body)
 			if err != nil {
 				t.Fatal(err)
 			}

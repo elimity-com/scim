@@ -4,12 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	datetime "github.com/di-wu/xsd-datetime"
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
+
+var (
+	schemaAllowStringValues = false
+)
+
+// SetAllowStringValues sets whether string values are allowed.
+// If enabled, string values are allowed for booleans, integer and decimal attributes.
+// NOTE: This is NOT a standard SCIM behaviour, and should only be used for compatibility with non-compliant SCIM
+// clients, such as the one provided by Microsoft Azure.
+func SetAllowStringValues(enabled bool) {
+	schemaAllowStringValues = enabled
+}
 
 // CoreAttribute represents those attributes that sit at the top level of the JSON object together with the common
 // attributes (such as the resource "id").
@@ -122,8 +135,7 @@ func (a CoreAttribute) MultiValued() bool {
 
 // Mutability returns the mutability of the attribute.
 func (a CoreAttribute) Mutability() string {
-	raw, _ := a.mutability.MarshalJSON()
-	return string(raw)
+	return a.mutability.String()
 }
 
 // Name returns the case insensitive name of the attribute.
@@ -143,8 +155,7 @@ func (a CoreAttribute) Required() bool {
 
 // Returned returns when the attribute need to be returned.
 func (a CoreAttribute) Returned() string {
-	raw, _ := a.returned.MarshalJSON()
-	return string(raw)
+	return a.returned.String()
 }
 
 // SubAttributes returns the sub attributes.
@@ -154,8 +165,7 @@ func (a CoreAttribute) SubAttributes() Attributes {
 
 // Uniqueness returns the attributes uniqueness.
 func (a CoreAttribute) Uniqueness() string {
-	raw, _ := a.uniqueness.MarshalJSON()
-	return string(raw)
+	return a.uniqueness.String()
 }
 
 // ValidateSingular checks whether the given singular value matches the attribute data type. Unknown attributes in
@@ -181,6 +191,13 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 	case attributeDataTypeBoolean:
 		b, ok := attribute.(bool)
 		if !ok {
+			if b, ok := attribute.(string); ok && schemaAllowStringValues {
+				b, err := strconv.ParseBool(b)
+				if err != nil {
+					return nil, &errors.ScimErrorInvalidValue
+				}
+				return b, nil
+			}
 			return nil, &errors.ScimErrorInvalidValue
 		}
 
@@ -233,10 +250,14 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 			if err != nil {
 				return nil, &errors.ScimErrorInvalidValue
 			}
-
 			return f, nil
 		case float64:
 			return n, nil
+		case string:
+			if f, err := strconv.ParseFloat(n, 64); err == nil && schemaAllowStringValues {
+				return f, nil
+			}
+			return nil, &errors.ScimErrorInvalidValue
 		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}
@@ -247,10 +268,14 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 			if err != nil {
 				return nil, &errors.ScimErrorInvalidValue
 			}
-
 			return i, nil
 		case int, int8, int16, int32, int64:
 			return n, nil
+		case string:
+			if i, err := strconv.ParseInt(n, 10, 64); err == nil && schemaAllowStringValues {
+				return i, nil
+			}
+			return nil, &errors.ScimErrorInvalidValue
 		default:
 			return nil, &errors.ScimErrorInvalidValue
 		}

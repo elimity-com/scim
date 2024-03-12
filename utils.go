@@ -2,7 +2,7 @@ package scim
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -29,10 +29,10 @@ func contains(arr []string, el string) bool {
 }
 
 func readBody(r *http.Request) ([]byte, error) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	r.Body = io.NopCloser(bytes.NewBuffer(data))
 	return data, nil
 }

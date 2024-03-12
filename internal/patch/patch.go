@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -35,13 +36,16 @@ type OperationValidator struct {
 
 // NewValidator creates an OperationValidator based on the given JSON string and reference schemas.
 // Returns an error if patchReq is not valid.
-func NewValidator(patchReq string, s schema.Schema, extensions ...schema.Schema) (OperationValidator, error) {
+func NewValidator(patchReq []byte, s schema.Schema, extensions ...schema.Schema) (OperationValidator, error) {
 	var operation struct {
 		Op    string
 		Path  string
 		Value interface{}
 	}
-	if err := json.Unmarshal([]byte(patchReq), &operation); err != nil {
+
+	d := json.NewDecoder(bytes.NewReader(patchReq))
+	d.UseNumber()
+	if err := d.Decode(&operation); err != nil {
 		return OperationValidator{}, err
 	}
 
