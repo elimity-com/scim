@@ -156,7 +156,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestPara
 			break
 		}
 
-		validator := internal.NewFilterValidator(params.Filter, h.schema)
+		validator := internal.NewFilterValidator(params.FilterValidator.GetFilter(), h.schema)
 		if err := validator.PassesFilter(v.attributes); err != nil {
 			continue
 		}

@@ -30,7 +30,7 @@ func assertEqualStrings(t *testing.T, expected, actual []string) {
 	assertLen(t, actual, len(expected))
 	for i, id := range expected {
 		if rID := actual[i]; rID != id {
-			t.Errorf("%s is not equal to %sd", rID, id)
+			t.Errorf("%s is not equal to %s", rID, id)
 		}
 	}
 }
