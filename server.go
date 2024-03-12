@@ -189,7 +189,7 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		startIndex = defaultStartIndex
 	}
 
-	if len(invalidParams) > 1 {
+	if len(invalidParams) > 0 {
 		scimErr := errors.ScimErrorBadParams(invalidParams)
 		return ListRequestParams{}, &scimErr
 	}
