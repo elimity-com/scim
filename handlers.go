@@ -2,7 +2,6 @@ package scim
 
 import (
 	"encoding/json"
-	f "github.com/elimity-com/scim/filter"
 	"net/http"
 
 	"github.com/elimity-com/scim/errors"
@@ -369,11 +368,10 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		validator  = f.NewFilterValidator(params.Filter, schema.Definition())
 		start, end = clamp(params.StartIndex-1, params.Count, len(s.getSchemas()))
 		resources  []interface{}
 	)
-	if params.Filter != nil {
+	if validator := params.FilterValidator; validator != nil {
 		if err := validator.Validate(); err != nil {
 			errorHandler(w, &errors.ScimErrorInvalidFilter)
 			return
@@ -381,7 +379,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, v := range s.getSchemas()[start:end] {
 		resource := v.ToMap()
-		if params.Filter != nil {
+		if validator := params.FilterValidator; validator != nil {
 			if err := validator.PassesFilter(resource); err != nil {
 				continue
 			}

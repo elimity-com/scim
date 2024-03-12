@@ -2,14 +2,13 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/filter"
-	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -19,20 +18,20 @@ const (
 )
 
 // getFilter returns a validated filter if present in the url query, nil otherwise.
-func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
-	filter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if filter == "" {
+func getFilterValidator(r *http.Request, s schema.Schema, extensions ...schema.Schema) (*filter.Validator, error) {
+	f := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if f == "" {
 		return nil, nil // No filter present.
 	}
 
-	validator, err := f.NewValidator(filter, s, extensions...)
+	validator, err := filter.NewValidator(f, s, extensions...)
 	if err != nil {
 		return nil, err
 	}
 	if err := validator.Validate(); err != nil {
 		return nil, err
 	}
-	return validator.GetFilter(), nil
+	return &validator, nil
 }
 
 func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
@@ -194,14 +193,14 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		return ListRequestParams{}, &scimErr
 	}
 
-	reqFilter, err := getFilter(r, refSchema, refExtensions...)
+	validator, err := getFilterValidator(r, refSchema, refExtensions...)
 	if err != nil {
 		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
 
 	return ListRequestParams{
-		Count:      count,
-		Filter:     reqFilter,
-		StartIndex: startIndex,
+		Count:           count,
+		FilterValidator: validator,
+		StartIndex:      startIndex,
 	}, nil
 }
