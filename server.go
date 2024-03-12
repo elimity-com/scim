@@ -68,7 +68,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/Me":
-		errorHandler(w, r, &errors.ScimError{
+		errorHandler(w, &errors.ScimError{
 			Status: http.StatusNotImplemented,
 		})
 		return
@@ -124,7 +124,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, r, &errors.ScimError{
+	errorHandler(w, &errors.ScimError{
 		Detail: "Specified endpoint does not exist.",
 		Status: http.StatusNotFound,
 	})

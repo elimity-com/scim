@@ -3,19 +3,19 @@ jobs:
   arrange:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.16'
-      - run: go get github.com/jdeflander/goarrange
+          go-version: '1.21'
+      - run: go install github.com/jdeflander/goarrange@v1.0.0
         working-directory: ${{ runner.temp }}
       - run: test -z "$(goarrange run -r -d)"
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v2
+      - uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v4
         with:
           version: v1.39
           args: -E misspell,godot,whitespace
@@ -23,18 +23,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.16'
+          go-version: '1.21'
       - run: go test -v ./...
 
   tidy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.16'
+          go-version: '1.21'
       - run: go mod tidy
       - run: git diff --quiet go.mod go.sum

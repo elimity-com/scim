@@ -2,7 +2,7 @@ package schema
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -24,7 +24,7 @@ func TestDefaultSchemas(t *testing.T) {
 			schema: ExtensionEnterpriseUser(),
 		},
 	} {
-		expectedJSON, err := ioutil.ReadFile(fmt.Sprintf("./testdata/%s", test.file))
+		expectedJSON, err := os.ReadFile(fmt.Sprintf("./testdata/%s", test.file))
 		if err != nil {
 			t.Errorf("Failed to acquire test data")
 			return

@@ -3,14 +3,14 @@ package scim_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 func TestPatch_addAttributes(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/attributes.json")
+	raw, err := os.ReadFile("testdata/patch/add/attributes.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestPatch_addAttributes(t *testing.T) {
 }
 
 func TestPatch_addMember(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/member.json")
+	raw, err := os.ReadFile("testdata/patch/add/member.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestPatch_alreadyExists(t *testing.T) {
 		},
 	} {
 		server := newTestServer()
-		raw, err := ioutil.ReadFile(test.jsonFilePath)
+		raw, err := os.ReadFile(test.jsonFilePath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +150,7 @@ func TestPatch_alreadyExists(t *testing.T) {
 }
 
 func TestPatch_complex(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/complex.json")
+	raw, err := os.ReadFile("testdata/patch/add/complex.json")
 	if err != nil {
 		t.Fatal(err)
 	}
