@@ -689,3 +689,160 @@ func ResourceTypeSchema() Schema {
 		Name:        optional.NewString("Resource Type"),
 	}
 }
+
+// ServiceProviderConfig returns the Resource Type Schema.
+// RFC: https://tools.ietf.org/html/rfc7643#section-5
+func ServiceProviderConfigSchema() Schema {
+	return Schema{
+		Attributes: []CoreAttribute{
+			SimpleCoreAttribute(SimpleStringParams(StringParams{
+				Description: optional.NewString("An HTTP-addressable URL pointing to the service provider's	human-consumable help documentation."),
+				Mutability: AttributeMutabilityReadOnly(),
+				Name:       "documentationUri",
+				Required:   false,
+			})),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies PATCH configuration options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "patch",
+				Required:    true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies bulk configuration options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "bulk",
+				Required:    true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+					SimpleNumberParams(NumberParams{
+						Description: optional.NewString("An integer value specifying the maximum number of operations."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "maxOperations",
+						Required:    true,
+					}),
+					SimpleNumberParams(NumberParams{
+						Description: optional.NewString("An integer value specifying the maximum payload size in bytes."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "maxPayloadSize",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies FILTER options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "filter",
+				Required:    true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+					SimpleNumberParams(NumberParams{
+						Description: optional.NewString("An integer value specifying the maximum number of resources returned in a response."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "maxResults",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies configuration options related to	changing a password."),
+				Mutability: AttributeMutabilityReadOnly(),
+				Name:       "changePassword",
+				Required:   true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies Sort configuration options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "sort",
+				Required:    true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies ETag configuration options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "etag",
+				Required:    true,
+				SubAttributes: []SimpleParams{
+					SimpleBooleanParams(BooleanParams{
+						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "supported",
+						Required:    true,
+					}),
+				},
+			}),
+			ComplexCoreAttribute(ComplexParams{
+				Description: optional.NewString("A complex type that specifies ETag configuration options."),
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "authenticationSchemes",
+				Required:    true,
+				MultiValued: true,
+				SubAttributes: []SimpleParams{
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("The authentication scheme.  This specification defines the	values 'oauth', 'oauth2', 'oauthbearertoken', 'httpbasic', and 'httpdigest'."),
+						Mutability: AttributeMutabilityReadOnly(),
+						Name:       "type",
+						Required:   true,
+					}),
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("The common authentication scheme name, e.g., HTTP Basic."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "name",
+						Required:    true,
+					}),
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("A description of the authentication scheme."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "description",
+						Required:    true,
+					}),
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication	scheme's specification."),
+						Mutability: AttributeMutabilityReadOnly(),
+						Name:       "specUri",
+					}),
+					SimpleStringParams(StringParams{
+						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication scheme's usage documentation."),
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "documentationUri",
+					}),
+				},
+			}),
+		},
+		Description: optional.NewString("SCIM provides a schema for representing the service provider's configuration."),
+		ID:          "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
+		Name:        optional.NewString("Service Provider Config"),
+	}
+}
