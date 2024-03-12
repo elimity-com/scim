@@ -139,15 +139,6 @@ func (a attributeMutability) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }
 
-type attributeReturned int
-
-const (
-	attributeReturnedDefault attributeReturned = iota
-	attributeReturnedAlways
-	attributeReturnedNever
-	attributeReturnedRequest
-)
-
 func (a attributeMutability) String() string {
 	switch a {
 	case attributeMutabilityImmutable:
@@ -160,6 +151,15 @@ func (a attributeMutability) String() string {
 		return "readWrite"
 	}
 }
+
+type attributeReturned int
+
+const (
+	attributeReturnedDefault attributeReturned = iota
+	attributeReturnedAlways
+	attributeReturnedNever
+	attributeReturnedRequest
+)
 
 func (a attributeReturned) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
@@ -225,6 +225,10 @@ const (
 	attributeUniquenessServer
 )
 
+func (a attributeUniqueness) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
+}
+
 func (a attributeUniqueness) String() string {
 	switch a {
 	case attributeUniquenessGlobal:
@@ -234,8 +238,4 @@ func (a attributeUniqueness) String() string {
 	default:
 		return "none"
 	}
-}
-
-func (a attributeUniqueness) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.String())
 }

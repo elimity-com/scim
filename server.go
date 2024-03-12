@@ -2,7 +2,7 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/internal/filter"
+	f "github.com/elimity-com/scim/filter"
 	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"

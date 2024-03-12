@@ -2,13 +2,13 @@ package scim_test
 
 import (
 	"fmt"
+	internal "github.com/elimity-com/scim/filter"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
-	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
