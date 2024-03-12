@@ -1,7 +1,7 @@
 package filter_test
 
 import (
-	internal "github.com/elimity-com/scim/internal/filter"
+	internal "github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 	"testing"
 )
