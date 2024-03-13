@@ -593,7 +593,7 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/resourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 

@@ -93,8 +93,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/ResourceTypes" && r.Method == http.MethodGet:
 		s.resourceTypesHandler(w, r)
 		return
-	case strings.HasPrefix(path, "/resourceTypes/") && r.Method == http.MethodGet:
-		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/resourceTypes/"))
+	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == http.MethodGet:
+		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
 		return
 	case path == "/ServiceProviderConfig":
 		s.serviceProviderConfigHandler(w, r)
