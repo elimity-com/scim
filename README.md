@@ -119,11 +119,11 @@ resourceTypes := []ResourceType{
 ### 4. Create Server
 
 ```go
-server := NewServer{
+server := NewServer(
     WithServiceProviderConfig(config),
     WithResourceTypes(resourceTypes),
     WithLogger(logger), // optional, default is no logging
-}
+)
 ```
 
 ## Logging
