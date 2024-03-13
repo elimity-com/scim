@@ -959,9 +959,8 @@ func newTestResourceHandler() ResourceHandler {
 func newTestServer() Server {
 	userSchema := getUserSchema()
 	userSchemaExtension := getUserExtensionSchema()
-	return Server{
-		config: ServiceProviderConfig{},
-		resourceTypes: []ResourceType{
+	return NewServer(
+		WithResourceTypes([]ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -989,6 +988,6 @@ func newTestServer() Server {
 				Schema:      schema.CoreGroupSchema(),
 				Handler:     newTestResourceHandler(),
 			},
-		},
-	}
+		}),
+	)
 }
