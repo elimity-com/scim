@@ -90,7 +90,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "/Schemas/") && r.Method == http.MethodGet:
 		s.schemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
 		return
-	case path == "/resourceTypes" && r.Method == http.MethodGet:
+	case path == "/ResourceTypes" && r.Method == http.MethodGet:
 		s.resourceTypesHandler(w, r)
 		return
 	case strings.HasPrefix(path, "/resourceTypes/") && r.Method == http.MethodGet:

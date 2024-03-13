@@ -614,10 +614,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 	}{
 		{
 			name:   "resource types request without version",
-			target: "/resourceTypes",
+			target: "/ResourceTypes",
 		}, {
 			name:   "resource types request with version",
-			target: "/v2/resourceTypes",
+			target: "/v2/ResourceTypes",
 		},
 	}
 
