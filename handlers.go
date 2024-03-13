@@ -245,7 +245,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 	}
 }
 
-// resourceTypesHandler receives an HTTP GET to this endpoint, "/resourceTypes", which is used to discover the types of
+// resourceTypesHandler receives an HTTP GET to this endpoint, "/ResourceTypes", which is used to discover the types of
 // resources available on a SCIM service provider (e.g., Users and Groups).  Each resource type defines the endpoints,
 // the core schema URI that defines the resource, and any supported schema extensions.
 func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
