@@ -593,7 +593,7 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/resourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
 			rr := httptest.NewRecorder()
 			newTestServer().ServeHTTP(rr, req)
 
@@ -614,10 +614,10 @@ func TestServerResourceTypesHandler(t *testing.T) {
 	}{
 		{
 			name:   "resource types request without version",
-			target: "/ResourceTypes",
+			target: "/resourceTypes",
 		}, {
 			name:   "resource types request with version",
-			target: "/v2/ResourceTypes",
+			target: "/v2/resourceTypes",
 		},
 	}
 
@@ -934,8 +934,8 @@ func newTestServer() Server {
 	userSchema := getUserSchema()
 	userSchemaExtension := getUserExtensionSchema()
 	return Server{
-		Config: ServiceProviderConfig{},
-		ResourceTypes: []ResourceType{
+		config: ServiceProviderConfig{},
+		resourceTypes: []ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",

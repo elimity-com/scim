@@ -17,11 +17,11 @@ var azureCreatedTime = time.Date(
 )
 
 func newAzureADTestServer() scim.Server {
-	return scim.Server{
-		Config: scim.ServiceProviderConfig{
+	return scim.NewServer(
+		scim.WithServiceProviderConfig(scim.ServiceProviderConfig{
 			MaxResults: 20,
-		},
-		ResourceTypes: []scim.ResourceType{
+		}),
+		scim.WithResourceTypes([]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -42,8 +42,8 @@ func newAzureADTestServer() scim.Server {
 				Schema:      schema.CoreGroupSchema(),
 				Handler:     azureADGroupResourceHandler{},
 			},
-		},
-	}
+		}),
+	)
 }
 
 type azureADGroupResourceHandler struct{}
