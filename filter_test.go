@@ -130,8 +130,8 @@ func Test_User_Filter(t *testing.T) {
 }
 
 func newTestServerForFilter() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
+	return scim.NewServer(
+		scim.WithResourceTypes([]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -160,6 +160,6 @@ func newTestServerForFilter() scim.Server {
 					schema: schema.CoreGroupSchema(),
 				},
 			},
-		},
-	}
+		}),
+	)
 }

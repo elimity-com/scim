@@ -2,10 +2,11 @@ package scim_test
 
 import (
 	"fmt"
-	internal "github.com/elimity-com/scim/filter"
 	"io"
 	"net/http"
 	"time"
+
+	internal "github.com/elimity-com/scim/filter"
 
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
@@ -41,8 +42,8 @@ func externalID(attributes scim.ResourceAttributes) optional.String {
 //   e.g. if a member gets added, does this entity exist?
 
 func newTestServer() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
+	return scim.NewServer(
+		scim.WithResourceTypes([]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -69,8 +70,8 @@ func newTestServer() scim.Server {
 					schema: schema.CoreGroupSchema(),
 				},
 			},
-		},
-	}
+		}),
+	)
 }
 
 // testData represents a resource entity.

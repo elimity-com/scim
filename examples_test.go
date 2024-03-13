@@ -7,16 +7,16 @@ import (
 
 func ExampleNewServer() {
 	server := Server{
-		Config:        ServiceProviderConfig{},
-		ResourceTypes: nil,
+		config:        ServiceProviderConfig{},
+		resourceTypes: nil,
 	}
 	logger.Fatal(http.ListenAndServe(":7643", server))
 }
 
 func ExampleNewServer_basePath() {
 	server := Server{
-		Config:        ServiceProviderConfig{},
-		ResourceTypes: nil,
+		config:        ServiceProviderConfig{},
+		resourceTypes: nil,
 	}
 	// You can host the SCIM server on a custom path, make sure to strip the prefix, so only `/v2/` is left.
 	http.Handle("/scim/", http.StripPrefix("/scim", server))
@@ -34,8 +34,8 @@ func ExampleNewServer_logger() {
 		return http.HandlerFunc(fn)
 	}
 	server := Server{
-		Config:        ServiceProviderConfig{},
-		ResourceTypes: nil,
+		config:        ServiceProviderConfig{},
+		resourceTypes: nil,
 	}
 	logger.Fatal(http.ListenAndServe(":7643", loggingMiddleware(server)))
 }

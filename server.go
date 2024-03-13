@@ -52,11 +52,24 @@ func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
 }
 
-// Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
-// domain scenarios easier to support via a standardized service.
+// Server represents a SCIM server which implements the HTTP-based SCIM protocol
+// that makes managing identities in multi-domain scenarios easier to support via a standardized service.
 type Server struct {
-	Config        ServiceProviderConfig
-	ResourceTypes []ResourceType
+	config        ServiceProviderConfig
+	resourceTypes []ResourceType
+	log           Logger
+}
+
+func NewServer(opts ...ServerOption) Server {
+	s := &Server{
+		log: &noopLogger{},
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return *s
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
@@ -67,7 +80,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/Me":
-		errorHandler(w, &errors.ScimError{
+		s.errorHandler(w, &errors.ScimError{
 			Status: http.StatusNotImplemented,
 		})
 		return
@@ -77,18 +90,18 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "/Schemas/") && r.Method == http.MethodGet:
 		s.schemaHandler(w, r, strings.TrimPrefix(path, "/Schemas/"))
 		return
-	case path == "/ResourceTypes" && r.Method == http.MethodGet:
+	case path == "/resourceTypes" && r.Method == http.MethodGet:
 		s.resourceTypesHandler(w, r)
 		return
-	case strings.HasPrefix(path, "/ResourceTypes/") && r.Method == http.MethodGet:
-		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/ResourceTypes/"))
+	case strings.HasPrefix(path, "/resourceTypes/") && r.Method == http.MethodGet:
+		s.resourceTypeHandler(w, r, strings.TrimPrefix(path, "/resourceTypes/"))
 		return
 	case path == "/ServiceProviderConfig":
 		s.serviceProviderConfigHandler(w, r)
 		return
 	}
 
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if path == resourceType.Endpoint {
 			switch r.Method {
 			case http.MethodPost:
@@ -123,7 +136,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, &errors.ScimError{
+	s.errorHandler(w, &errors.ScimError{
 		Detail: "Specified endpoint does not exist.",
 		Status: http.StatusNotFound,
 	})
@@ -131,7 +144,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // getSchema extracts the schemas from the resources types defined in the server with given id.
 func (s Server) getSchema(id string) schema.Schema {
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if resourceType.Schema.ID == id {
 			return resourceType.Schema
 		}
@@ -148,7 +161,7 @@ func (s Server) getSchema(id string) schema.Schema {
 func (s Server) getSchemas() []schema.Schema {
 	ids := make([]string, 0)
 	schemas := make([]schema.Schema, 0)
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if !contains(ids, resourceType.Schema.ID) {
 			schemas = append(schemas, resourceType.Schema)
 		}
@@ -166,7 +179,7 @@ func (s Server) getSchemas() []schema.Schema {
 func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, refExtensions ...schema.Schema) (ListRequestParams, *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
-	defaultCount := s.Config.getItemsPerPage()
+	defaultCount := s.config.getItemsPerPage()
 	count, countErr := getIntQueryParam(r, "count", defaultCount)
 	if countErr != nil {
 		invalidParams = append(invalidParams, "count")

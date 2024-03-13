@@ -10,8 +10,8 @@ import (
 )
 
 func newOktaTestServer() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
+	return scim.NewServer(
+		scim.WithResourceTypes([]scim.ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
@@ -29,8 +29,8 @@ func newOktaTestServer() scim.Server {
 				Schema:      schema.CoreGroupSchema(),
 				Handler:     oktaGroupResourceHandler{},
 			},
-		},
-	}
+		}),
+	)
 }
 
 type oktaGroupResourceHandler struct{}
