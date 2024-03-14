@@ -2,6 +2,7 @@ package idp_test
 
 import (
 	"net/http"
+	"testing"
 	"time"
 
 	"github.com/elimity-com/scim"
@@ -16,34 +17,39 @@ var azureCreatedTime = time.Date(
 	19, 59, 26, 0, time.UTC,
 )
 
-func newAzureADTestServer() scim.Server {
-	return scim.NewServer(
-		scim.WithServiceProviderConfig(scim.ServiceProviderConfig{
-			MaxResults: 20,
-		}),
-		scim.WithResourceTypes([]scim.ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      schema.CoreUserSchema(),
-				SchemaExtensions: []scim.SchemaExtension{
-					{Schema: schema.ExtensionEnterpriseUser()},
+func newAzureADTestServer(t *testing.T) scim.Server {
+	s, err := scim.NewServer(
+		&scim.ServerArgs{
+			ServiceProviderConfig: &scim.ServiceProviderConfig{
+				MaxResults: 20,
+			},
+			ResourceTypes: []scim.ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      schema.CoreUserSchema(),
+					SchemaExtensions: []scim.SchemaExtension{
+						{Schema: schema.ExtensionEnterpriseUser()},
+					},
+					Handler: azureADUserResourceHandler{},
 				},
-				Handler: azureADUserResourceHandler{},
-			},
 
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler:     azureADGroupResourceHandler{},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler:     azureADGroupResourceHandler{},
+				},
 			},
-		}),
-	)
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
 
 type azureADGroupResourceHandler struct{}

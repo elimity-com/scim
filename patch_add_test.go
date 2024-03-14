@@ -18,7 +18,7 @@ func TestPatch_addAttributes(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Users/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
@@ -65,7 +65,7 @@ func TestPatch_addMember(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Groups/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
@@ -121,7 +121,7 @@ func TestPatch_alreadyExists(t *testing.T) {
 			changed:      false,
 		},
 	} {
-		server := newTestServer()
+		server := newTestServer(t)
 		raw, err := os.ReadFile(test.jsonFilePath)
 		if err != nil {
 			t.Fatal(err)
@@ -158,7 +158,7 @@ func TestPatch_complex(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Users/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}

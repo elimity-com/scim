@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Group_Filter(t *testing.T) {
-	s := newTestServerForFilter()
+	s := newTestServerForFilter(t)
 
 	tests := []struct {
 		name                string
@@ -72,7 +72,7 @@ func Test_Group_Filter(t *testing.T) {
 }
 
 func Test_User_Filter(t *testing.T) {
-	s := newTestServerForFilter()
+	s := newTestServerForFilter(t)
 
 	tests := []struct {
 		name             string
@@ -129,37 +129,46 @@ func Test_User_Filter(t *testing.T) {
 	}
 }
 
-func newTestServerForFilter() scim.Server {
-	return scim.NewServer(
-		scim.WithResourceTypes([]scim.ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      schema.CoreUserSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{"userName": "testUser"}},
-						"0002": {attributes: map[string]interface{}{"userName": "testUser+test"}},
+// newTestServerForFilter creates a new test server with a User and Group resource type
+// or fails the test if an error occurs.
+func newTestServerForFilter(t *testing.T) scim.Server {
+	s, err := scim.NewServer(
+		&scim.ServerArgs{
+			ServiceProviderConfig: &scim.ServiceProviderConfig{},
+			ResourceTypes: []scim.ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      schema.CoreUserSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{"userName": "testUser"}},
+							"0002": {attributes: map[string]interface{}{"userName": "testUser+test"}},
+						},
+						schema: schema.CoreUserSchema(),
 					},
-					schema: schema.CoreUserSchema(),
+				},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{"displayName": "testGroup"}},
+							"0002": {attributes: map[string]interface{}{"displayName": "testGroup+test"}},
+						},
+						schema: schema.CoreGroupSchema(),
+					},
 				},
 			},
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{"displayName": "testGroup"}},
-						"0002": {attributes: map[string]interface{}{"displayName": "testGroup+test"}},
-					},
-					schema: schema.CoreGroupSchema(),
-				},
-			},
-		}),
+		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }

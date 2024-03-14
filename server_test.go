@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"testing"
 	"time"
 
 	internal "github.com/elimity-com/scim/filter"
@@ -41,37 +42,44 @@ func externalID(attributes scim.ResourceAttributes) optional.String {
 // - Whether a reference to another entity really exists.
 //   e.g. if a member gets added, does this entity exist?
 
-func newTestServer() scim.Server {
-	return scim.NewServer(
-		scim.WithResourceTypes([]scim.ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      schema.CoreUserSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{}},
+func newTestServer(t *testing.T) scim.Server {
+	s, err := scim.NewServer(
+		&scim.ServerArgs{
+			ServiceProviderConfig: &scim.ServiceProviderConfig{},
+			ResourceTypes: []scim.ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      schema.CoreUserSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{}},
+						},
+						schema: schema.CoreUserSchema(),
 					},
-					schema: schema.CoreUserSchema(),
+				},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{}},
+						},
+						schema: schema.CoreGroupSchema(),
+					},
 				},
 			},
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{}},
-					},
-					schema: schema.CoreGroupSchema(),
-				},
-			},
-		}),
+		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
 
 // testData represents a resource entity.

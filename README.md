@@ -119,35 +119,16 @@ resourceTypes := []ResourceType{
 ### 4. Create Server
 
 ```go
-server := NewServer(
-    WithServiceProviderConfig(config),
-    WithResourceTypes(resourceTypes),
+serverArgs := &ServerArgs{
+    ServiceProviderConfig: config,
+    ResourceTypes: resourceTypes,
+}
+
+serverOpts := []ServerOption{
     WithLogger(logger), // optional, default is no logging
-)
-```
+}
 
-## Logging
-
-No incoming or outgoing (incl. errors) requests are logged by default. It is up to the user to implement this. This can
-either be done through middleware around the server or by implementing the `ResourceHandler` interface.
-
-### Internal
-
-The SCIM server uses the standard `slog` package for logging.
-
-There are two moments where the server logs:
-
-1. When it was not able to marshal the response, it will log the error. This should not happen, since these are
-   predefined structures, of which most have custom `MarshalJSON` methods. In these cases an `errors.ScimErrorInternal`
-   error is returned.
-2. When the server was not able to `Write` the response.
-
-This logger can be customized by overwriting the default `slog.Logger`.
-
-```go
-var scimLogger slog.Logger
-// initialize w/ own implementation
-scim.SetLogger(scimLogger)
+server := NewServer(serverArgs, serverOpts...)
 ```
 
 ## String Values for Attributes
