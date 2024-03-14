@@ -60,16 +60,46 @@ type Server struct {
 	log           Logger
 }
 
-func NewServer(opts ...ServerOption) Server {
+type ServerArgs struct {
+	ServiceProviderConfig *ServiceProviderConfig
+	ResourceTypes         []ResourceType
+}
+
+type ServerOption func(*Server)
+
+// WithLogger sets the logger for the server.
+func WithLogger(logger Logger) ServerOption {
+	return func(s *Server) {
+		if logger != nil {
+			s.log = logger
+		}
+	}
+}
+
+func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
+	if args == nil {
+		return Server{}, fmt.Errorf("arguments not provided")
+	}
+
+	if args.ServiceProviderConfig == nil {
+		return Server{}, fmt.Errorf("service provider config not provided")
+	}
+
+	if args.ResourceTypes == nil {
+		return Server{}, fmt.Errorf("resource types not provided")
+	}
+
 	s := &Server{
-		log: &noopLogger{},
+		config:        *args.ServiceProviderConfig,
+		resourceTypes: args.ResourceTypes,
+		log:           &noopLogger{},
 	}
 
 	for _, opt := range opts {
 		opt(s)
 	}
 
-	return *s
+	return *s, nil
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.

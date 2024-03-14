@@ -84,7 +84,7 @@ func TestInvalidRequests(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(test.method, test.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, test.expectedStatus, rr.Code)
 		})
@@ -94,7 +94,7 @@ func TestInvalidRequests(t *testing.T) {
 func TestServerMeEndpoint(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Me", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNotImplemented, rr.Code)
 }
@@ -102,7 +102,7 @@ func TestServerMeEndpoint(t *testing.T) {
 func TestServerResourceDeleteHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
@@ -110,7 +110,7 @@ func TestServerResourceDeleteHandler(t *testing.T) {
 func TestServerResourceDeleteHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
@@ -156,7 +156,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -185,7 +185,7 @@ func TestServerResourceGetHandler(t *testing.T) {
 func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users/9999", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
@@ -210,7 +210,7 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	var resource map[string]interface{}
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
@@ -232,7 +232,7 @@ func TestServerResourcePatchHandlerInvalidPath(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
@@ -252,14 +252,14 @@ func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	newTestServer().ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+	newTestServer(t).ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
 			"Operations":[
 			  {
@@ -272,7 +272,7 @@ func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusOK, recorder.Code)
 
 	recorder2 := httptest.NewRecorder()
-	newTestServer().ServeHTTP(recorder2, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+	newTestServer(t).ServeHTTP(recorder2, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 			"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
 			"Operations":[
 			  {
@@ -319,7 +319,7 @@ func TestServerResourcePatchHandlerReturnsNoContent(t *testing.T) {
 	}
 	for _, req := range reqs {
 		rr := httptest.NewRecorder()
-		newTestServer().ServeHTTP(rr, req)
+		newTestServer(t).ServeHTTP(rr, req)
 
 		assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 	}
@@ -358,7 +358,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -408,7 +408,7 @@ func TestServerResourcePatchHandlerValidPathHasSubAttributes(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 }
@@ -424,7 +424,7 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 		]
 	}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
@@ -468,7 +468,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, test.target, test.body)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusCreated, rr.Code)
 
@@ -498,7 +498,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 func TestServerResourcePutHandlerNotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 
@@ -549,7 +549,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPut, test.target, test.body)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -595,7 +595,7 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s/ResourceTypes/%s", tt.versionPrefix, tt.resourceType), nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -625,7 +625,7 @@ func TestServerResourceTypesHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, test.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -650,7 +650,7 @@ func TestServerResourceTypesHandler(t *testing.T) {
 func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=-1", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -689,7 +689,7 @@ func TestServerResourcesGetAllHandlerNonIntStartIndex(t *testing.T) {
 func TestServerResourcesGetHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -702,7 +702,7 @@ func TestServerResourcesGetHandler(t *testing.T) {
 func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -714,7 +714,7 @@ func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 func TestServerResourcesGetHandlerPagination(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=2", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -752,7 +752,7 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 				"%s/Schemas/%s", test.versionPrefix, test.schema,
 			), nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -781,7 +781,7 @@ func TestServerSchemasEndpoint(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, test.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -817,7 +817,7 @@ func TestServerSchemasEndpointFilter(t *testing.T) {
 		"/Schemas?%s", params.Encode(),
 	), nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
@@ -845,7 +845,7 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
 			rr := httptest.NewRecorder()
-			newTestServer().ServeHTTP(rr, req)
+			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 		})
@@ -956,38 +956,45 @@ func newTestResourceHandler() ResourceHandler {
 	}
 }
 
-func newTestServer() Server {
+func newTestServer(t *testing.T) Server {
 	userSchema := getUserSchema()
 	userSchemaExtension := getUserExtensionSchema()
-	return NewServer(
-		WithResourceTypes([]ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      userSchema,
-				Handler:     newTestResourceHandler(),
-			},
-			{
-				ID:          optional.NewString("EnterpriseUser"),
-				Name:        "EnterpriseUser",
-				Endpoint:    "/EnterpriseUsers",
-				Description: optional.NewString("Enterprise User Account"),
-				Schema:      userSchema,
-				SchemaExtensions: []SchemaExtension{
-					{Schema: userSchemaExtension},
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes: []ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      userSchema,
+					Handler:     newTestResourceHandler(),
 				},
-				Handler: newTestResourceHandler(),
+				{
+					ID:          optional.NewString("EnterpriseUser"),
+					Name:        "EnterpriseUser",
+					Endpoint:    "/EnterpriseUsers",
+					Description: optional.NewString("Enterprise User Account"),
+					Schema:      userSchema,
+					SchemaExtensions: []SchemaExtension{
+						{Schema: userSchemaExtension},
+					},
+					Handler: newTestResourceHandler(),
+				},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler:     newTestResourceHandler(),
+				},
 			},
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler:     newTestResourceHandler(),
-			},
-		}),
+		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
