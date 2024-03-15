@@ -60,22 +60,6 @@ type Server struct {
 	log           Logger
 }
 
-type ServerArgs struct {
-	ServiceProviderConfig *ServiceProviderConfig
-	ResourceTypes         []ResourceType
-}
-
-type ServerOption func(*Server)
-
-// WithLogger sets the logger for the server.
-func WithLogger(logger Logger) ServerOption {
-	return func(s *Server) {
-		if logger != nil {
-			s.log = logger
-		}
-	}
-}
-
 func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 	if args == nil {
 		return Server{}, fmt.Errorf("arguments not provided")
@@ -246,4 +230,20 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		FilterValidator: validator,
 		StartIndex:      startIndex,
 	}, nil
+}
+
+type ServerArgs struct {
+	ServiceProviderConfig *ServiceProviderConfig
+	ResourceTypes         []ResourceType
+}
+
+type ServerOption func(*Server)
+
+// WithLogger sets the logger for the server.
+func WithLogger(logger Logger) ServerOption {
+	return func(s *Server) {
+		if logger != nil {
+			s.log = logger
+		}
+	}
 }
