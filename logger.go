@@ -1,6 +1,6 @@
 package scim
 
-// Logger defines and interface for logging errors.
+// Logger defines an interface for logging errors.
 type Logger interface {
 	Error(args ...interface{})
 }
