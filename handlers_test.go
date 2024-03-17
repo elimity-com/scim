@@ -663,7 +663,7 @@ func TestServerResourcesGetAllHandlerNegativeCount(t *testing.T) {
 func TestServerResourcesGetAllHandlerNonIntCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=BadBanana", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
@@ -676,7 +676,7 @@ func TestServerResourcesGetAllHandlerNonIntCount(t *testing.T) {
 func TestServerResourcesGetAllHandlerNonIntStartIndex(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?startIndex=BadBanana", nil)
 	rr := httptest.NewRecorder()
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 
