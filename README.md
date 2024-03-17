@@ -131,6 +131,14 @@ serverOpts := []ServerOption{
 server := NewServer(serverArgs, serverOpts...)
 ```
 
+## Backwards Compatibility
+
+Even though the SCIM package has been running in some production environments, it is still in an early stage, and not
+all features are supported. So be aware that a change in the minor version could break your implementation. We will not
+make any breaking changes that takes hours to fix, but some functions might change name or signature.
+
+This was the case for `v0.1` to `v0.2.0`.
+
 ## String Values for Attributes
 
 By default, the SCIM server will NOT use the `string` type for all attributes, since this is NOT compliant with the
