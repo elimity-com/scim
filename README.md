@@ -128,7 +128,7 @@ serverOpts := []ServerOption{
     WithLogger(logger), // optional, default is no logging
 }
 
-server := NewServer(serverArgs, serverOpts...)
+server, err := NewServer(serverArgs, serverOpts...)
 ```
 
 ## Backwards Compatibility
