@@ -9,7 +9,7 @@ import (
 )
 
 var testSchema = Schema{
-	ID:          "empty",
+	ID:          "test-schema-id",
 	Name:        optional.NewString("test"),
 	Description: optional.String{},
 	Attributes: []CoreAttribute{
@@ -93,7 +93,8 @@ func TestJSONMarshalling(t *testing.T) {
 		return
 	}
 	if normalizedActual != normalizedExpected {
-		t.Errorf("schema output by MarshalJSON did not match the expected output. want %s, got %s", normalizedExpected, normalizedActual)
+		t.Errorf("schema output by MarshalJSON did not match the expected output."+
+			"\nWant: %s\nGot:  %s", normalizedExpected, normalizedActual)
 	}
 }
 
@@ -107,6 +108,7 @@ func TestResourceInvalid(t *testing.T) {
 func TestValidValidation(t *testing.T) {
 	for _, test := range []map[string]interface{}{
 		{
+			"schemas":  []interface{}{"test-schema-id"},
 			"required": "present",
 			"booleans": []interface{}{
 				true,
@@ -131,121 +133,182 @@ func TestValidValidation(t *testing.T) {
 }
 
 func TestValidationInvalid(t *testing.T) {
-	for _, test := range []map[string]interface{}{
-		{ // missing required field
-			"field": "present",
-			"booleans": []interface{}{
-				true,
+	tests := []struct {
+		name     string
+		resource map[string]interface{}
+	}{
+		{
+			name: "missing required field",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"field":    "present",
+				"booleans": []interface{}{true},
 			},
 		},
-		{ // missing required multivalued field
-			"required": "present",
-			"booleans": []interface{}{},
-		},
-		{ // wrong type element of slice
-			"required": "present",
-			"booleans": []interface{}{
-				"present",
+		{
+			name: "missing required multivalued field",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{},
 			},
 		},
-		{ // duplicate names
-			"required": "present",
-			"Required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "wrong type element of slice",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{"present"},
 			},
 		},
-		{ // wrong string type
-			"required": true,
-			"booleans": []interface{}{
-				true,
+		{
+			name: "duplicate names",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"Required": "present",
+				"booleans": []interface{}{true},
 			},
 		},
-		{ // wrong complex type
-			"required": "present",
-			"complex":  "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "wrong string type",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": true,
+				"booleans": []interface{}{true},
 			},
 		},
-		{ // wrong complex element type
-			"required": "present",
-			"booleans": []interface{}{
-				true,
-			},
-			"complex": []interface{}{
-				"present",
+		{
+			name: "wrong complex type",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"complex":  "present",
+				"booleans": []interface{}{true},
 			},
 		},
-		{ // duplicate complex element names
-			"required": "present",
-			"booleans": []interface{}{
-				true,
-			},
-			"complex": []interface{}{
-				map[string]interface{}{
-					"sub": "present",
-					"Sub": "present",
+		{
+			name: "wrong complex element type",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"complex": []interface{}{
+					"present",
 				},
 			},
 		},
-		{ // wrong type complex element
-			"required": "present",
-			"booleans": []interface{}{
-				true,
-			},
-			"complex": []interface{}{
-				map[string]interface{}{
-					"sub": true,
+		{
+			name: "duplicate complex element names",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"complex": []interface{}{
+					map[string]interface{}{
+						"sub": "present",
+						"Sub": "present",
+					},
 				},
 			},
 		},
-		{ // invalid type binary
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "wrong type complex element",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"complex": []interface{}{
+					map[string]interface{}{
+						"sub": true,
+					},
+				},
 			},
-			"binary": true,
 		},
-		{ // invalid type dateTime
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "invalid type binary",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"binary":   true,
 			},
-			"dateTime": "04:56:22Z2008-01-23T",
 		},
-		{ // invalid type integer
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "invalid type dateTime",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"dateTime": "04:56:22Z2008-01-23T",
 			},
-			"integer": 1.1,
 		},
-		{ // invalid type decimal
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "invalid type integer",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"integer":  1.1,
 			},
-			"decimal": "1.1",
 		},
-		{ // invalid type integer (json.Number)
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "invalid type decimal",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"test-schema-id"},
+				"required": "present",
+				"booleans": []interface{}{true},
+				"decimal":  "1.1",
 			},
-			"integerNumber": json.Number("1.1"),
 		},
-		{ // invalid type decimal (json.Number)
-			"required": "present",
-			"booleans": []interface{}{
-				true,
+		{
+			name: "invalid type integer (json.Number)",
+			resource: map[string]interface{}{
+				"schemas":       []interface{}{"test-schema-id"},
+				"required":      "present",
+				"booleans":      []interface{}{true},
+				"integerNumber": json.Number("1.1"),
 			},
-			"decimalNumber": json.Number("fail"),
 		},
-	} {
-		if _, scimErr := testSchema.Validate(test); scimErr == nil {
-			t.Errorf("invalid resource expected")
-		}
+		{
+			name: "invalid type decimal (json.Number)",
+			resource: map[string]interface{}{
+				"schemas":       []interface{}{"test-schema-id"},
+				"required":      "present",
+				"booleans":      []interface{}{true},
+				"decimalNumber": json.Number("fail"),
+			},
+		},
+		{
+			name: "missing 'schemas' attribute",
+			resource: map[string]interface{}{
+				"required": "present",
+				"booleans": []interface{}{true},
+			},
+		},
+		{
+			name: "'schemas' attribute is not an array of strings",
+			resource: map[string]interface{}{
+				"schemas":  "test-schema-id",
+				"required": "present",
+				"booleans": []interface{}{true},
+			},
+		},
+		{
+			name: "wrong 'schemas' name",
+			resource: map[string]interface{}{
+				"schemas":  []interface{}{"wrong_schema_name"},
+				"required": "present",
+				"booleans": []interface{}{true},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, scimErr := testSchema.Validate(tt.resource); scimErr == nil {
+				t.Errorf("invalid resource expected")
+			}
+		})
 	}
 }
 
