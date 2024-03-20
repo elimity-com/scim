@@ -3,14 +3,14 @@ package scim_test
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 func TestPatch_addAttributes(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/attributes.json")
+	raw, err := os.ReadFile("testdata/patch/add/attributes.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,7 +18,7 @@ func TestPatch_addAttributes(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Users/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
@@ -57,7 +57,7 @@ func TestPatch_addAttributes(t *testing.T) {
 }
 
 func TestPatch_addMember(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/member.json")
+	raw, err := os.ReadFile("testdata/patch/add/member.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestPatch_addMember(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Groups/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
@@ -121,8 +121,8 @@ func TestPatch_alreadyExists(t *testing.T) {
 			changed:      false,
 		},
 	} {
-		server := newTestServer()
-		raw, err := ioutil.ReadFile(test.jsonFilePath)
+		server := newTestServer(t)
+		raw, err := os.ReadFile(test.jsonFilePath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +150,7 @@ func TestPatch_alreadyExists(t *testing.T) {
 }
 
 func TestPatch_complex(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/patch/add/complex.json")
+	raw, err := os.ReadFile("testdata/patch/add/complex.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestPatch_complex(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPatch, "/Users/0001", bytes.NewReader(raw))
 		rr  = httptest.NewRecorder()
 	)
-	newTestServer().ServeHTTP(rr, req)
+	newTestServer(t).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}

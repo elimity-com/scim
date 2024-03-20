@@ -2,14 +2,13 @@ package scim
 
 import (
 	"fmt"
-	f "github.com/elimity-com/scim/internal/filter"
-	"github.com/scim2/filter-parser/v2"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -19,20 +18,20 @@ const (
 )
 
 // getFilter returns a validated filter if present in the url query, nil otherwise.
-func getFilter(r *http.Request, s schema.Schema, extensions ...schema.Schema) (filter.Expression, error) {
-	filter := strings.TrimSpace(r.URL.Query().Get("filter"))
-	if filter == "" {
+func getFilterValidator(r *http.Request, s schema.Schema, extensions ...schema.Schema) (*filter.Validator, error) {
+	f := strings.TrimSpace(r.URL.Query().Get("filter"))
+	if f == "" {
 		return nil, nil // No filter present.
 	}
 
-	validator, err := f.NewValidator(filter, s, extensions...)
+	validator, err := filter.NewValidator(f, s, extensions...)
 	if err != nil {
 		return nil, err
 	}
 	if err := validator.Validate(); err != nil {
 		return nil, err
 	}
-	return validator.GetFilter(), nil
+	return &validator, nil
 }
 
 func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
@@ -53,11 +52,38 @@ func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
 }
 
-// Server represents a SCIM server which implements the HTTP-based SCIM protocol that makes managing identities in multi-
-// domain scenarios easier to support via a standardized service.
+// Server represents a SCIM server which implements the HTTP-based SCIM protocol
+// that makes managing identities in multi-domain scenarios easier to support via a standardized service.
 type Server struct {
-	Config        ServiceProviderConfig
-	ResourceTypes []ResourceType
+	config        ServiceProviderConfig
+	resourceTypes []ResourceType
+	log           Logger
+}
+
+func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
+	if args == nil {
+		return Server{}, fmt.Errorf("arguments not provided")
+	}
+
+	if args.ServiceProviderConfig == nil {
+		return Server{}, fmt.Errorf("service provider config not provided")
+	}
+
+	if args.ResourceTypes == nil {
+		return Server{}, fmt.Errorf("resource types not provided")
+	}
+
+	s := &Server{
+		config:        *args.ServiceProviderConfig,
+		resourceTypes: args.ResourceTypes,
+		log:           &noopLogger{},
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return *s, nil
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
@@ -68,7 +94,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/Me":
-		errorHandler(w, r, &errors.ScimError{
+		s.errorHandler(w, &errors.ScimError{
 			Status: http.StatusNotImplemented,
 		})
 		return
@@ -89,7 +115,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if path == resourceType.Endpoint {
 			switch r.Method {
 			case http.MethodPost:
@@ -124,7 +150,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	errorHandler(w, r, &errors.ScimError{
+	s.errorHandler(w, &errors.ScimError{
 		Detail: "Specified endpoint does not exist.",
 		Status: http.StatusNotFound,
 	})
@@ -132,7 +158,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // getSchema extracts the schemas from the resources types defined in the server with given id.
 func (s Server) getSchema(id string) schema.Schema {
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if resourceType.Schema.ID == id {
 			return resourceType.Schema
 		}
@@ -149,7 +175,7 @@ func (s Server) getSchema(id string) schema.Schema {
 func (s Server) getSchemas() []schema.Schema {
 	ids := make([]string, 0)
 	schemas := make([]schema.Schema, 0)
-	for _, resourceType := range s.ResourceTypes {
+	for _, resourceType := range s.resourceTypes {
 		if !contains(ids, resourceType.Schema.ID) {
 			schemas = append(schemas, resourceType.Schema)
 		}
@@ -167,7 +193,7 @@ func (s Server) getSchemas() []schema.Schema {
 func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, refExtensions ...schema.Schema) (ListRequestParams, *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
-	defaultCount := s.Config.getItemsPerPage()
+	defaultCount := s.config.getItemsPerPage()
 	count, countErr := getIntQueryParam(r, "count", defaultCount)
 	if countErr != nil {
 		invalidParams = append(invalidParams, "count")
@@ -194,14 +220,30 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		return ListRequestParams{}, &scimErr
 	}
 
-	reqFilter, err := getFilter(r, refSchema, refExtensions...)
+	validator, err := getFilterValidator(r, refSchema, refExtensions...)
 	if err != nil {
 		return ListRequestParams{}, &errors.ScimErrorInvalidFilter
 	}
 
 	return ListRequestParams{
-		Count:      count,
-		Filter:     reqFilter,
-		StartIndex: startIndex,
+		Count:           count,
+		FilterValidator: validator,
+		StartIndex:      startIndex,
 	}, nil
+}
+
+type ServerArgs struct {
+	ServiceProviderConfig *ServiceProviderConfig
+	ResourceTypes         []ResourceType
+}
+
+type ServerOption func(*Server)
+
+// WithLogger sets the logger for the server.
+func WithLogger(logger Logger) ServerOption {
+	return func(s *Server) {
+		if logger != nil {
+			s.log = logger
+		}
+	}
 }

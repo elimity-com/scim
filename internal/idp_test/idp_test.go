@@ -27,7 +27,7 @@ func TestIdP(t *testing.T) {
 				var test testCase
 				_ = unmarshal(raw, &test)
 				t.Run(strings.TrimSuffix(f.Name(), ".json"), func(t *testing.T) {
-					if err := testRequest(test, idp.Name()); err != nil {
+					if err := testRequest(t, test, idp.Name()); err != nil {
 						t.Error(err)
 					}
 				})
@@ -36,23 +36,23 @@ func TestIdP(t *testing.T) {
 	}
 }
 
-func testRequest(t testCase, idpName string) error {
+func testRequest(t *testing.T, tc testCase, idpName string) error {
 	rr := httptest.NewRecorder()
-	br := bytes.NewReader(t.Request)
-	getNewServer(idpName).ServeHTTP(
+	br := bytes.NewReader(tc.Request)
+	getNewServer(t, idpName).ServeHTTP(
 		rr,
-		httptest.NewRequest(t.Method, t.Path, br),
+		httptest.NewRequest(tc.Method, tc.Path, br),
 	)
-	if code := rr.Code; code != t.StatusCode {
-		return fmt.Errorf("expected %d, got %d", t.StatusCode, code)
+	if code := rr.Code; code != tc.StatusCode {
+		return fmt.Errorf("expected %d, got %d", tc.StatusCode, code)
 	}
-	if len(t.Response) != 0 {
+	if len(tc.Response) != 0 {
 		var response map[string]interface{}
 		if err := unmarshal(rr.Body.Bytes(), &response); err != nil {
 			return err
 		}
-		if !reflect.DeepEqual(t.Response, response) {
-			return fmt.Errorf("expected, got:\n%v\n%v", t.Response, response)
+		if !reflect.DeepEqual(tc.Response, response) {
+			return fmt.Errorf("expected, got:\n%v\n%v", tc.Response, response)
 		}
 	}
 	return nil

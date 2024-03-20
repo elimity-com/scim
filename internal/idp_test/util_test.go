@@ -3,16 +3,17 @@ package idp_test
 import (
 	"bytes"
 	"encoding/json"
+	"testing"
 
 	"github.com/elimity-com/scim"
 )
 
-func getNewServer(idpName string) scim.Server {
+func getNewServer(t *testing.T, idpName string) scim.Server {
 	switch idpName {
 	case "okta":
-		return newOktaTestServer()
+		return newOktaTestServer(t)
 	case "azuread":
-		return newAzureADTestServer()
+		return newAzureADTestServer(t)
 	default:
 		panic("unreachable")
 	}

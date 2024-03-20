@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -9,10 +10,10 @@ import (
 
 // The following example shows how remove all members of a group.
 func Example_removeAllMembers() {
-	operation := `{
-	"op": "remove",
-	"path": "members"
-}`
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":   "remove",
+		"path": "members",
+	})
 	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 	fmt.Println(validator.Validate())
 	// Output:
@@ -21,23 +22,11 @@ func Example_removeAllMembers() {
 
 // The following example shows how remove a value from a complex multi-valued attribute.
 func Example_removeComplexMultiValuedAttributeValue() {
-	operation := `{
-	"op": "remove",
-	"path": "emails[type eq \"work\" and value ew \"elimity.com\"]"
-}`
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":   "remove",
+		"path": `emails[type eq "work" and value eq "elimity.com"]`,
+	})
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
-	fmt.Println(validator.Validate())
-	// Output:
-	// <nil> <nil>
-}
-
-// The following example shows how remove a single member from a group.
-func Example_removeSingleMember() {
-	operation := `{
-	"op": "remove",
-	"path": "members[value eq \"0001\"]"
-}`
-	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 	fmt.Println(validator.Validate())
 	// Output:
 	// <nil> <nil>
@@ -45,52 +34,70 @@ func Example_removeSingleMember() {
 
 // The following example shows how remove a single group from a user.
 func Example_removeSingleGroup() {
-	operation := `{
-		"op": "remove",
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":   "remove",
 		"path": "groups",
-		"value": [{
-			"$ref":  null,
-			"value": "f648f8d5ea4e4cd38e9c"
-		}]
-	}`
+		"value": []interface{}{
+			map[string]interface{}{
+				"$ref":  nil,
+				"value": "f648f8d5ea4e4cd38e9c",
+			},
+		},
+	})
 	validator, _ := NewValidator(operation, schema.CoreUserSchema())
 	fmt.Println(validator.Validate())
 	// Output:
 	// [map[]] <nil>
 }
 
+// The following example shows how remove a single member from a group.
+func Example_removeSingleMember() {
+	operation, _ := json.Marshal(map[string]interface{}{
+		"op":   "remove",
+		"path": `members[value eq "0001"]`,
+	})
+	validator, _ := NewValidator(operation, schema.CoreGroupSchema())
+	fmt.Println(validator.Validate())
+	// Output:
+	// <nil> <nil>
+}
+
 // The following example shows how to replace all of the members of a group with a different members list.
 func Example_replaceAllMembers() {
-	operations := []string{`{
-	"op": "remove",
-	"path": "members"
-}`,
-		`{
-	"op": "remove",
-	"path": "members",
-	"value": [{
-		"value": "f648f8d5ea4e4cd38e9c"
-	}]
-}`,
-		`{
-	"op": "add",
-	"path": "members",
-	"value": [
+	operations := []map[string]interface{}{
 		{
-			"display": "di-wu",
-			"$ref": "https://example.com/v2/Users/0001",
-			"value": "0001"
+			"op":   "remove",
+			"path": "members",
 		},
 		{
-			"display": "example",
-			"$ref": "https://example.com/v2/Users/0002",
-			"value": "0002"
-		}
-	]
-}`,
+			"op":   "remove",
+			"path": "members",
+			"value": []interface{}{
+				map[string]interface{}{
+					"value": "f648f8d5ea4e4cd38e9c",
+				},
+			},
+		},
+		{
+			"op":   "add",
+			"path": "members",
+			"value": []interface{}{
+				map[string]interface{}{
+					"display": "di-wu",
+					"$ref":    "https://example.com/v2/Users/0001",
+					"value":   "0001",
+				},
+				map[string]interface{}{
+					"display": "example",
+					"$ref":    "https://example.com/v2/Users/0002",
+					"value":   "0002",
+				},
+			},
+		},
 	}
 	for _, op := range operations {
-		validator, _ := NewValidator(op, schema.CoreGroupSchema())
+		operation, _ := json.Marshal(op)
+		validator, _ := NewValidator(operation, schema.CoreGroupSchema())
 		fmt.Println(validator.Validate())
 	}
 	// Output:
@@ -113,27 +120,28 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 	//   attribute's sub-attributes, the matching records are removed.
 
 	for i, test := range []struct {
-		valid   string
-		invalid string
+		valid   map[string]interface{}
+		invalid map[string]interface{}
 	}{
 		// If "path" is unspecified, the operation fails.
-		{invalid: `{"op":"remove"}`},
+		{invalid: map[string]interface{}{"op": "remove"}},
 
 		// If the target location is a single-value attribute.
-		{valid: `{"op":"remove","path":"attr1"}`},
+		{valid: map[string]interface{}{"op": "remove", "path": "attr1"}},
 		// If the target location is a multi-valued attribute and no filter is specified.
-		{valid: `{"op":"remove","path":"multiValued"}`},
+		{valid: map[string]interface{}{"op": "remove", "path": "multiValued"}},
 		// If the target location is a multi-valued attribute and a complex filter is specified comparing a "value".
-		{valid: `{"op":"remove","path":"multivalued[value eq \"value\"]"}`},
+		{valid: map[string]interface{}{"op": "remove", "path": `multivalued[value eq "value"]`}},
 		// If the target location is a complex multi-valued attribute and a complex filter is specified based on the
 		// attribute's sub-attributes
-		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"]"}`},
-		{valid: `{"op":"remove","path":"complexMultiValued[attr1 eq \"value\"].attr1"}`},
+		{valid: map[string]interface{}{"op": "remove", "path": `complexMultiValued[attr1 eq "value"]`}},
+		{valid: map[string]interface{}{"op": "remove", "path": `complexMultiValued[attr1 eq "value"].attr1`}},
 	} {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			// valid
-			if op := test.valid; op != "" {
-				validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
+			if op := test.valid; op != nil {
+				operation, _ := json.Marshal(op)
+				validator, err := NewValidator(operation, patchSchema, patchSchemaExtension)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -142,8 +150,9 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 				}
 			}
 			// invalid
-			if op := test.invalid; op != "" {
-				validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
+			if op := test.invalid; op != nil {
+				operation, _ := json.Marshal(op)
+				validator, err := NewValidator(operation, patchSchema, patchSchemaExtension)
 				if err != nil {
 					t.Fatal(err)
 				}

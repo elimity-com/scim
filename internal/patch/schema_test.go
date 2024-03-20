@@ -14,6 +14,17 @@ var (
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name: "attr1",
 			})),
+			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
+				Name: "attr2",
+				Type: schema.AttributeTypeInteger(),
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleNumberParams(schema.NumberParams{
+				Name: "attr3",
+				Type: schema.AttributeTypeDecimal(),
+			})),
+			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
+				Name: "attr4",
+			})),
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name:        "multiValued",
 				MultiValued: true,

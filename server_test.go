@@ -2,13 +2,15 @@ package scim_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"testing"
 	"time"
+
+	internal "github.com/elimity-com/scim/filter"
 
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
-	internal "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
 	"github.com/scim2/filter-parser/v2"
@@ -16,7 +18,7 @@ import (
 
 func checkBodyNotEmpty(r *http.Request) error {
 	// Check whether the request body is empty.
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
@@ -40,37 +42,44 @@ func externalID(attributes scim.ResourceAttributes) optional.String {
 // - Whether a reference to another entity really exists.
 //   e.g. if a member gets added, does this entity exist?
 
-func newTestServer() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      schema.CoreUserSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{}},
+func newTestServer(t *testing.T) scim.Server {
+	s, err := scim.NewServer(
+		&scim.ServerArgs{
+			ServiceProviderConfig: &scim.ServiceProviderConfig{},
+			ResourceTypes: []scim.ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      schema.CoreUserSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{}},
+						},
+						schema: schema.CoreUserSchema(),
 					},
-					schema: schema.CoreUserSchema(),
 				},
-			},
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler: &testResourceHandler{
-					data: map[string]testData{
-						"0001": {attributes: map[string]interface{}{}},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler: &testResourceHandler{
+						data: map[string]testData{
+							"0001": {attributes: map[string]interface{}{}},
+						},
+						schema: schema.CoreGroupSchema(),
 					},
-					schema: schema.CoreGroupSchema(),
 				},
 			},
 		},
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
+	return s
 }
 
 // testData represents a resource entity.
@@ -156,7 +165,7 @@ func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestPara
 			break
 		}
 
-		validator := internal.NewFilterValidator(params.Filter, h.schema)
+		validator := internal.NewFilterValidator(params.FilterValidator.GetFilter(), h.schema)
 		if err := validator.PassesFilter(v.attributes); err != nil {
 			continue
 		}

@@ -2,6 +2,7 @@ package idp_test
 
 import (
 	"net/http"
+	"testing"
 
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
@@ -9,28 +10,36 @@ import (
 	"github.com/elimity-com/scim/schema"
 )
 
-func newOktaTestServer() scim.Server {
-	return scim.Server{
-		ResourceTypes: []scim.ResourceType{
-			{
-				ID:          optional.NewString("User"),
-				Name:        "User",
-				Endpoint:    "/Users",
-				Description: optional.NewString("User Account"),
-				Schema:      schema.CoreUserSchema(),
-				Handler:     oktaUserResourceHandler{},
-			},
+func newOktaTestServer(t *testing.T) scim.Server {
+	s, err := scim.NewServer(
+		&scim.ServerArgs{
+			ServiceProviderConfig: &scim.ServiceProviderConfig{},
+			ResourceTypes: []scim.ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      schema.CoreUserSchema(),
+					Handler:     oktaUserResourceHandler{},
+				},
 
-			{
-				ID:          optional.NewString("Group"),
-				Name:        "Group",
-				Endpoint:    "/Groups",
-				Description: optional.NewString("Group"),
-				Schema:      schema.CoreGroupSchema(),
-				Handler:     oktaGroupResourceHandler{},
+				{
+					ID:          optional.NewString("Group"),
+					Name:        "Group",
+					Endpoint:    "/Groups",
+					Description: optional.NewString("Group"),
+					Schema:      schema.CoreGroupSchema(),
+					Handler:     oktaGroupResourceHandler{},
+				},
 			},
 		},
+	)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	return s
 }
 
 type oktaGroupResourceHandler struct{}

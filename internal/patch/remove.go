@@ -1,10 +1,10 @@
 package patch
 
 import (
+	"github.com/elimity-com/scim/filter"
 	"net/http"
 
 	"github.com/elimity-com/scim/errors"
-	f "github.com/elimity-com/scim/internal/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -24,8 +24,8 @@ func (v OperationValidator) validateRemove() (interface{}, error) {
 		return nil, err
 	}
 	if v.Path.ValueExpression != nil {
-		if err := f.NewFilterValidator(v.Path.ValueExpression, schema.Schema{
-			Attributes: f.MultiValuedFilterAttributes(*refAttr),
+		if err := filter.NewFilterValidator(v.Path.ValueExpression, schema.Schema{
+			Attributes: filter.MultiValuedFilterAttributes(*refAttr),
 		}).Validate(); err != nil {
 			return nil, err
 		}
