@@ -433,32 +433,32 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string
 		target             string
-		body               io.Reader
+		body               string
 		expectedUserName   string
 		expectedExternalID interface{}
 	}{
 		{
 			name:               "Users post request without version",
 			target:             "/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test1", "externalId": "external_test1"}`),
+			body:               `{"id": "other", "userName": "test1", "externalId": "external_test1","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test1",
 			expectedExternalID: "external_test1",
 		}, {
 			name:               "Users post request with version",
 			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
+			body:               `{"id": "other", "userName": "test2", "externalId": "external_test2","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test2",
 			expectedExternalID: "external_test2",
 		}, {
 			name:               "Users post request without externalId",
 			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			body:               `{"id": "other", "userName": "test3","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
 		}, {
 			name:               "Users post request with immutable attribute",
 			target:             "/v2/Users",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
+			body:               `{"id": "other", "userName": "test3", "immutableThing": "test","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
 		},
@@ -466,7 +466,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, test.target, test.body)
+			req := httptest.NewRequest(http.MethodPost, test.target, strings.NewReader(test.body))
 			rr := httptest.NewRecorder()
 			newTestServer(t).ServeHTTP(rr, req)
 
@@ -496,7 +496,8 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 }
 
 func TestServerResourcePutHandlerNotFound(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(`{"userName": "other"}`))
+	reqBody := `{"userName": "other","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`
+	req := httptest.NewRequest(http.MethodPut, "/Users/9999", strings.NewReader(reqBody))
 	rr := httptest.NewRecorder()
 	newTestServer(t).ServeHTTP(rr, req)
 
@@ -520,26 +521,26 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string
 		target             string
-		body               io.Reader
+		body               string
 		expectedUserName   string
 		expectedExternalID interface{}
 	}{
 		{
 			name:               "Users put request",
 			target:             "/v2/Users/0002",
-			body:               strings.NewReader(`{"id": "other", "userName": "test2", "externalId": "external_test2"}`),
+			body:               `{"id": "other", "userName": "test2", "externalId": "external_test2","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test2",
 			expectedExternalID: "external_test2",
 		}, {
 			name:               "Users put request without externalId",
 			target:             "/Users/0003",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3"}`),
+			body:               `{"id": "other", "userName": "test3","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
 		}, {
 			name:               "Users put request with immutable attribute",
 			target:             "/Users/0003",
-			body:               strings.NewReader(`{"id": "other", "userName": "test3", "immutableThing": "test"}`),
+			body:               `{"id": "other", "userName": "test3", "immutableThing": "test","schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`,
 			expectedUserName:   "test3",
 			expectedExternalID: nil,
 		},
@@ -547,7 +548,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPut, test.target, test.body)
+			req := httptest.NewRequest(http.MethodPut, test.target, strings.NewReader(test.body))
 			rr := httptest.NewRecorder()
 			newTestServer(t).ServeHTTP(rr, req)
 

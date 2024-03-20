@@ -127,10 +127,39 @@ func (s Schema) getRawAttributes() []map[string]interface{} {
 	return attributes
 }
 
+func (s Schema) validateSchemaID(resource map[string]interface{}) *errors.ScimError {
+	resourceSchemas, present := resource["schemas"]
+	if !present {
+		return &errors.ScimErrorInvalidSyntax
+	}
+
+	resourceSchemasSlice, ok := resourceSchemas.([]interface{})
+	if !ok {
+		return &errors.ScimErrorInvalidSyntax
+	}
+
+	var schemaFound bool
+	for _, v := range resourceSchemasSlice {
+		if v == s.ID {
+			schemaFound = true
+			break
+		}
+	}
+	if !schemaFound {
+		return &errors.ScimErrorInvalidSyntax
+	}
+
+	return nil
+}
+
 func (s Schema) validate(resource interface{}, checkMutability bool) (map[string]interface{}, *errors.ScimError) {
 	core, ok := resource.(map[string]interface{})
 	if !ok {
 		return nil, &errors.ScimErrorInvalidSyntax
+	}
+
+	if err := s.validateSchemaID(core); err != nil {
+		return nil, err
 	}
 
 	attributes := make(map[string]interface{})
