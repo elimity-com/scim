@@ -12,6 +12,17 @@
       "uniqueness": "none"
     },
     {
+      "caseExact": false,
+      "description": "",
+      "multiValued": false,
+      "mutability": "readOnly",
+      "name": "requiredReadOnly",
+      "required": true,
+      "returned": "default",
+      "type": "string",
+      "uniqueness": "none"
+    },
+    {
       "description": "",
       "multiValued": true,
       "mutability": "readWrite",
@@ -120,7 +131,9 @@
       "uniqueness": "none"
     }
   ],
-  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:Schema"
+  ],
   "description": "",
   "id": "empty",
   "name": "test"

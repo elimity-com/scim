@@ -330,7 +330,7 @@ func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
 func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.ScimError) {
 	// whether or not the attribute is required.
 	if attribute == nil {
-		if !a.required {
+		if !a.required || a.mutability == attributeMutabilityReadOnly {
 			return nil, nil
 		}
 
