@@ -66,7 +66,7 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -199,7 +199,7 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -235,7 +235,7 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 			"error", err,
 		)
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -277,7 +277,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -319,7 +319,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 		)
 		return
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -403,7 +403,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
@@ -426,7 +426,7 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 		)
 		return
 	}
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(raw)
 	if err != nil {
 		s.log.Error(
