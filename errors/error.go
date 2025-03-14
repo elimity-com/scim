@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -133,20 +134,23 @@ type ScimError struct {
 
 // CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
 func CheckScimError(err error, method string) ScimError {
-	scimErr, ok := err.(ScimError)
-	if !ok {
-		return ScimError{
-			Detail: err.Error(),
-			Status: http.StatusInternalServerError,
+	var target ScimError
+
+	if errors.As(err, &target) {
+		if !checkApplicability(target, method) {
+			return ScimError{
+				Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", target.Status, method),
+				Status: http.StatusInternalServerError,
+			}
 		}
+
+		return target
 	}
-	if !checkApplicability(scimErr, method) {
-		return ScimError{
-			Detail: fmt.Sprintf("The HTTP status code %d is not applicable to the %s-operation.", scimErr.Status, method),
-			Status: http.StatusInternalServerError,
-		}
+
+	return ScimError{
+		Detail: err.Error(),
+		Status: http.StatusInternalServerError,
 	}
-	return scimErr
 }
 
 // ScimErrorBadParams returns an 400 SCIM error with a detailed message based on the invalid parameters.
