@@ -205,7 +205,11 @@ func (a CoreAttribute) ValidateSingular(attribute any) (any, *errors.ScimError) 
 	case attributeDataTypeComplex:
 		obj, ok := attribute.(map[string]any)
 		if !ok {
-			return nil, &errors.ScimErrorInvalidValue
+			if s, ok := attribute.(string); ok && schemaAllowStringValues {
+				obj = map[string]any{"value": s}
+			} else {
+				return nil, &errors.ScimErrorInvalidValue
+			}
 		}
 
 		attributes := make(map[string]any)

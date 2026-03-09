@@ -249,6 +249,68 @@ func TestValidationInvalid(t *testing.T) {
 	}
 }
 
+func TestValidateSingularComplexWithStringValue(t *testing.T) {
+	attr := ComplexCoreAttribute(ComplexParams{
+		Name: "manager",
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "displayName"}),
+		},
+	})
+
+	t.Run("map value always accepted", func(t *testing.T) {
+		v, scimErr := attr.ValidateSingular(map[string]any{
+			"value":       "mgr-123",
+			"displayName": "Test Manager",
+		})
+		if scimErr != nil {
+			t.Fatalf("unexpected error: %v", scimErr)
+		}
+		m := v.(map[string]any)
+		if m["value"] != "mgr-123" {
+			t.Errorf("expected value %q, got %q", "mgr-123", m["value"])
+		}
+		if m["displayName"] != "Test Manager" {
+			t.Errorf("expected displayName %q, got %q", "Test Manager", m["displayName"])
+		}
+	})
+
+	t.Run("string value rejected when AllowStringValues is false", func(t *testing.T) {
+		SetAllowStringValues(false)
+		_, scimErr := attr.ValidateSingular("mgr-123")
+		if scimErr == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("string value accepted when AllowStringValues is true", func(t *testing.T) {
+		SetAllowStringValues(true)
+		defer SetAllowStringValues(false)
+
+		v, scimErr := attr.ValidateSingular("mgr-123")
+		if scimErr != nil {
+			t.Fatalf("unexpected error: %v", scimErr)
+		}
+		m, ok := v.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", v)
+		}
+		if m["value"] != "mgr-123" {
+			t.Errorf("expected value %q, got %q", "mgr-123", m["value"])
+		}
+	})
+
+	t.Run("non-string non-map value always rejected", func(t *testing.T) {
+		SetAllowStringValues(true)
+		defer SetAllowStringValues(false)
+
+		_, scimErr := attr.ValidateSingular(42)
+		if scimErr == nil {
+			t.Fatal("expected error for integer value on complex attribute, got nil")
+		}
+	})
+}
+
 func normalizeJSON(rawJSON []byte) (string, error) {
 	dataMap := map[string]any{}
 

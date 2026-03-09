@@ -40,16 +40,27 @@ var (
 					}),
 				},
 			}),
-			schema.ComplexCoreAttribute(schema.ComplexParams{
-				Name:        "complexMultiValued",
-				MultiValued: true,
-				SubAttributes: []schema.SimpleParams{
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "attr1",
-					}),
-				},
-			}),
-		},
+		schema.ComplexCoreAttribute(schema.ComplexParams{
+			Name:        "complexMultiValued",
+			MultiValued: true,
+			SubAttributes: []schema.SimpleParams{
+				schema.SimpleStringParams(schema.StringParams{
+					Name: "attr1",
+				}),
+			},
+		}),
+		schema.ComplexCoreAttribute(schema.ComplexParams{
+			Name: "complexWithValue",
+			SubAttributes: []schema.SimpleParams{
+				schema.SimpleStringParams(schema.StringParams{
+					Name: "value",
+				}),
+				schema.SimpleStringParams(schema.StringParams{
+					Name: "displayName",
+				}),
+			},
+		}),
+	},
 	}
 	patchSchemaExtension = schema.Schema{
 		ID:          "test:PatchExtension",
