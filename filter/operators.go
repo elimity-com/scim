@@ -9,7 +9,7 @@ import (
 
 // createCompareFunction returns a compare function based on the attribute expression and attribute.
 // e.g. `userName eq "john"` will return a string comparator that checks whether the passed value is equal to "john".
-func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttribute) (func(interface{}) error, error) {
+func createCompareFunction(e *filter.AttributeExpression, attr schema.CoreAttribute) (func(any) error, error) {
 	switch typ := attr.AttributeType(); typ {
 	case "binary":
 		ref, ok := e.CompareValue.(string)

@@ -20,7 +20,7 @@ func TestValidatorDateTime(t *testing.T) {
 				})),
 			},
 		}
-		attrs = [3]map[string]interface{}{
+		attrs = [3]map[string]any{
 			{"time": "2021-01-01T08:00:00Z"}, // before
 			{"time": "2021-01-01T12:00:00Z"}, // equal
 			{"time": "2021-01-01T16:00:00Z"}, // after

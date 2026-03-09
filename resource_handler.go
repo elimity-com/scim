@@ -88,7 +88,7 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 
 // ResourceAttributes represents a list of attributes given to the callback method to create or replace
 // a resource based on the given attributes.
-type ResourceAttributes map[string]interface{}
+type ResourceAttributes map[string]any
 
 // ResourceHandler represents a set of callback method that connect the SCIM server with a provider of a certain resource.
 type ResourceHandler interface {

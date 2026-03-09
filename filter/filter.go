@@ -117,7 +117,7 @@ func (v Validator) GetFilter() filter.Expression {
 }
 
 // PassesFilter checks whether given resources passes the filter.
-func (v Validator) PassesFilter(resource map[string]interface{}) error {
+func (v Validator) PassesFilter(resource map[string]any) error {
 	switch e := v.filter.(type) {
 	case *filter.ValuePath:
 		ref, attr, ok := v.referenceContains(e.AttributePath)
@@ -144,9 +144,9 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 			},
 		}
 		switch value := value.(type) {
-		case []interface{}:
+		case []any:
 			for _, a := range value {
-				attr, ok := a.(map[string]interface{})
+				attr, ok := a.(map[string]any)
 				if !ok {
 					return fmt.Errorf("the target is not a complex attribute")
 				}
@@ -190,7 +190,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 				return fmt.Errorf("the resource has no sub-attribute named: %s", subAttrName)
 			}
 
-			attr, ok := value.(map[string]interface{})
+			attr, ok := value.(map[string]any)
 			if !ok {
 				return fmt.Errorf("the target is not a complex attribute")
 			}
@@ -221,7 +221,7 @@ func (v Validator) PassesFilter(resource map[string]interface{}) error {
 		}
 
 		switch value := value.(type) {
-		case []interface{}:
+		case []any:
 			var err error
 			for _, v := range value {
 				if err = cmp(v); err == nil {

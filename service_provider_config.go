@@ -61,19 +61,19 @@ func (config ServiceProviderConfig) getItemsPerPage() int {
 	return config.MaxResults
 }
 
-func (config ServiceProviderConfig) getRaw() map[string]interface{} {
-	return map[string]interface{}{
+func (config ServiceProviderConfig) getRaw() map[string]any {
+	return map[string]any{
 		"schemas":          []string{"urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"},
 		"documentationUri": config.DocumentationURI.Value(),
 		"patch": map[string]bool{
 			"supported": config.SupportPatch,
 		},
-		"bulk": map[string]interface{}{
+		"bulk": map[string]any{
 			"supported":      false,
 			"maxOperations":  1000,
 			"maxPayloadSize": 1048576,
 		},
-		"filter": map[string]interface{}{
+		"filter": map[string]any{
 			"supported":  config.SupportFiltering,
 			"maxResults": config.MaxResults,
 		},
@@ -90,10 +90,10 @@ func (config ServiceProviderConfig) getRaw() map[string]interface{} {
 	}
 }
 
-func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]interface{} {
-	rawAuthScheme := make([]map[string]interface{}, 0)
+func (config ServiceProviderConfig) getRawAuthenticationSchemes() []map[string]any {
+	rawAuthScheme := make([]map[string]any, 0)
 	for _, auth := range config.AuthenticationSchemes {
-		rawAuthScheme = append(rawAuthScheme, map[string]interface{}{
+		rawAuthScheme = append(rawAuthScheme, map[string]any{
 			"description":      auth.Description,
 			"documentationUri": auth.DocumentationURI.Value(),
 			"name":             auth.Name,

@@ -13,7 +13,7 @@ import (
 //
 // Expects a dateTime attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpDateTime(e *filter.AttributeExpression, date string, ref time.Time) (func(interface{}) error, error) {
+func cmpDateTime(e *filter.AttributeExpression, date string, ref time.Time) (func(any) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpTime(ref, func(v, ref time.Time) error {
@@ -83,8 +83,8 @@ func cmpDateTime(e *filter.AttributeExpression, date string, ref time.Time) (fun
 	}
 }
 
-func cmpTime(ref time.Time, cmp func(v, ref time.Time) error) func(interface{}) error {
-	return func(i interface{}) error {
+func cmpTime(ref time.Time, cmp func(v, ref time.Time) error) func(any) error {
+	return func(i any) error {
 		date, ok := i.(string)
 		if !ok {
 			panic(fmt.Sprintf("given value is not a string: %v", i))

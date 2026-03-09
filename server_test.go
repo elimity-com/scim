@@ -55,7 +55,7 @@ func newTestServer(t *testing.T) scim.Server {
 					Schema:      schema.CoreUserSchema(),
 					Handler: &testResourceHandler{
 						data: map[string]testData{
-							"0001": {attributes: map[string]interface{}{}},
+							"0001": {attributes: map[string]any{}},
 						},
 						schema: schema.CoreUserSchema(),
 					},
@@ -68,7 +68,7 @@ func newTestServer(t *testing.T) scim.Server {
 					Schema:      schema.CoreGroupSchema(),
 					Handler: &testResourceHandler{
 						data: map[string]testData{
-							"0001": {attributes: map[string]interface{}{}},
+							"0001": {attributes: map[string]any{}},
 						},
 						schema: schema.CoreGroupSchema(),
 					},
@@ -196,7 +196,7 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 	for _, op := range operations {
 		// Target is the root node.
 		if op.Path == nil {
-			for k, v := range op.Value.(map[string]interface{}) {
+			for k, v := range op.Value.(map[string]any) {
 				if v == nil {
 					continue
 				}
@@ -204,7 +204,7 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 				path, _ := filter.ParseAttrPath([]byte(k))
 				if subAttrName := path.SubAttributeName(); subAttrName != "" {
 					if old, ok := h.data[id].attributes[path.AttributeName]; ok {
-						m := old.(map[string]interface{})
+						m := old.(map[string]any)
 						if sub, ok := m[subAttrName]; ok {
 							if sub == v {
 								continue
@@ -216,7 +216,7 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 						continue
 					}
 					changed = true
-					h.data[id].attributes[path.AttributeName] = map[string]interface{}{
+					h.data[id].attributes[path.AttributeName] = map[string]any{
 						subAttrName: v,
 					}
 					continue
@@ -228,11 +228,11 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 					continue
 				}
 				switch v := v.(type) {
-				case []interface{}:
+				case []any:
 					changed = true
-					h.data[id].attributes[k] = append(old.([]interface{}), v...)
-				case map[string]interface{}:
-					m := old.(map[string]interface{})
+					h.data[id].attributes[k] = append(old.([]any), v...)
+				case map[string]any:
+					m := old.(map[string]any)
 					var changed_ bool
 					for attr, value := range v {
 						if value == nil {
@@ -274,7 +274,7 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 			switch {
 			case subAttrName != "":
 				changed = true
-				h.data[id].attributes[attrName] = map[string]interface{}{
+				h.data[id].attributes[attrName] = map[string]any{
 					subAttrName: op.Value,
 				}
 			case valueExpr != nil:
@@ -289,13 +289,13 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 		switch op.Op {
 		case "add":
 			switch v := op.Value.(type) {
-			case []interface{}:
+			case []any:
 				changed = true
-				h.data[id].attributes[attrName] = append(old.([]interface{}), v...)
+				h.data[id].attributes[attrName] = append(old.([]any), v...)
 			default:
 				if subAttrName != "" {
-					m := old.(map[string]interface{})
-					if value, ok := old.(map[string]interface{})[subAttrName]; ok {
+					m := old.(map[string]any)
+					if value, ok := old.(map[string]any)[subAttrName]; ok {
 						if v == value {
 							continue
 						}
@@ -306,8 +306,8 @@ func (h *testResourceHandler) Patch(r *http.Request, id string, operations []sci
 					continue
 				}
 				switch v := v.(type) {
-				case map[string]interface{}:
-					m := old.(map[string]interface{})
+				case map[string]any:
+					m := old.(map[string]any)
 					var changed_ bool
 					for attr, value := range v {
 						if value == nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -113,12 +114,7 @@ func checkApplicability(err ScimError, method string) bool {
 		return false
 	}
 
-	for _, m := range methods {
-		if m == method {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(methods, method)
 }
 
 // ScimError is a SCIM error response to indicate operation success or failure.

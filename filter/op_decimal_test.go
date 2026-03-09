@@ -21,7 +21,7 @@ func TestValidatorDecimal(t *testing.T) {
 				})),
 			},
 		}
-		attrs = [3]map[string]interface{}{
+		attrs = [3]map[string]any{
 			{"dec": -0.1},       // less
 			{"dec": float64(1)}, // equal
 			{"dec": 1.1},        // greater

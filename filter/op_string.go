@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-func cmpStr(ref string, caseExact bool, cmp func(v, ref string) error) (func(interface{}) error, error) {
+func cmpStr(ref string, caseExact bool, cmp func(v, ref string) error) (func(any) error, error) {
 	if caseExact {
-		return func(i interface{}) error {
+		return func(i any) error {
 			value, ok := i.(string)
 			if !ok {
 				panic(fmt.Sprintf("given value is not a string: %v", i))
@@ -17,7 +17,7 @@ func cmpStr(ref string, caseExact bool, cmp func(v, ref string) error) (func(int
 			return cmp(value, ref)
 		}, nil
 	}
-	return func(i interface{}) error {
+	return func(i any) error {
 		value, ok := i.(string)
 		if !ok {
 			panic(fmt.Sprintf("given value is not a string: %v", i))
@@ -31,7 +31,7 @@ func cmpStr(ref string, caseExact bool, cmp func(v, ref string) error) (func(int
 //
 // Expects a string/reference attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpString(e *filter.AttributeExpression, attr schema.CoreAttribute, ref string) (func(interface{}) error, error) {
+func cmpString(e *filter.AttributeExpression, attr schema.CoreAttribute, ref string) (func(any) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpStr(ref, attr.CaseExact(), func(v, ref string) error {

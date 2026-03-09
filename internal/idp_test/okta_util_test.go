@@ -62,8 +62,8 @@ func (o oktaGroupResourceHandler) Get(r *http.Request, id string) (scim.Resource
 		ID: id,
 		Attributes: scim.ResourceAttributes{
 			"displayName": "Test SCIMv2",
-			"members": []interface{}{
-				map[string]interface{}{
+			"members": []any{
+				map[string]any{
 					"value":   "b1c794f24f4c49f4b5d503a4cb2686ea",
 					"display": "SCIM 2 Group A",
 				},
@@ -115,13 +115,13 @@ func (t oktaUserResourceHandler) Get(r *http.Request, id string) (scim.Resource,
 		ID: id,
 		Attributes: scim.ResourceAttributes{
 			"userName": "test.user@okta.local",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"givenName":  "Test",
 				"familyName": "User",
 			},
 			"active": true,
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"primary": true,
 					"value":   "test.user@okta.local",
 					"type":    "work",
@@ -141,13 +141,13 @@ func (t oktaUserResourceHandler) Patch(r *http.Request, id string, operations []
 		ID: id,
 		Attributes: scim.ResourceAttributes{
 			"userName": "test.user@okta.local",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"givenName":  "Another",
 				"familyName": "User",
 			},
 			"active": false,
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"primary": true,
 					"value":   "test.user@okta.local",
 					"type":    "work",

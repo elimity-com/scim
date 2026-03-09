@@ -155,14 +155,14 @@ func (a azureADUserResourceHandler) Get(r *http.Request, id string) (scim.Resour
 		ExternalID: optional.NewString("58342554-38d6-4ec8-948c-50044d0a33fd"),
 		Attributes: scim.ResourceAttributes{
 			"userName": "Test_User_feed3ace-693c-4e5a-82e2-694be1b39934",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"formatted":  "givenName familyName",
 				"familyName": "familyName",
 				"givenName":  "givenName",
 			},
 			"active": true,
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"value":   "Test_User_22370c1a-9012-42b2-bf64-86099c2a1c22@testuser.com",
 					"type":    "work",
 					"primary": true,
@@ -190,13 +190,13 @@ func (a azureADUserResourceHandler) GetAll(r *http.Request, params scim.ListRequ
 				ExternalID: optional.NewString("7fce0092-d52e-4f76-b727-3955bd72c939"),
 				Attributes: scim.ResourceAttributes{
 					"userName": "Test_User_dfeef4c5-5681-4387-b016-bdf221e82081",
-					"name": map[string]interface{}{
+					"name": map[string]any{
 						"familyName": "familyName",
 						"givenName":  "givenName",
 					},
 					"active": true,
-					"emails": []interface{}{
-						map[string]interface{}{
+					"emails": []any{
+						map[string]any{
 							"value":   "Test_User_91b67701-697b-46de-b864-bd0bbe4f99c1@testuser.com",
 							"type":    "work",
 							"primary": true,
@@ -218,14 +218,14 @@ func (a azureADUserResourceHandler) Patch(r *http.Request, id string, operations
 		ExternalID: optional.NewString("6c75de36-30fa-4d2d-a196-6bdcdb6b6539"),
 		Attributes: scim.ResourceAttributes{
 			"userName": "5b50642d-79fc-4410-9e90-4c077cdd1a59@testuser.com",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"formatted":  "givenName updatedFamilyName",
 				"familyName": "updatedFamilyName",
 				"givenName":  "givenName",
 			},
 			"active": false,
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"value":   "updatedEmail@microsoft.com",
 					"type":    "work",
 					"primary": true,

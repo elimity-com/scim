@@ -10,7 +10,7 @@ import (
 
 // validateRemove validates the remove operation contained within the validator based on on Section 3.5.2.2 in RFC 7644.
 // More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.2
-func (v OperationValidator) validateRemove() (interface{}, error) {
+func (v OperationValidator) validateRemove() (any, error) {
 	// If "path" is unspecified, the operation fails with HTTP status code 400 and a "scimType" error code of "noTarget".
 	if v.Path == nil {
 		return nil, &errors.ScimError{
@@ -48,8 +48,8 @@ func (v OperationValidator) validateRemove() (interface{}, error) {
 		return attr, nil
 	}
 
-	if list, ok := v.value.([]interface{}); ok {
-		var attrs []interface{}
+	if list, ok := v.value.([]any); ok {
+		var attrs []any
 		for _, value := range list {
 			attr, scimErr := refAttr.ValidateSingular(value)
 			if scimErr != nil {
@@ -64,5 +64,5 @@ func (v OperationValidator) validateRemove() (interface{}, error) {
 	if scimErr != nil {
 		return nil, scimErr
 	}
-	return []interface{}{attr}, nil
+	return []any{attr}, nil
 }

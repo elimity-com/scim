@@ -20,7 +20,7 @@ func TestValidatorBoolean(t *testing.T) {
 				})),
 			},
 		}
-		attr = map[string]interface{}{
+		attr = map[string]any{
 			"bool": true,
 		}
 	)

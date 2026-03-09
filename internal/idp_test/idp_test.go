@@ -47,7 +47,7 @@ func testRequest(t *testing.T, tc testCase, idpName string) error {
 		return fmt.Errorf("expected %d, got %d", tc.StatusCode, code)
 	}
 	if len(tc.Response) != 0 {
-		var response map[string]interface{}
+		var response map[string]any
 		if err := unmarshal(rr.Body.Bytes(), &response); err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func testRequest(t *testing.T, tc testCase, idpName string) error {
 
 type testCase struct {
 	Request    json.RawMessage
-	Response   map[string]interface{}
+	Response   map[string]any
 	Method     string
 	Path       string
 	StatusCode int

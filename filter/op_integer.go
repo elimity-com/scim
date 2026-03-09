@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-func cmpInt(ref int, cmp func(v, ref int) error) func(interface{}) error {
-	return func(i interface{}) error {
+func cmpInt(ref int, cmp func(v, ref int) error) func(any) error {
+	return func(i any) error {
 		v, ok := i.(int)
 		if !ok {
 			panic(fmt.Sprintf("given value is not an integer: %v", i))
@@ -16,8 +16,8 @@ func cmpInt(ref int, cmp func(v, ref int) error) func(interface{}) error {
 	}
 }
 
-func cmpIntStr(ref int, cmp func(v, ref string) error) (func(interface{}) error, error) {
-	return func(i interface{}) error {
+func cmpIntStr(ref int, cmp func(v, ref string) error) (func(any) error, error) {
+	return func(i any) error {
 		if _, ok := i.(int); !ok {
 			panic(fmt.Sprintf("given value is not an integer: %v", i))
 		}
@@ -30,7 +30,7 @@ func cmpIntStr(ref int, cmp func(v, ref string) error) (func(interface{}) error,
 //
 // Expects a integer attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpInteger(e *filter.AttributeExpression, ref int) (func(interface{}) error, error) {
+func cmpInteger(e *filter.AttributeExpression, ref int) (func(any) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpInt(ref, func(v, ref int) error {

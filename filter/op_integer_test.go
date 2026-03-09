@@ -21,7 +21,7 @@ func TestValidatorInteger(t *testing.T) {
 				})),
 			},
 		}
-		attrs = [3]map[string]interface{}{
+		attrs = [3]map[string]any{
 			{"int": -1}, // less
 			{"int": 0},  // equal
 			{"int": 10}, // greater

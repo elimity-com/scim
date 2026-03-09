@@ -22,7 +22,7 @@ func TestPatch_addAttributes(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
-	var resource map[string]interface{}
+	var resource map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
@@ -30,14 +30,14 @@ func TestPatch_addAttributes(t *testing.T) {
 	if !ok {
 		t.Fatal(resource["emails"])
 	}
-	rl, ok := rm.([]interface{})
+	rl, ok := rm.([]any)
 	if !ok {
 		t.Fatal(rm)
 	}
 	if len(rl) != 1 {
 		t.Fatal(rl)
 	}
-	m, ok := rl[0].(map[string]interface{})
+	m, ok := rl[0].(map[string]any)
 	if !ok {
 		t.Fatal(rl[0])
 	}
@@ -69,7 +69,7 @@ func TestPatch_addMember(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
-	var resource map[string]interface{}
+	var resource map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
@@ -77,14 +77,14 @@ func TestPatch_addMember(t *testing.T) {
 	if !ok {
 		t.Fatal(resource["members"])
 	}
-	rl, ok := rm.([]interface{})
+	rl, ok := rm.([]any)
 	if !ok {
 		t.Fatal(rm)
 	}
 	if len(rl) != 1 {
 		t.Fatal(rl)
 	}
-	m, ok := rl[0].(map[string]interface{})
+	m, ok := rl[0].(map[string]any)
 	if !ok {
 		t.Fatal(rl[0])
 	}
@@ -162,7 +162,7 @@ func TestPatch_complex(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code, rr.Body.String())
 	}
-	var resource map[string]interface{}
+	var resource map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &resource); err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestPatch_complex(t *testing.T) {
 	if !ok {
 		t.Fatal(resource["members"])
 	}
-	m, ok := rm.(map[string]interface{})
+	m, ok := rm.(map[string]any)
 	if !ok {
 		t.Fatal(rm)
 	}

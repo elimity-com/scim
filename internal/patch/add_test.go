@@ -8,10 +8,10 @@ import (
 
 // The following example shows how to add a member to a group.
 func Example_addMemberToGroup() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "add",
 		"path": "members",
-		"value": map[string]interface{}{
+		"value": map[string]any{
 			"display": "di-wu",
 			"$ref":    "https://example.com/v2/Users/0001",
 			"value":   "0001",
@@ -25,10 +25,10 @@ func Example_addMemberToGroup() {
 
 // The following example shows how to add one or more attributes to a User resource without using a "path" attribute.
 func Example_addWithoutPath() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op": "add",
-		"value": map[string]interface{}{
-			"emails": []map[string]interface{}{
+		"value": map[string]any{
+			"emails": []map[string]any{
 				{
 					"value": "quint@elimity.com",
 					"type":  "work",
