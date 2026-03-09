@@ -19,5 +19,5 @@ type PatchOperation struct {
 	// "add" and "replace" and is REQUIRED for "remove" operations.
 	Path *filter.Path
 	// Value specifies the value to be added or replaced.
-	Value interface{}
+	Value any
 }

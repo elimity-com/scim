@@ -62,30 +62,30 @@ func TestValidator_PassesFilter(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		for _, test := range []struct {
 			filter  string
-			valid   map[string]interface{}
-			invalid map[string]interface{}
+			valid   map[string]any
+			invalid map[string]any
 		}{
 			{
 				filter: `userName eq "john"`,
-				valid: map[string]interface{}{
+				valid: map[string]any{
 					"userName": "john",
 				},
-				invalid: map[string]interface{}{
+				invalid: map[string]any{
 					"userName": "doe",
 				},
 			},
 			{
 				filter: `emails[type eq "work"]`,
-				valid: map[string]interface{}{
-					"emails": []interface{}{
-						map[string]interface{}{
+				valid: map[string]any{
+					"emails": []any{
+						map[string]any{
 							"type": "work",
 						},
 					},
 				},
-				invalid: map[string]interface{}{
-					"emails": []interface{}{
-						map[string]interface{}{
+				invalid: map[string]any{
+					"emails": []any{
+						map[string]any{
 							"type": "private",
 						},
 					},
@@ -222,36 +222,36 @@ func TestValidator_Validate(t *testing.T) {
 	}
 }
 
-func testResources() []map[string]interface{} {
-	return []map[string]interface{}{
+func testResources() []map[string]any {
+	return []map[string]any{
 		{
-			"schemas": []interface{}{
+			"schemas": []any{
 				"urn:ietf:params:scim:schemas:core:2.0:User",
 			},
 			"userName": "di-wu",
 			"userType": "admin",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"familyName": "di",
 				"givenName":  "wu",
 			},
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"value": "quint@elimity.com",
 					"type":  "work",
 				},
 			},
-			"meta": map[string]interface{}{
+			"meta": map[string]any{
 				"lastModified": "2020-07-26T20:02:34Z",
 			},
 			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization": "Elimity",
 		},
 		{
-			"schemas": []interface{}{
+			"schemas": []any{
 				"urn:ietf:params:scim:schemas:core:2.0:User",
 			},
 			"userName": "noreply",
-			"emails": []interface{}{
-				map[string]interface{}{
+			"emails": []any{
+				map[string]any{
 					"value": "noreply@elimity.com",
 					"type":  "work",
 				},
@@ -260,18 +260,18 @@ func testResources() []map[string]interface{} {
 		{
 			"userName": "admin",
 			"userType": "admin",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"familyName": "ad",
 				"givenName":  "min",
 			},
-			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager": map[string]interface{}{
+			"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager": map[string]any{
 				"displayName": "di-wu",
 			},
 		},
 		{"userName": "guest"},
 		{
 			"userName": "unknown",
-			"name": map[string]interface{}{
+			"name": map[string]any{
 				"familyName": "un",
 				"givenName":  "known",
 			},

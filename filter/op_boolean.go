@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func cmpBool(ref bool, cmp func(v, ref bool) error) func(interface{}) error {
-	return func(i interface{}) error {
+func cmpBool(ref bool, cmp func(v, ref bool) error) func(any) error {
+	return func(i any) error {
 		value, ok := i.(bool)
 		if !ok {
 			panic(fmt.Sprintf("given value is not a boolean: %v", i))
@@ -17,8 +17,8 @@ func cmpBool(ref bool, cmp func(v, ref bool) error) func(interface{}) error {
 	}
 }
 
-func cmpBoolStr(ref bool, cmp func(v, ref string) error) (func(interface{}) error, error) {
-	return func(i interface{}) error {
+func cmpBoolStr(ref bool, cmp func(v, ref string) error) (func(any) error, error) {
+	return func(i any) error {
 		if _, ok := i.(bool); !ok {
 			panic(fmt.Sprintf("given value is not a boolean: %v", i))
 		}
@@ -32,7 +32,7 @@ func cmpBoolStr(ref bool, cmp func(v, ref string) error) (func(interface{}) erro
 //
 // Expects a boolean attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpBoolean(e *filter.AttributeExpression, attr schema.CoreAttribute, ref bool) (func(interface{}) error, error) {
+func cmpBoolean(e *filter.AttributeExpression, attr schema.CoreAttribute, ref bool) (func(any) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpBool(ref, func(v, ref bool) error {

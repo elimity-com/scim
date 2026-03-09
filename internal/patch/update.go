@@ -8,7 +8,7 @@ import (
 
 // validateUpdate validates the add/replace operation contained within the validator based on on Section 3.5.2.1 in
 // RFC 7644. More info: https://datatracker.ietf.org/doc/html/rfc7644#section-3.5.2.1
-func (v OperationValidator) validateUpdate() (interface{}, error) {
+func (v OperationValidator) validateUpdate() (any, error) {
 	// The operation must contain a "value" member whose content specifies the value to be added/replaces.
 	if v.value == nil {
 		return nil, fmt.Errorf("an add operation must contain a value member")
@@ -46,8 +46,8 @@ func (v OperationValidator) validateUpdate() (interface{}, error) {
 		return attr, nil
 	}
 
-	if list, ok := v.value.([]interface{}); ok {
-		var attrs []interface{}
+	if list, ok := v.value.([]any); ok {
+		var attrs []any
 		for _, value := range list {
 			attr, scimErr := refAttr.ValidateSingular(value)
 			if scimErr != nil {
@@ -62,5 +62,5 @@ func (v OperationValidator) validateUpdate() (interface{}, error) {
 	if scimErr != nil {
 		return nil, scimErr
 	}
-	return []interface{}{attr}, nil
+	return []any{attr}, nil
 }

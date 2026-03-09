@@ -55,8 +55,8 @@ func (s Schema) MarshalJSON() ([]byte, error) {
 }
 
 // ToMap returns the map representation of a schema.
-func (s Schema) ToMap() map[string]interface{} {
-	return map[string]interface{}{
+func (s Schema) ToMap() map[string]any {
+	return map[string]any{
 		"id":          s.ID,
 		"name":        s.Name.Value(),
 		"description": s.Description.Value(),
@@ -67,17 +67,17 @@ func (s Schema) ToMap() map[string]interface{} {
 
 // Validate validates given resource based on the schema. Does NOT validate mutability.
 // NOTE: only used in POST and PUT requests where attributes MAY be (re)defined.
-func (s Schema) Validate(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+func (s Schema) Validate(resource any) (map[string]any, *errors.ScimError) {
 	return s.validate(resource, false)
 }
 
 // ValidateMutability validates given resource based on the schema, including strict immutability checks.
-func (s Schema) ValidateMutability(resource interface{}) (map[string]interface{}, *errors.ScimError) {
+func (s Schema) ValidateMutability(resource any) (map[string]any, *errors.ScimError) {
 	return s.validate(resource, true)
 }
 
 // ValidatePatchOperation validates an individual operation and its related value.
-func (s Schema) ValidatePatchOperation(operation string, operationValue map[string]interface{}, isExtension bool) *errors.ScimError {
+func (s Schema) ValidatePatchOperation(operation string, operationValue map[string]any, isExtension bool) *errors.ScimError {
 	for k, v := range operationValue {
 		var attr *CoreAttribute
 		var scimErr *errors.ScimError
@@ -113,12 +113,12 @@ func (s Schema) ValidatePatchOperation(operation string, operationValue map[stri
 }
 
 // ValidatePatchOperationValue validates an individual operation and its related value.
-func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]interface{}) *errors.ScimError {
+func (s Schema) ValidatePatchOperationValue(operation string, operationValue map[string]any) *errors.ScimError {
 	return s.ValidatePatchOperation(operation, operationValue, false)
 }
 
-func (s Schema) getRawAttributes() []map[string]interface{} {
-	attributes := make([]map[string]interface{}, len(s.Attributes))
+func (s Schema) getRawAttributes() []map[string]any {
+	attributes := make([]map[string]any, len(s.Attributes))
 
 	for i, a := range s.Attributes {
 		attributes[i] = a.getRawAttributes()
@@ -127,15 +127,15 @@ func (s Schema) getRawAttributes() []map[string]interface{} {
 	return attributes
 }
 
-func (s Schema) validate(resource interface{}, checkMutability bool) (map[string]interface{}, *errors.ScimError) {
-	core, ok := resource.(map[string]interface{})
+func (s Schema) validate(resource any, checkMutability bool) (map[string]any, *errors.ScimError) {
+	core, ok := resource.(map[string]any)
 	if !ok {
 		return nil, &errors.ScimErrorInvalidSyntax
 	}
 
-	attributes := make(map[string]interface{})
+	attributes := make(map[string]any)
 	for _, attribute := range s.Attributes {
-		var hit interface{}
+		var hit any
 		var found bool
 		for k, v := range core {
 			if strings.EqualFold(attribute.name, k) {

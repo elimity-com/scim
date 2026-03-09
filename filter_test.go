@@ -25,7 +25,6 @@ func Test_Group_Filter(t *testing.T) {
 		{name: "Happy path with plus sign", filter: "displayName eq \"testGroup+test\"", expectedDisplayName: "testGroup+test"},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/Groups?filter="+url.QueryEscape(tt.filter), nil)
 			w := httptest.NewRecorder()
@@ -40,12 +39,12 @@ func Test_Group_Filter(t *testing.T) {
 				t.Fatal(w.Result().StatusCode, string(bytes))
 			}
 
-			var result map[string]interface{}
+			var result map[string]any
 			if err := json.Unmarshal(bytes, &result); err != nil {
 				t.Fatal(err)
 			}
 
-			resources, ok := result["Resources"].([]interface{})
+			resources, ok := result["Resources"].([]any)
 			if !ok {
 				t.Fatal("Resources is not the right type or missing")
 			}
@@ -54,7 +53,7 @@ func Test_Group_Filter(t *testing.T) {
 				t.Fatal("one Resource expected")
 			}
 
-			firstResource, ok := resources[0].(map[string]interface{})
+			firstResource, ok := resources[0].(map[string]any)
 			if !ok {
 				t.Fatal("first Resource is not the right type or missing")
 			}
@@ -83,7 +82,6 @@ func Test_User_Filter(t *testing.T) {
 		{name: "Happy path with plus sign", filter: "userName eq \"testUser+test\"", expectedUserName: "testUser+test"},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/Users?filter="+url.QueryEscape(tt.filter), nil)
 			w := httptest.NewRecorder()
@@ -98,12 +96,12 @@ func Test_User_Filter(t *testing.T) {
 				t.Fatal(w.Result().StatusCode, string(bytes))
 			}
 
-			var result map[string]interface{}
+			var result map[string]any
 			if err := json.Unmarshal(bytes, &result); err != nil {
 				t.Fatal(err)
 			}
 
-			resources, ok := result["Resources"].([]interface{})
+			resources, ok := result["Resources"].([]any)
 			if !ok {
 				t.Fatal("Resources is not the right type or missing")
 			}
@@ -112,7 +110,7 @@ func Test_User_Filter(t *testing.T) {
 				t.Fatal("one Resource expected")
 			}
 
-			firstResource, ok := resources[0].(map[string]interface{})
+			firstResource, ok := resources[0].(map[string]any)
 			if !ok {
 				t.Fatal("first Resource is not the right type or missing")
 			}
@@ -144,8 +142,8 @@ func newTestServerForFilter(t *testing.T) scim.Server {
 					Schema:      schema.CoreUserSchema(),
 					Handler: &testResourceHandler{
 						data: map[string]testData{
-							"0001": {attributes: map[string]interface{}{"userName": "testUser"}},
-							"0002": {attributes: map[string]interface{}{"userName": "testUser+test"}},
+							"0001": {attributes: map[string]any{"userName": "testUser"}},
+							"0002": {attributes: map[string]any{"userName": "testUser+test"}},
 						},
 						schema: schema.CoreUserSchema(),
 					},
@@ -158,8 +156,8 @@ func newTestServerForFilter(t *testing.T) scim.Server {
 					Schema:      schema.CoreGroupSchema(),
 					Handler: &testResourceHandler{
 						data: map[string]testData{
-							"0001": {attributes: map[string]interface{}{"displayName": "testGroup"}},
-							"0002": {attributes: map[string]interface{}{"displayName": "testGroup+test"}},
+							"0001": {attributes: map[string]any{"displayName": "testGroup"}},
+							"0002": {attributes: map[string]any{"displayName": "testGroup+test"}},
 						},
 						schema: schema.CoreGroupSchema(),
 					},

@@ -10,7 +10,7 @@ import (
 
 // The following example shows how remove all members of a group.
 func Example_removeAllMembers() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "remove",
 		"path": "members",
 	})
@@ -22,7 +22,7 @@ func Example_removeAllMembers() {
 
 // The following example shows how remove a value from a complex multi-valued attribute.
 func Example_removeComplexMultiValuedAttributeValue() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "remove",
 		"path": `emails[type eq "work" and value eq "elimity.com"]`,
 	})
@@ -34,11 +34,11 @@ func Example_removeComplexMultiValuedAttributeValue() {
 
 // The following example shows how remove a single group from a user.
 func Example_removeSingleGroup() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "remove",
 		"path": "groups",
-		"value": []interface{}{
-			map[string]interface{}{
+		"value": []any{
+			map[string]any{
 				"$ref":  nil,
 				"value": "f648f8d5ea4e4cd38e9c",
 			},
@@ -52,7 +52,7 @@ func Example_removeSingleGroup() {
 
 // The following example shows how remove a single member from a group.
 func Example_removeSingleMember() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "remove",
 		"path": `members[value eq "0001"]`,
 	})
@@ -64,7 +64,7 @@ func Example_removeSingleMember() {
 
 // The following example shows how to replace all of the members of a group with a different members list.
 func Example_replaceAllMembers() {
-	operations := []map[string]interface{}{
+	operations := []map[string]any{
 		{
 			"op":   "remove",
 			"path": "members",
@@ -72,8 +72,8 @@ func Example_replaceAllMembers() {
 		{
 			"op":   "remove",
 			"path": "members",
-			"value": []interface{}{
-				map[string]interface{}{
+			"value": []any{
+				map[string]any{
 					"value": "f648f8d5ea4e4cd38e9c",
 				},
 			},
@@ -81,13 +81,13 @@ func Example_replaceAllMembers() {
 		{
 			"op":   "add",
 			"path": "members",
-			"value": []interface{}{
-				map[string]interface{}{
+			"value": []any{
+				map[string]any{
 					"display": "di-wu",
 					"$ref":    "https://example.com/v2/Users/0001",
 					"value":   "0001",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"display": "example",
 					"$ref":    "https://example.com/v2/Users/0002",
 					"value":   "0002",
@@ -120,22 +120,22 @@ func TestOperationValidator_ValidateRemove(t *testing.T) {
 	//   attribute's sub-attributes, the matching records are removed.
 
 	for i, test := range []struct {
-		valid   map[string]interface{}
-		invalid map[string]interface{}
+		valid   map[string]any
+		invalid map[string]any
 	}{
 		// If "path" is unspecified, the operation fails.
-		{invalid: map[string]interface{}{"op": "remove"}},
+		{invalid: map[string]any{"op": "remove"}},
 
 		// If the target location is a single-value attribute.
-		{valid: map[string]interface{}{"op": "remove", "path": "attr1"}},
+		{valid: map[string]any{"op": "remove", "path": "attr1"}},
 		// If the target location is a multi-valued attribute and no filter is specified.
-		{valid: map[string]interface{}{"op": "remove", "path": "multiValued"}},
+		{valid: map[string]any{"op": "remove", "path": "multiValued"}},
 		// If the target location is a multi-valued attribute and a complex filter is specified comparing a "value".
-		{valid: map[string]interface{}{"op": "remove", "path": `multivalued[value eq "value"]`}},
+		{valid: map[string]any{"op": "remove", "path": `multivalued[value eq "value"]`}},
 		// If the target location is a complex multi-valued attribute and a complex filter is specified based on the
 		// attribute's sub-attributes
-		{valid: map[string]interface{}{"op": "remove", "path": `complexMultiValued[attr1 eq "value"]`}},
-		{valid: map[string]interface{}{"op": "remove", "path": `complexMultiValued[attr1 eq "value"].attr1`}},
+		{valid: map[string]any{"op": "remove", "path": `complexMultiValued[attr1 eq "value"]`}},
+		{valid: map[string]any{"op": "remove", "path": `complexMultiValued[attr1 eq "value"].attr1`}},
 	} {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			// valid

@@ -12,17 +12,17 @@ type Page struct {
 	Resources []Resource
 }
 
-func (p Page) resources(resourceType ResourceType) []interface{} {
+func (p Page) resources(resourceType ResourceType) []any {
 	// If the page.Resources is nil, then it will also be represented as a `null` in the response.
 	// Otherwise is it is an empty slice then it will result in an empty array `[]`.
 	if len(p.Resources) == 0 {
 		if p.Resources != nil {
-			return []interface{}{}
+			return []any{}
 		}
 		return nil
 	}
 
-	var resources []interface{}
+	var resources []any
 	for _, v := range p.Resources {
 		resources = append(
 			resources,
@@ -51,11 +51,11 @@ type listResponse struct {
 	// Resources is a multi-valued list of complex objects containing the requested resources.
 	// This may be a subset of the full set of resources if pagination is requested.
 	// REQUIRED if TotalResults is non-zero.
-	Resources []interface{}
+	Resources []any
 }
 
 func (l listResponse) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"schemas":      []string{"urn:ietf:params:scim:api:messages:2.0:ListResponse"},
 		"totalResults": l.TotalResults,
 		"itemsPerPage": l.ItemsPerPage,

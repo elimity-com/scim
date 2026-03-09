@@ -164,13 +164,13 @@ func TestServerResourceGetHandler(t *testing.T) {
 
 			assertEqual(t, tt.expectedVersion, rr.Header().Get("Etag"))
 
-			var resource map[string]interface{}
+			var resource map[string]any
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
 			assertEqual(t, tt.expectedUserName, resource["userName"])
 			assertEqual(t, tt.expectedExternalID, resource["externalId"])
 
-			meta, ok := resource["meta"].(map[string]interface{})
+			meta, ok := resource["meta"].(map[string]any)
 			assertTypeOk(t, ok, "object")
 
 			assertEqual(t, "User", meta["resourceType"])
@@ -212,7 +212,7 @@ func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	rr := httptest.NewRecorder()
 	newTestServer(t).ServeHTTP(rr, req)
 
-	var resource map[string]interface{}
+	var resource map[string]any
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
@@ -368,7 +368,7 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 
 	assertEqual(t, expectedVersion, rr.Header().Get("Etag"))
 
-	var resource map[string]interface{}
+	var resource map[string]any
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
 	assertEqualStatusCode(t, http.StatusOK, rr.Code)
@@ -377,11 +377,11 @@ func TestServerResourcePatchHandlerValid(t *testing.T) {
 	assertFalse(t, resource["active"].(bool))
 	assertEqual(t, "external_test_replace", resource["externalId"])
 
-	if resource["emails"] == nil || len(resource["emails"].([]interface{})) < 1 {
+	if resource["emails"] == nil || len(resource["emails"].([]any)) < 1 {
 		t.Errorf("handler did not add user's email address")
 	}
 
-	meta, ok := resource["meta"].(map[string]interface{})
+	meta, ok := resource["meta"].(map[string]any)
 	assertTrue(t, ok)
 
 	assertEqual(t, "User", meta["resourceType"])
@@ -435,7 +435,7 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 		target             string
 		body               io.Reader
 		expectedUserName   string
-		expectedExternalID interface{}
+		expectedExternalID any
 	}{
 		{
 			name:               "Users post request without version",
@@ -474,14 +474,14 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 
 			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
-			var resource map[string]interface{}
+			var resource map[string]any
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
 			assertEqual(t, test.expectedUserName, resource["userName"])
 
 			assertEqual(t, test.expectedExternalID, resource["externalId"])
 
-			meta, ok := resource["meta"].(map[string]interface{})
+			meta, ok := resource["meta"].(map[string]any)
 			assertTypeOk(t, ok, "object")
 
 			assertEqual(t, "User", meta["resourceType"])
@@ -522,7 +522,7 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 		target             string
 		body               io.Reader
 		expectedUserName   string
-		expectedExternalID interface{}
+		expectedExternalID any
 	}{
 		{
 			name:               "Users put request",
@@ -555,13 +555,13 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 
 			assertEqual(t, "application/scim+json", rr.Header().Get("Content-Type"))
 
-			var resource map[string]interface{}
+			var resource map[string]any
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
 
 			assertEqual(t, test.expectedUserName, resource["userName"])
 			assertEqual(t, test.expectedExternalID, resource["externalId"])
 
-			meta, ok := resource["meta"].(map[string]interface{})
+			meta, ok := resource["meta"].(map[string]any)
 			assertTypeOk(t, ok, "meta")
 			assertEqual(t, "User", meta["resourceType"])
 		})
@@ -599,7 +599,7 @@ func TestServerResourceTypeHandlerValid(t *testing.T) {
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-			var resourceType map[string]interface{}
+			var resourceType map[string]any
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resourceType))
 
 			assertEqual(t, tt.resourceType, resourceType["id"])
@@ -637,7 +637,7 @@ func TestServerResourceTypesHandler(t *testing.T) {
 
 			resourceTypes := make([]string, 3)
 			for i, resource := range response.Resources {
-				resourceType, ok := resource.(map[string]interface{})
+				resourceType, ok := resource.(map[string]any)
 				assertTypeOk(t, ok, "object")
 				resourceTypes[i] = resourceType["name"].(string)
 			}
@@ -756,7 +756,7 @@ func TestServerSchemaEndpointValid(t *testing.T) {
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
 
-			var s map[string]interface{}
+			var s map[string]any
 			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &s))
 			assertEqual(t, test.schema, s["id"].(string))
 		})
@@ -794,7 +794,7 @@ func TestServerSchemasEndpoint(t *testing.T) {
 
 			resourceIDs := make([]string, 3)
 			for i, resource := range response.Resources {
-				resourceType, ok := resource.(map[string]interface{})
+				resourceType, ok := resource.(map[string]any)
 				assertTypeOk(t, ok, "object")
 				resourceIDs[i] = resourceType["id"].(string)
 			}

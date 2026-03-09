@@ -98,21 +98,21 @@ func TestJSONMarshalling(t *testing.T) {
 }
 
 func TestResourceInvalid(t *testing.T) {
-	var resource interface{}
+	var resource any
 	if _, scimErr := testSchema.Validate(resource); scimErr == nil {
 		t.Error("invalid resource expected")
 	}
 }
 
 func TestValidValidation(t *testing.T) {
-	for _, test := range []map[string]interface{}{
+	for _, test := range []map[string]any{
 		{
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
-			"complex": []interface{}{
-				map[string]interface{}{
+			"complex": []any{
+				map[string]any{
 					"sub": "present",
 				},
 			},
@@ -131,59 +131,59 @@ func TestValidValidation(t *testing.T) {
 }
 
 func TestValidationInvalid(t *testing.T) {
-	for _, test := range []map[string]interface{}{
+	for _, test := range []map[string]any{
 		{ // missing required field
 			"field": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 		},
 		{ // missing required multivalued field
 			"required": "present",
-			"booleans": []interface{}{},
+			"booleans": []any{},
 		},
 		{ // wrong type element of slice
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				"present",
 			},
 		},
 		{ // duplicate names
 			"required": "present",
 			"Required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 		},
 		{ // wrong string type
 			"required": true,
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 		},
 		{ // wrong complex type
 			"required": "present",
 			"complex":  "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 		},
 		{ // wrong complex element type
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
-			"complex": []interface{}{
+			"complex": []any{
 				"present",
 			},
 		},
 		{ // duplicate complex element names
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
-			"complex": []interface{}{
-				map[string]interface{}{
+			"complex": []any{
+				map[string]any{
 					"sub": "present",
 					"Sub": "present",
 				},
@@ -191,53 +191,53 @@ func TestValidationInvalid(t *testing.T) {
 		},
 		{ // wrong type complex element
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
-			"complex": []interface{}{
-				map[string]interface{}{
+			"complex": []any{
+				map[string]any{
 					"sub": true,
 				},
 			},
 		},
 		{ // invalid type binary
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"binary": true,
 		},
 		{ // invalid type dateTime
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"dateTime": "04:56:22Z2008-01-23T",
 		},
 		{ // invalid type integer
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"integer": 1.1,
 		},
 		{ // invalid type decimal
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"decimal": "1.1",
 		},
 		{ // invalid type integer (json.Number)
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"integerNumber": json.Number("1.1"),
 		},
 		{ // invalid type decimal (json.Number)
 			"required": "present",
-			"booleans": []interface{}{
+			"booleans": []any{
 				true,
 			},
 			"decimalNumber": json.Number("fail"),
@@ -249,8 +249,70 @@ func TestValidationInvalid(t *testing.T) {
 	}
 }
 
+func TestValidateSingularComplexWithStringValue(t *testing.T) {
+	attr := ComplexCoreAttribute(ComplexParams{
+		Name: "manager",
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "displayName"}),
+		},
+	})
+
+	t.Run("map value always accepted", func(t *testing.T) {
+		v, scimErr := attr.ValidateSingular(map[string]any{
+			"value":       "mgr-123",
+			"displayName": "Test Manager",
+		})
+		if scimErr != nil {
+			t.Fatalf("unexpected error: %v", scimErr)
+		}
+		m := v.(map[string]any)
+		if m["value"] != "mgr-123" {
+			t.Errorf("expected value %q, got %q", "mgr-123", m["value"])
+		}
+		if m["displayName"] != "Test Manager" {
+			t.Errorf("expected displayName %q, got %q", "Test Manager", m["displayName"])
+		}
+	})
+
+	t.Run("string value rejected when AllowStringValues is false", func(t *testing.T) {
+		SetAllowStringValues(false)
+		_, scimErr := attr.ValidateSingular("mgr-123")
+		if scimErr == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("string value accepted when AllowStringValues is true", func(t *testing.T) {
+		SetAllowStringValues(true)
+		defer SetAllowStringValues(false)
+
+		v, scimErr := attr.ValidateSingular("mgr-123")
+		if scimErr != nil {
+			t.Fatalf("unexpected error: %v", scimErr)
+		}
+		m, ok := v.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", v)
+		}
+		if m["value"] != "mgr-123" {
+			t.Errorf("expected value %q, got %q", "mgr-123", m["value"])
+		}
+	})
+
+	t.Run("non-string non-map value always rejected", func(t *testing.T) {
+		SetAllowStringValues(true)
+		defer SetAllowStringValues(false)
+
+		_, scimErr := attr.ValidateSingular(42)
+		if scimErr == nil {
+			t.Fatal("expected error for integer value on complex attribute, got nil")
+		}
+	})
+}
+
 func normalizeJSON(rawJSON []byte) (string, error) {
-	dataMap := map[string]interface{}{}
+	dataMap := map[string]any{}
 
 	// Ignoring errors since we know it is valid
 	err := json.Unmarshal(rawJSON, &dataMap)

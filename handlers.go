@@ -256,7 +256,7 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start, end := clamp(params.StartIndex-1, params.Count, len(s.resourceTypes))
-	var resources []interface{}
+	var resources []any
 	for _, v := range s.resourceTypes[start:end] {
 		resources = append(resources, v.getRaw())
 	}
@@ -369,7 +369,7 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		start, end = clamp(params.StartIndex-1, params.Count, len(s.getSchemas()))
-		resources  []interface{}
+		resources  []any
 	)
 	if validator := params.FilterValidator; validator != nil {
 		if err := validator.Validate(); err != nil {

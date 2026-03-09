@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"slices"
 )
 
 func clamp(offset, limit, length int) (int, int) {
-	start := length
-	if offset < length {
-		start = offset
-	}
+	start := min(offset, length)
 	end := length
 	if limit < length-start {
 		end = start + limit
@@ -19,13 +17,7 @@ func clamp(offset, limit, length int) (int, int) {
 }
 
 func contains(arr []string, el string) bool {
-	for _, item := range arr {
-		if item == el {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(arr, el)
 }
 
 func readBody(r *http.Request) ([]byte, error) {

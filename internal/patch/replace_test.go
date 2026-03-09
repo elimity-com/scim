@@ -8,10 +8,10 @@ import (
 
 // The following example shows how to replace all values of one or more specific attributes.
 func Example_replaceAnyAttribute() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op": "replace",
-		"value": map[string]interface{}{
-			"emails": []map[string]interface{}{
+		"value": map[string]any{
+			"emails": []map[string]any{
 				{
 					"value":   "quint",
 					"type":    "work",
@@ -34,17 +34,17 @@ func Example_replaceAnyAttribute() {
 // The following example shows how to replace all of the members of a group with a different members list in a single
 // replace operation.
 func Example_replaceMembers() {
-	operations := []map[string]interface{}{
+	operations := []map[string]any{
 		{
 			"op":   "replace",
 			"path": "members",
-			"value": []interface{}{
-				map[string]interface{}{
+			"value": []any{
+				map[string]any{
 					"display": "di-wu",
 					"$ref":    "https://example.com/v2/Users/0001",
 					"value":   "0001",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"display": "example",
 					"$ref":    "https://example.com/v2/Users/0002",
 					"value":   "0002",
@@ -64,7 +64,7 @@ func Example_replaceMembers() {
 // The following example shows how to change a specific sub-attribute "streetAddress" of complex attribute "emails"
 // selected by a "valuePath" filter.
 func Example_replaceSpecificSubAttribute() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":    "replace",
 		"path":  `addresses[type eq "work"].streetAddress`,
 		"value": "ExampleStreet 100",
@@ -77,10 +77,10 @@ func Example_replaceSpecificSubAttribute() {
 
 // The following example shows how to change a User's entire "work" address, using a "valuePath" filter.
 func Example_replaceWorkAddress() {
-	operation, _ := json.Marshal(map[string]interface{}{
+	operation, _ := json.Marshal(map[string]any{
 		"op":   "replace",
 		"path": `addresses[type eq "work"]`,
-		"value": map[string]interface{}{
+		"value": map[string]any{
 			"type":          "work",
 			"streetAddress": "ExampleStreet 1",
 			"locality":      "ExampleCity",

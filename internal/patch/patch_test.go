@@ -9,7 +9,7 @@ import (
 
 func TestNewPathValidator(t *testing.T) {
 	t.Run("Valid Integer", func(t *testing.T) {
-		for _, op := range []map[string]interface{}{
+		for _, op := range []map[string]any{
 			{"op": "add", "path": "attr2", "value": 1234},
 			{"op": "add", "path": "attr2", "value": "1234"},
 		} {
@@ -35,7 +35,7 @@ func TestNewPathValidator(t *testing.T) {
 	})
 
 	t.Run("Valid Float", func(t *testing.T) {
-		for _, op := range []map[string]interface{}{
+		for _, op := range []map[string]any{
 			{"op": "add", "path": "attr3", "value": 12.34},
 			{"op": "add", "path": "attr3", "value": "12.34"},
 		} {
@@ -62,13 +62,13 @@ func TestNewPathValidator(t *testing.T) {
 
 	t.Run("Valid Booleans", func(t *testing.T) {
 		tests := []struct {
-			op       map[string]interface{}
+			op       map[string]any
 			expected bool
 		}{
-			{map[string]interface{}{"op": "add", "path": "attr4", "value": true}, true},
-			{map[string]interface{}{"op": "add", "path": "attr4", "value": "True"}, true},
-			{map[string]interface{}{"op": "add", "path": "attr4", "value": false}, false},
-			{map[string]interface{}{"op": "add", "path": "attr4", "value": "False"}, false},
+			{map[string]any{"op": "add", "path": "attr4", "value": true}, true},
+			{map[string]any{"op": "add", "path": "attr4", "value": "True"}, true},
+			{map[string]any{"op": "add", "path": "attr4", "value": false}, false},
+			{map[string]any{"op": "add", "path": "attr4", "value": "False"}, false},
 		}
 		for _, tc := range tests {
 			operation, _ := json.Marshal(tc.op)
@@ -91,9 +91,82 @@ func TestNewPathValidator(t *testing.T) {
 			}
 		}
 	})
+	t.Run("Complex attribute with string value (AllowStringValues)", func(t *testing.T) {
+		schema.SetAllowStringValues(true)
+		defer schema.SetAllowStringValues(false)
+
+		op, _ := json.Marshal(map[string]any{
+			"op":    "add",
+			"path":  "complexWithValue",
+			"value": "manager-id-123",
+		})
+		validator, err := NewValidator(op, patchSchema)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		v, err := validator.Validate()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m, ok := v.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", v)
+		}
+		if m["value"] != "manager-id-123" {
+			t.Errorf("expected value %q, got %q", "manager-id-123", m["value"])
+		}
+	})
+	t.Run("Complex attribute with string value rejected without AllowStringValues", func(t *testing.T) {
+		schema.SetAllowStringValues(false)
+
+		op, _ := json.Marshal(map[string]any{
+			"op":    "add",
+			"path":  "complexWithValue",
+			"value": "manager-id-123",
+		})
+		validator, err := NewValidator(op, patchSchema)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		_, err = validator.Validate()
+		if err == nil {
+			t.Fatal("expected error for string value on complex attribute, got none")
+		}
+	})
+	t.Run("Complex attribute with map value still works", func(t *testing.T) {
+		schema.SetAllowStringValues(true)
+		defer schema.SetAllowStringValues(false)
+
+		op, _ := json.Marshal(map[string]any{
+			"op":   "add",
+			"path": "complexWithValue",
+			"value": map[string]any{
+				"value":       "manager-id-123",
+				"displayName": "Test Manager",
+			},
+		})
+		validator, err := NewValidator(op, patchSchema)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		v, err := validator.Validate()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m, ok := v.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", v)
+		}
+		if m["value"] != "manager-id-123" {
+			t.Errorf("expected value %q, got %q", "manager-id-123", m["value"])
+		}
+		if m["displayName"] != "Test Manager" {
+			t.Errorf("expected displayName %q, got %q", "Test Manager", m["displayName"])
+		}
+	})
 	t.Run("Invalid Op", func(t *testing.T) {
 		// "op" must be one of "add", "remove", or "replace".
-		op, _ := json.Marshal(map[string]interface{}{
+		op, _ := json.Marshal(map[string]any{
 			"op":    "invalid",
 			"path":  "attr1",
 			"value": "value",
@@ -106,7 +179,7 @@ func TestNewPathValidator(t *testing.T) {
 	t.Run("Invalid Attribute", func(t *testing.T) {
 		// "invalid pr" is not a valid path filter.
 		// This error will be caught by the path filter validator.
-		op, _ := json.Marshal(map[string]interface{}{
+		op, _ := json.Marshal(map[string]any{
 			"op":    "add",
 			"path":  "invalid pr",
 			"value": "value",
@@ -126,7 +199,7 @@ func TestOperationValidator_getRefAttribute(t *testing.T) {
 		{`name.givenName`, `givenName`},
 		{`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber`, `employeeNumber`},
 	} {
-		op, _ := json.Marshal(map[string]interface{}{
+		op, _ := json.Marshal(map[string]any{
 			"op":    "add",
 			"path":  test.pathFilter,
 			"value": "value",
@@ -148,7 +221,7 @@ func TestOperationValidator_getRefAttribute(t *testing.T) {
 		}
 	}
 
-	op, _ := json.Marshal(map[string]interface{}{
+	op, _ := json.Marshal(map[string]any{
 		"op":    "invalid",
 		"path":  "complex",
 		"value": "value",
@@ -173,7 +246,7 @@ func TestOperationValidator_getRefSubAttribute(t *testing.T) {
 		{`name`, `givenName`},
 		{`groups`, `display`},
 	} {
-		op, _ := json.Marshal(map[string]interface{}{
+		op, _ := json.Marshal(map[string]any{
 			"op":    "invalid",
 			"path":  test.attributeName,
 			"value": "value",

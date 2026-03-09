@@ -11,7 +11,7 @@ import (
 //
 // Expects a decimal attribute. Will panic on unknown filter operator.
 // Known operators: eq, ne, co, sw, ew, gt, lt, ge and le.
-func cmpDecimal(e *filter.AttributeExpression, ref float64) (func(interface{}) error, error) {
+func cmpDecimal(e *filter.AttributeExpression, ref float64) (func(any) error, error) {
 	switch op := e.Operator; op {
 	case filter.EQ:
 		return cmpFloat(ref, func(v, ref float64) error {
@@ -81,8 +81,8 @@ func cmpDecimal(e *filter.AttributeExpression, ref float64) (func(interface{}) e
 	}
 }
 
-func cmpFloat(ref float64, cmp func(v, ref float64) error) func(interface{}) error {
-	return func(i interface{}) error {
+func cmpFloat(ref float64, cmp func(v, ref float64) error) func(any) error {
+	return func(i any) error {
 		f, ok := i.(float64)
 		if !ok {
 			panic(fmt.Sprintf("given value is not a float: %v", i))
@@ -91,8 +91,8 @@ func cmpFloat(ref float64, cmp func(v, ref float64) error) func(interface{}) err
 	}
 }
 
-func cmpFloatStr(ref float64, cmp func(v, ref string) error) (func(interface{}) error, error) {
-	return func(i interface{}) error {
+func cmpFloatStr(ref float64, cmp func(v, ref string) error) (func(any) error, error) {
+	return func(i any) error {
 		if _, ok := i.(float64); !ok {
 			panic(fmt.Sprintf("given value is not a float: %v", i))
 		}

@@ -28,7 +28,7 @@ const (
 type OperationValidator struct {
 	Op    Op
 	Path  *filter.Path
-	value interface{}
+	value any
 
 	schema  schema.Schema
 	schemas map[string]schema.Schema
@@ -40,7 +40,7 @@ func NewValidator(patchReq []byte, s schema.Schema, extensions ...schema.Schema)
 	var operation struct {
 		Op    string
 		Path  string
-		Value interface{}
+		Value any
 	}
 
 	d := json.NewDecoder(bytes.NewReader(patchReq))
@@ -55,7 +55,7 @@ func NewValidator(patchReq []byte, s schema.Schema, extensions ...schema.Schema)
 	// Okta also send the ID on PATCH requests.
 	// See: internal/idp_test/testdata/okta/update_group_name.json
 	// https://developer.okta.com/docs/reference/scim/scim-20/#update-a-specific-group-name
-	case map[string]interface{}:
+	case map[string]any:
 		var key string
 		var found bool
 		for k := range v {
@@ -102,7 +102,7 @@ func NewValidator(patchReq []byte, s schema.Schema, extensions ...schema.Schema)
 // Validate validates the PATCH operation. Unknown attributes in complex values are ignored. The returned interface
 // contains a (sanitised) version of given value based on the attribute it targets. Multi-valued attributes will always
 // be returned wrapped in a slice, even if it is just one value that was defined within the operation.
-func (v OperationValidator) Validate() (interface{}, error) {
+func (v OperationValidator) Validate() (any, error) {
 	switch v.Op {
 	case OperationAdd, OperationReplace:
 		return v.validateUpdate()
@@ -175,13 +175,13 @@ func (v OperationValidator) getRefSubAttribute(refAttr *schema.CoreAttribute, su
 
 // validateEmptyPath validates paths that don't have a "path" value. In this case the target location is assumed to be
 // the resource itself. The "value" parameter contains a set of attributes to be added to the resource.
-func (v OperationValidator) validateEmptyPath() (interface{}, error) {
-	attributes, ok := v.value.(map[string]interface{})
+func (v OperationValidator) validateEmptyPath() (any, error) {
+	attributes, ok := v.value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("the given value should be a complex attribute if path is empty")
 	}
 
-	rootValue := map[string]interface{}{}
+	rootValue := map[string]any{}
 	for p, value := range attributes {
 		path, err := filter.ParsePath([]byte(p))
 		if err != nil {

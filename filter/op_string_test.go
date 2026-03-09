@@ -13,7 +13,7 @@ func TestValidatorString(t *testing.T) {
 		exp = func(op filter.CompareOperator) string {
 			return fmt.Sprintf("str %s \"x\"", op)
 		}
-		attrs = [3]map[string]interface{}{
+		attrs = [3]map[string]any{
 			{"str": "x"},
 			{"str": "X"},
 			{"str": "y"},

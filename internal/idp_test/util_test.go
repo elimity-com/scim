@@ -19,7 +19,7 @@ func getNewServer(t *testing.T, idpName string) scim.Server {
 	}
 }
 
-func unmarshal(data []byte, v interface{}) error {
+func unmarshal(data []byte, v any) error {
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
 	return d.Decode(v)
