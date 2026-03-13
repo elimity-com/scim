@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	schemaAllowStringValues = false
+	schemaAllowStringValues          = false
+	schemaAllowComplexValuesAsString = false
 )
 
 // SetAllowStringValues sets whether string values are allowed.
@@ -22,6 +23,15 @@ var (
 // clients, such as the one provided by Microsoft Azure.
 func SetAllowStringValues(enabled bool) {
 	schemaAllowStringValues = enabled
+}
+
+// SetSchemaAllowComplexValuesAsString sets whether certain complex values
+// (such as the "manager" attribute are allowed to be represented as a simple string. If presented this
+// way, it is equivalent to {"value": "string"}.
+// NOTE: This is NOT a standard SCIM behaviour, and should only be used for compatibility with non-compliant SCIM
+// clients, such as the one provided by Microsoft Azure.
+func SetSchemaAllowComplexValuesAsString(enabled bool) {
+	schemaAllowComplexValuesAsString = enabled
 }
 
 // CoreAttribute represents those attributes that sit at the top level of the JSON object together with the common
@@ -205,7 +215,13 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 	case attributeDataTypeComplex:
 		obj, ok := attribute.(map[string]interface{})
 		if !ok {
-			return nil, &errors.ScimErrorInvalidValue
+			if str, ok := attribute.(string); ok && schemaAllowComplexValuesAsString {
+				obj = map[string]interface{}{
+					"value": str,
+				}
+			} else {
+				return nil, &errors.ScimErrorInvalidValue
+			}
 		}
 
 		attributes := make(map[string]interface{})
