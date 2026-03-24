@@ -86,9 +86,33 @@ func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 	return *s, nil
 }
 
+// statusResponseWriter wraps http.ResponseWriter to ensure WriteHeader is
+// always called explicitly. If Write is called without a prior WriteHeader,
+// it defaults to http.StatusOK. Subsequent WriteHeader calls are ignored.
+// This allows observability middleware to reliably capture status codes.
+type statusResponseWriter struct {
+	http.ResponseWriter
+	wroteHeader bool
+}
+
+func (w *statusResponseWriter) WriteHeader(status int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(status)
+	}
+}
+
+func (w *statusResponseWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
+	w = &statusResponseWriter{ResponseWriter: w}
 
 	path := strings.TrimPrefix(r.URL.Path, "/v2")
 

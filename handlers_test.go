@@ -992,6 +992,101 @@ func newTestResourceHandler() ResourceHandler {
 	}
 }
 
+// statusRecordingResponseWriter wraps an http.ResponseWriter and records
+// whether WriteHeader was called explicitly, simulating logging middleware.
+type statusRecordingResponseWriter struct {
+	http.ResponseWriter
+	calledWriteHeader bool
+	status            int
+}
+
+func (w *statusRecordingResponseWriter) WriteHeader(status int) {
+	w.calledWriteHeader = true
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func TestServerExplicitStatusCodes(t *testing.T) {
+	tests := []struct {
+		name           string
+		method         string
+		target         string
+		body           io.Reader
+		expectedStatus int
+	}{
+		{
+			name:           "GET resource",
+			method:         http.MethodGet,
+			target:         "/Users/0001",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "GET resources",
+			method:         http.MethodGet,
+			target:         "/Users",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "POST resource",
+			method:         http.MethodPost,
+			target:         "/Users",
+			body:           strings.NewReader(`{"userName": "test", "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]}`),
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "PUT resource",
+			method:         http.MethodPut,
+			target:         "/Users/0001",
+			body:           strings.NewReader(`{"userName": "test_replace", "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]}`),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "DELETE resource",
+			method:         http.MethodDelete,
+			target:         "/Users/0001",
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "GET ResourceTypes",
+			method:         http.MethodGet,
+			target:         "/ResourceTypes",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "GET ResourceType",
+			method:         http.MethodGet,
+			target:         "/ResourceTypes/User",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "GET Schemas",
+			method:         http.MethodGet,
+			target:         "/Schemas",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "GET ServiceProviderConfig",
+			method:         http.MethodGet,
+			target:         "/ServiceProviderConfig",
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.target, tt.body)
+			rr := httptest.NewRecorder()
+			w := &statusRecordingResponseWriter{ResponseWriter: rr}
+			newTestServer(t).ServeHTTP(w, req)
+
+			if !w.calledWriteHeader {
+				t.Error("handler did not explicitly call WriteHeader")
+			}
+			assertEqualStatusCode(t, tt.expectedStatus, w.status)
+		})
+	}
+}
+
 func newTestServer(t *testing.T) Server {
 	userSchema := getUserSchema()
 	userSchemaExtension := getUserExtensionSchema()
