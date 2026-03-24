@@ -315,7 +315,7 @@ func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
 		rawSubAttributes = append(rawSubAttributes, subAttr.getRawAttributes())
 	}
 
-	if a.subAttributes != nil && len(a.subAttributes) != 0 {
+	if len(a.subAttributes) != 0 {
 		attributes["subAttributes"] = rawSubAttributes
 	}
 
