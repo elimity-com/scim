@@ -298,14 +298,14 @@ func TestValidationInvalid(t *testing.T) {
 			},
 		},
 		{
-			name: "missing 'schemas' attribute",
+			name: "missing schemas attribute",
 			resource: map[string]interface{}{
 				"required": "present",
 				"booleans": []interface{}{true},
 			},
 		},
 		{
-			name: "'schemas' attribute is not an array of strings",
+			name: "schemas attribute is not an array",
 			resource: map[string]interface{}{
 				"schemas":  "test-schema-id",
 				"required": "present",
@@ -313,9 +313,9 @@ func TestValidationInvalid(t *testing.T) {
 			},
 		},
 		{
-			name: "wrong 'schemas' name",
+			name: "wrong schema ID",
 			resource: map[string]interface{}{
-				"schemas":  []interface{}{"wrong_schema_name"},
+				"schemas":  []interface{}{"wrong-schema-id"},
 				"required": "present",
 				"booleans": []interface{}{true},
 			},

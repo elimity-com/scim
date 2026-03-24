@@ -429,6 +429,14 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
+func TestServerResourcePostHandlerMissingSchemas(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"userName": "test1"}`))
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
 func TestServerResourcePostHandlerValid(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -493,6 +501,30 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			assertEqual(t, rr.Header().Get("Etag"), meta["version"])
 		})
 	}
+}
+
+func TestServerResourcePostHandlerWithExtension(t *testing.T) {
+	body := `{
+		"schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],
+		"userName": "test1",
+		"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+			"employeeNumber": "1234"
+		}
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/EnterpriseUsers", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusCreated, rr.Code)
+}
+
+func TestServerResourcePostHandlerWrongSchema(t *testing.T) {
+	body := `{"userName": "test1", "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"]}`
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestServerResourcePutHandlerNotFound(t *testing.T) {

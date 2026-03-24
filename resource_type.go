@@ -106,7 +106,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 			continue
 		}
 
-		extensionAttributes, scimErr := extension.Schema.Validate(extensionField)
+		extensionAttributes, scimErr := extension.Schema.ValidateExtension(extensionField)
 		if scimErr != nil {
 			return ResourceAttributes{}, scimErr
 		}
