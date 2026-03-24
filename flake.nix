@@ -12,15 +12,25 @@
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          ci = pkgs.writeShellScriptBin "ci" ''
+          goarrange = pkgs.buildGoModule {
+            pname = "goarrange";
+            version = "1.0.0";
+            src = pkgs.fetchFromGitHub {
+              owner = "jdeflander";
+              repo = "goarrange";
+              rev = "v1.0.0";
+              hash = "sha256-V03BgTeWcAspMHGUHlAgSbiTaoZ42hgb/Zb/yqZ2m+k=";
+            };
+            vendorHash = "sha256-Xhxfiw1WeXFHrYIYvUytEtMzMbSxOrignmUC5kVna0o=";
+          };
+          lint = pkgs.writeShellScriptBin "lint" ''
             set -euo pipefail
-            echo "--- test ---"
-            go test -v ./...
+            echo "--- format ---"
+            go fmt ./...
+            goarrange run -r
+            git diff --quiet
             echo "--- lint ---"
             golangci-lint run -E misspell,godot,whitespace ./...
-            echo "--- arrange ---"
-            command -v goarrange >/dev/null || go install github.com/jdeflander/goarrange@v1.0.0
-            test -z "$(goarrange run -r -d)"
             echo "--- tidy ---"
             go mod tidy
             git diff --quiet go.mod go.sum
@@ -31,7 +41,8 @@
             packages = [
               pkgs.go_1_26
               pkgs.golangci-lint
-              ci
+              goarrange
+              lint
             ];
           };
         }
