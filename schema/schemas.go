@@ -697,9 +697,9 @@ func ServiceProviderConfigSchema() Schema {
 		Attributes: []CoreAttribute{
 			SimpleCoreAttribute(SimpleStringParams(StringParams{
 				Description: optional.NewString("An HTTP-addressable URL pointing to the service provider's human-consumable help documentation."),
-				Mutability: AttributeMutabilityReadOnly(),
-				Name:       "documentationUri",
-				Required:   false,
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "documentationUri",
+				Required:    false,
 			})),
 			ComplexCoreAttribute(ComplexParams{
 				Description: optional.NewString("A complex type that specifies PATCH configuration options."),
@@ -763,9 +763,9 @@ func ServiceProviderConfigSchema() Schema {
 			}),
 			ComplexCoreAttribute(ComplexParams{
 				Description: optional.NewString("A complex type that specifies configuration options related to changing a password."),
-				Mutability: AttributeMutabilityReadOnly(),
-				Name:       "changePassword",
-				Required:   true,
+				Mutability:  AttributeMutabilityReadOnly(),
+				Name:        "changePassword",
+				Required:    true,
 				SubAttributes: []SimpleParams{
 					SimpleBooleanParams(BooleanParams{
 						Description: optional.NewString("A Boolean value specifying whether or not the operation is supported."),
@@ -812,9 +812,9 @@ func ServiceProviderConfigSchema() Schema {
 				SubAttributes: []SimpleParams{
 					SimpleStringParams(StringParams{
 						Description: optional.NewString("The authentication scheme. This specification defines the values 'oauth', 'oauth2', 'oauthbearertoken', 'httpbasic', and 'httpdigest'."),
-						Mutability: AttributeMutabilityReadOnly(),
-						Name:       "type",
-						Required:   true,
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "type",
+						Required:    true,
 					}),
 					SimpleStringParams(StringParams{
 						Description: optional.NewString("The common authentication scheme name, e.g., HTTP Basic."),
@@ -830,8 +830,8 @@ func ServiceProviderConfigSchema() Schema {
 					}),
 					SimpleStringParams(StringParams{
 						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication scheme's specification."),
-						Mutability: AttributeMutabilityReadOnly(),
-						Name:       "specUri",
+						Mutability:  AttributeMutabilityReadOnly(),
+						Name:        "specUri",
 					}),
 					SimpleStringParams(StringParams{
 						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication scheme's usage documentation."),
