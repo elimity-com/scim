@@ -131,3 +131,33 @@ func TestOperationValidator_ValidateUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateUpdate_SingularValueNotWrapped(t *testing.T) {
+	// RFC 7644 Section 3.5.2.3 (page 43): "If the target location is a
+	// multi-valued attribute and a value selection ("valuePath") filter is
+	// specified that matches one or more values of the multi-valued attribute,
+	// then all matching record values SHALL be replaced."
+	//
+	// The singular value should NOT be wrapped in a slice, as it represents the
+	// replacement for matched records.
+	// https://github.com/elimity-com/scim/issues/188
+	op, _ := json.Marshal(map[string]interface{}{
+		"op":    "replace",
+		"path":  `complexMultiValued[attr1 eq "value"]`,
+		"value": map[string]interface{}{"attr1": "new"},
+	})
+	validator, err := NewValidator(op, patchSchema, patchSchemaExtension)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := validator.Validate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := v.([]interface{}); ok {
+		t.Error("singular value with value expression should not be wrapped in a slice")
+	}
+	if _, ok := v.(map[string]interface{}); !ok {
+		t.Errorf("expected map[string]interface{}, got %T", v)
+	}
+}
