@@ -62,5 +62,11 @@ func (v OperationValidator) validateUpdate() (interface{}, error) {
 	if scimErr != nil {
 		return nil, scimErr
 	}
+	// When a value expression is present (e.g. addresses[type eq "work"]),
+	// the value replaces the matched element and should not be wrapped in a
+	// slice. Only wrap when replacing the entire multi-valued attribute.
+	if v.Path != nil && v.Path.ValueExpression != nil {
+		return attr, nil
+	}
 	return []interface{}{attr}, nil
 }

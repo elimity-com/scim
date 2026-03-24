@@ -100,8 +100,9 @@ func NewValidator(patchReq []byte, s schema.Schema, extensions ...schema.Schema)
 }
 
 // Validate validates the PATCH operation. Unknown attributes in complex values are ignored. The returned interface
-// contains a (sanitised) version of given value based on the attribute it targets. Multi-valued attributes will always
-// be returned wrapped in a slice, even if it is just one value that was defined within the operation.
+// contains a (sanitised) version of given value based on the attribute it targets. Multi-valued attributes are
+// returned wrapped in a slice, unless a value expression is present in the path (e.g. addresses[type eq "work"]),
+// in which case a singular value is returned unwrapped as it targets a specific matched element.
 func (v OperationValidator) Validate() (interface{}, error) {
 	switch v.Op {
 	case OperationAdd, OperationReplace:
