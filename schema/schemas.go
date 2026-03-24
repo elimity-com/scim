@@ -690,13 +690,13 @@ func ResourceTypeSchema() Schema {
 	}
 }
 
-// ServiceProviderConfig returns the Resource Type Schema.
+// ServiceProviderConfigSchema returns the Service Provider Config Schema.
 // RFC: https://tools.ietf.org/html/rfc7643#section-5
 func ServiceProviderConfigSchema() Schema {
 	return Schema{
 		Attributes: []CoreAttribute{
 			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("An HTTP-addressable URL pointing to the service provider's	human-consumable help documentation."),
+				Description: optional.NewString("An HTTP-addressable URL pointing to the service provider's human-consumable help documentation."),
 				Mutability: AttributeMutabilityReadOnly(),
 				Name:       "documentationUri",
 				Required:   false,
@@ -762,7 +762,7 @@ func ServiceProviderConfigSchema() Schema {
 				},
 			}),
 			ComplexCoreAttribute(ComplexParams{
-				Description: optional.NewString("A complex type that specifies configuration options related to	changing a password."),
+				Description: optional.NewString("A complex type that specifies configuration options related to changing a password."),
 				Mutability: AttributeMutabilityReadOnly(),
 				Name:       "changePassword",
 				Required:   true,
@@ -804,14 +804,14 @@ func ServiceProviderConfigSchema() Schema {
 				},
 			}),
 			ComplexCoreAttribute(ComplexParams{
-				Description: optional.NewString("A complex type that specifies ETag configuration options."),
+				Description: optional.NewString("A multi-valued complex type that specifies supported authentication scheme properties."),
 				Mutability:  AttributeMutabilityReadOnly(),
 				Name:        "authenticationSchemes",
 				Required:    true,
 				MultiValued: true,
 				SubAttributes: []SimpleParams{
 					SimpleStringParams(StringParams{
-						Description: optional.NewString("The authentication scheme.  This specification defines the	values 'oauth', 'oauth2', 'oauthbearertoken', 'httpbasic', and 'httpdigest'."),
+						Description: optional.NewString("The authentication scheme. This specification defines the values 'oauth', 'oauth2', 'oauthbearertoken', 'httpbasic', and 'httpdigest'."),
 						Mutability: AttributeMutabilityReadOnly(),
 						Name:       "type",
 						Required:   true,
@@ -829,7 +829,7 @@ func ServiceProviderConfigSchema() Schema {
 						Required:    true,
 					}),
 					SimpleStringParams(StringParams{
-						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication	scheme's specification."),
+						Description: optional.NewString("An HTTP-addressable URL pointing to the authentication scheme's specification."),
 						Mutability: AttributeMutabilityReadOnly(),
 						Name:       "specUri",
 					}),
