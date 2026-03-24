@@ -1,0 +1,75 @@
+package schema
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/elimity-com/scim/optional"
+)
+
+func ExampleCoreAttribute_WithRequired() {
+	// Customize the pre-built CoreUserSchema to make "emails" required.
+	userSchema := CoreUserSchema()
+	for i, attr := range userSchema.Attributes {
+		if attr.Name() == "emails" {
+			userSchema.Attributes[i] = attr.WithRequired(true)
+		}
+	}
+
+	emails, _ := userSchema.Attributes.ContainsAttribute("emails")
+	fmt.Println(emails.Required())
+	// Output: true
+}
+
+func TestCoreAttribute_WithDescription(t *testing.T) {
+	attr := SimpleCoreAttribute(SimpleStringParams(StringParams{
+		Name: "test",
+	}))
+	desc := optional.NewString("new description")
+	got := attr.WithDescription(desc)
+	if got.Description() != "new description" {
+		t.Errorf("WithDescription: got %q, want %q", got.Description(), "new description")
+	}
+	if attr.Description() != "" {
+		t.Error("WithDescription modified the original attribute")
+	}
+}
+
+func TestCoreAttribute_WithMutability(t *testing.T) {
+	attr := SimpleCoreAttribute(SimpleStringParams(StringParams{
+		Name: "test",
+	}))
+	got := attr.WithMutability(AttributeMutabilityImmutable())
+	if got.Mutability() != "immutable" {
+		t.Errorf("WithMutability: got %q, want %q", got.Mutability(), "immutable")
+	}
+	if attr.Mutability() != "readWrite" {
+		t.Error("WithMutability modified the original attribute")
+	}
+}
+
+func TestCoreAttribute_WithRequired(t *testing.T) {
+	attr := SimpleCoreAttribute(SimpleStringParams(StringParams{
+		Name: "test",
+	}))
+	got := attr.WithRequired(true)
+	if !got.Required() {
+		t.Error("WithRequired(true): got false, want true")
+	}
+	if attr.Required() {
+		t.Error("WithRequired modified the original attribute")
+	}
+}
+
+func TestCoreAttribute_WithReturned(t *testing.T) {
+	attr := SimpleCoreAttribute(SimpleStringParams(StringParams{
+		Name: "test",
+	}))
+	got := attr.WithReturned(AttributeReturnedNever())
+	if got.Returned() != "never" {
+		t.Errorf("WithReturned: got %q, want %q", got.Returned(), "never")
+	}
+	if attr.Returned() != "default" {
+		t.Error("WithReturned modified the original attribute")
+	}
+}

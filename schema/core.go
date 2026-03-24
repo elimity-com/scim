@@ -291,6 +291,30 @@ func (a CoreAttribute) ValidateSingular(attribute interface{}) (interface{}, *er
 	}
 }
 
+// WithDescription returns a copy of the attribute with the given description.
+func (a CoreAttribute) WithDescription(description optional.String) CoreAttribute {
+	a.description = description
+	return a
+}
+
+// WithMutability returns a copy of the attribute with the given mutability.
+func (a CoreAttribute) WithMutability(mutability AttributeMutability) CoreAttribute {
+	a.mutability = mutability.m
+	return a
+}
+
+// WithRequired returns a copy of the attribute with the given required value.
+func (a CoreAttribute) WithRequired(required bool) CoreAttribute {
+	a.required = required
+	return a
+}
+
+// WithReturned returns a copy of the attribute with the given returned value.
+func (a CoreAttribute) WithReturned(returned AttributeReturned) CoreAttribute {
+	a.returned = returned.r
+	return a
+}
+
 func (a *CoreAttribute) getRawAttributes() map[string]interface{} {
 	attributes := map[string]interface{}{
 		"description": a.description.Value(),
