@@ -64,6 +64,17 @@ func TestCheckScimError(t *testing.T) {
 	}
 }
 
+func TestCheckScimErrorWrapped(t *testing.T) {
+	wrapped := fmt.Errorf("wrapped: %w", ScimErrorResourceNotFound("123"))
+	scimErr := CheckScimError(wrapped, http.MethodGet)
+	if scimErr.Status != http.StatusNotFound {
+		t.Errorf("status code %d expected, got %d", http.StatusNotFound, scimErr.Status)
+	}
+	if scimErr.Detail != "Resource 123 not found." {
+		t.Errorf("unexpected detail: %s", scimErr.Detail)
+	}
+}
+
 func TestScimErrorMarshalling(t *testing.T) {
 	scimErr := ScimError{
 		ScimType: ScimTypeTooMany,

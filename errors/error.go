@@ -2,6 +2,7 @@ package errors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -132,9 +133,10 @@ type ScimError struct {
 }
 
 // CheckScimError checks whether the error's status code is defined by SCIM for the given HTTP method.
+// Uses errors.As to support wrapped errors (Go 1.13+).
 func CheckScimError(err error, method string) ScimError {
-	scimErr, ok := err.(ScimError)
-	if !ok {
+	var scimErr ScimError
+	if !errors.As(err, &scimErr) {
 		return ScimError{
 			Detail: err.Error(),
 			Status: http.StatusInternalServerError,
