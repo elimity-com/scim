@@ -3,9 +3,10 @@ package scim
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 
-	"github.com/elimity-com/scim/errors"
+	scimErrors "github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/internal/patch"
 	"github.com/elimity-com/scim/optional"
 	"github.com/elimity-com/scim/schema"
@@ -86,10 +87,10 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 	return s
 }
 
-func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimError) {
+func (t ResourceType) validate(raw []byte) (ResourceAttributes, *scimErrors.ScimError) {
 	var m map[string]interface{}
 	if err := unmarshal(raw, &m); err != nil {
-		return ResourceAttributes{}, &errors.ScimErrorInvalidSyntax
+		return ResourceAttributes{}, &scimErrors.ScimErrorInvalidSyntax
 	}
 
 	attributes, scimErr := t.schemaWithCommon().Validate(m)
@@ -101,7 +102,7 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 		extensionField := m[extension.Schema.ID]
 		if extensionField == nil {
 			if extension.Required {
-				return ResourceAttributes{}, &errors.ScimErrorInvalidValue
+				return ResourceAttributes{}, &scimErrors.ScimErrorInvalidValue
 			}
 			continue
 		}
@@ -118,10 +119,10 @@ func (t ResourceType) validate(raw []byte) (ResourceAttributes, *errors.ScimErro
 }
 
 // validatePatch parse and validate PATCH request.
-func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.ScimError) {
+func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *scimErrors.ScimError) {
 	data, err := readBody(r)
 	if err != nil {
-		return nil, &errors.ScimErrorInvalidSyntax
+		return nil, &scimErrors.ScimErrorInvalidSyntax
 	}
 
 	var req struct {
@@ -129,19 +130,19 @@ func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.
 		Operations []json.RawMessage
 	}
 	if err := unmarshal(data, &req); err != nil {
-		return nil, &errors.ScimErrorInvalidSyntax
+		return nil, &scimErrors.ScimErrorInvalidSyntax
 	}
 
 	// The body of each request MUST contain the "schemas" attribute with the URI value of
 	// "urn:ietf:params:scim:api:messages:2.0:PatchOp".
 	if len(req.Schemas) != 1 || req.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:PatchOp" {
-		return nil, &errors.ScimErrorInvalidValue
+		return nil, &scimErrors.ScimErrorInvalidValue
 	}
 
 	// The body of an HTTP PATCH request MUST contain the attribute "Operations",
 	// whose value is an array of one or more PATCH operations.
 	if len(req.Operations) < 1 {
-		return nil, &errors.ScimErrorInvalidValue
+		return nil, &scimErrors.ScimErrorInvalidValue
 	}
 
 	// Evaluation continues until all operations are successfully applied or until an error condition is encountered.
@@ -153,11 +154,15 @@ func (t ResourceType) validatePatch(r *http.Request) ([]PatchOperation, *errors.
 			t.getSchemaExtensions()...,
 		)
 		if err != nil {
-			return nil, &errors.ScimErrorInvalidPath
+			return nil, &scimErrors.ScimErrorInvalidPath
 		}
 		value, err := validator.Validate()
 		if err != nil {
-			return nil, &errors.ScimErrorInvalidValue
+			var scimErr *scimErrors.ScimError
+			if errors.As(err, &scimErr) {
+				return nil, scimErr
+			}
+			return nil, &scimErrors.ScimErrorInvalidValue
 		}
 		operations = append(operations, PatchOperation{
 			Op:    string(validator.Op),

@@ -338,6 +338,25 @@ func TestServerResourcePatchHandlerInvalidRemoveOp(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestServerResourcePatchHandlerInvalidRemoveOpNoTarget(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Groups/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"remove",
+		    "path":""
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+	var scimErr *errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqualSCIMErrors(t, &errors.ScimErrorNoTarget, scimErr)
+}
+
 func TestServerResourcePatchHandlerMapTypeSubAttribute(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	newTestServer(t).ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{

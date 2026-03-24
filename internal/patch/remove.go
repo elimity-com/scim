@@ -2,7 +2,6 @@ package patch
 
 import (
 	"github.com/elimity-com/scim/filter"
-	"net/http"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
@@ -13,10 +12,7 @@ import (
 func (v OperationValidator) validateRemove() (interface{}, error) {
 	// If "path" is unspecified, the operation fails with HTTP status code 400 and a "scimType" error code of "noTarget".
 	if v.Path == nil {
-		return nil, &errors.ScimError{
-			ScimType: errors.ScimTypeNoTarget,
-			Status:   http.StatusBadRequest,
-		}
+		return nil, &errors.ScimErrorNoTarget
 	}
 
 	refAttr, err := v.getRefAttribute(v.Path.AttributePath)
