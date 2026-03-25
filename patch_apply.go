@@ -55,6 +55,33 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 	return result, matched, nil
 }
 
+func attrFromTarget(target interface{}) schema.CoreAttribute {
+	switch t := target.(type) {
+	case *attributeTarget:
+		return t.attr
+	case *subAttributeTarget:
+		return t.attr
+	case *valueExprTarget:
+		return t.attr
+	}
+	panic("unknown target type")
+}
+
+// checkMutability validates that the operation is compatible with the
+// attribute's mutability. Returns a mutability ScimError if not.
+func checkMutability(op string, attr schema.CoreAttribute, exists bool) error {
+	switch attr.Mutability() {
+	case "readOnly":
+		return scimErrors.ScimErrorMutability
+	case "immutable":
+		if op == PatchOperationAdd && !exists {
+			return nil
+		}
+		return scimErrors.ScimErrorMutability
+	}
+	return nil
+}
+
 func copyMap(m map[string]interface{}) map[string]interface{} {
 	cp := make(map[string]interface{}, len(m))
 	for k, v := range m {
@@ -230,6 +257,11 @@ func applyAdd(attrs ResourceAttributes, op PatchOperation, s schema.Schema, exte
 		return nil, err
 	}
 
+	_, exists := attrs[attrName]
+	if err := checkMutability(op.Op, attrFromTarget(target), exists); err != nil {
+		return nil, err
+	}
+
 	switch t := target.(type) {
 	case *attributeTarget:
 		existing, exists := attrs[attrName]
@@ -330,11 +362,16 @@ func applyOperation(attrs ResourceAttributes, op PatchOperation, s schema.Schema
 
 func applyRemove(attrs ResourceAttributes, op PatchOperation, s schema.Schema, extensions []schema.Schema) (ResourceAttributes, error) {
 	if op.Path == nil {
-		return nil, fmt.Errorf("path is required for remove operations")
+		return nil, scimErrors.ScimErrorNoTarget
 	}
 
 	attrName, target, err := resolveTarget(op.Path, s, extensions)
 	if err != nil {
+		return nil, err
+	}
+
+	_, exists := attrs[attrName]
+	if err := checkMutability(op.Op, attrFromTarget(target), exists); err != nil {
 		return nil, err
 	}
 
@@ -389,8 +426,38 @@ func applyReplace(attrs ResourceAttributes, op PatchOperation, s schema.Schema, 
 		return nil, err
 	}
 
+	_, exists := attrs[attrName]
+	if err := checkMutability(op.Op, attrFromTarget(target), exists); err != nil {
+		return nil, err
+	}
+
 	switch t := target.(type) {
 	case *attributeTarget:
+		// RFC 7644 Section 3.5.2.3: if the target location path specifies
+		// an attribute that does not exist, the service provider SHALL
+		// treat the operation as an "add".
+		if _, exists := attrs[attrName]; !exists {
+			return applyAdd(attrs, op, s, extensions)
+		}
+		// RFC 7644 Section 3.5.2.3: "If the target location specifies a
+		// complex attribute, a set of sub-attributes SHALL be specified in
+		// the 'value' parameter, which replaces any existing values or adds
+		// where an attribute did not previously exist. Sub-attributes that
+		// are not specified in the 'value' parameter are left unchanged."
+		if t.attr.HasSubAttributes() && !t.attr.MultiValued() {
+			existingMap, ok := attrs[attrName].(map[string]interface{})
+			if ok {
+				valueMap, ok := op.Value.(map[string]interface{})
+				if ok {
+					merged := copyMap(existingMap)
+					for k, v := range valueMap {
+						merged[k] = v
+					}
+					attrs[attrName] = merged
+					return attrs, nil
+				}
+			}
+		}
 		attrs[attrName] = op.Value
 	case *subAttributeTarget:
 		existing, exists := attrs[attrName]
@@ -411,7 +478,8 @@ func applyReplace(attrs ResourceAttributes, op PatchOperation, s schema.Schema, 
 		// RFC 7644 Section 3.5.2.3: if the target location is a multi-valued
 		// attribute for which a value selection filter ("valuePath") has been
 		// supplied and no record match was made, the service provider SHALL
-		// return a 400 error with a scimType of noTarget.
+		// indicate failure by returning HTTP status code 400 and a "scimType"
+		// error code of "noTarget".
 		existing, exists := attrs[attrName]
 		if !exists {
 			return nil, scimErrors.ScimErrorNoTarget
