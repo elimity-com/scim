@@ -3,15 +3,17 @@ package scim
 import (
 	"fmt"
 
+	scimErrors "github.com/elimity-com/scim/errors"
 	internal "github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 	filter "github.com/scim2/filter-parser/v2"
 )
 
-func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, replace bool) ([]interface{}, error) {
+func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, replace bool) ([]interface{}, bool, error) {
 	result := make([]interface{}, len(list))
 	copy(result, list)
 
+	matched := false
 	for i, elem := range result {
 		m, ok := elem.(map[string]interface{})
 		if !ok {
@@ -20,6 +22,7 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 		if !matchesExpression(m, t.expr, t.attr, t.refSchema) {
 			continue
 		}
+		matched = true
 		if t.subAttrName != "" {
 			updated := copyMap(m)
 			updated[t.subAttrName] = value
@@ -49,7 +52,7 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 			}
 		}
 	}
-	return result, nil
+	return result, matched, nil
 }
 
 func copyMap(m map[string]interface{}) map[string]interface{} {
@@ -263,7 +266,7 @@ func applyAdd(attrs ResourceAttributes, op PatchOperation, s schema.Schema, exte
 		if !ok {
 			return nil, fmt.Errorf("expected multi-valued attribute for %s", attrName)
 		}
-		list, err := applyToMatching(list, t, op.Value, false)
+		list, _, err := applyToMatching(list, t, op.Value, false)
 		if err != nil {
 			return nil, err
 		}
@@ -405,17 +408,24 @@ func applyReplace(attrs ResourceAttributes, op PatchOperation, s schema.Schema, 
 		m[t.subAttrName] = op.Value
 		attrs[attrName] = m
 	case *valueExprTarget:
+		// RFC 7644 Section 3.5.2.3: if the target location is a multi-valued
+		// attribute for which a value selection filter ("valuePath") has been
+		// supplied and no record match was made, the service provider SHALL
+		// return a 400 error with a scimType of noTarget.
 		existing, exists := attrs[attrName]
 		if !exists {
-			return attrs, nil
+			return nil, scimErrors.ScimErrorNoTarget
 		}
 		list, ok := existing.([]interface{})
 		if !ok {
 			return nil, fmt.Errorf("expected multi-valued attribute for %s", attrName)
 		}
-		list, err := applyToMatching(list, t, op.Value, true)
+		list, matched, err := applyToMatching(list, t, op.Value, true)
 		if err != nil {
 			return nil, err
+		}
+		if !matched {
+			return nil, scimErrors.ScimErrorNoTarget
 		}
 		attrs[attrName] = list
 	}

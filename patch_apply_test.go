@@ -3,8 +3,9 @@ package scim
 import (
 	"testing"
 
+	scimErrors "github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
-	filterlib "github.com/scim2/filter-parser/v2"
+	filter "github.com/scim2/filter-parser/v2"
 )
 
 func TestApplyPatch_AddSimpleAttribute(t *testing.T) {
@@ -306,6 +307,47 @@ func TestApplyPatch_ReplaceSimpleAttribute(t *testing.T) {
 	}
 }
 
+// RFC 7644 Section 3.5.2.3: "If the target location is a multi-valued
+// attribute for which a value selection filter ("valuePath") has been
+// supplied and no record match was made, the service provider SHALL
+// return a 400 error with a scimType of noTarget".
+func TestApplyPatch_ReplaceValueExprNoTarget_AttributeMissing(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"userName": "john",
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{
+			Op:    PatchOperationReplace,
+			Path:  mustParsePath(`emails[type eq "work"].value`),
+			Value: "new@work.com",
+		},
+	}, s)
+	assertScimError(t, err, scimErrors.ScimTypeNoTarget)
+}
+
+func TestApplyPatch_ReplaceValueExprNoTarget_NoMatch(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"emails": []interface{}{
+			map[string]interface{}{
+				"value": "john@home.com",
+				"type":  "home",
+			},
+		},
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{
+			Op:    PatchOperationReplace,
+			Path:  mustParsePath(`emails[type eq "work"].value`),
+			Value: "new@work.com",
+		},
+	}, s)
+	assertScimError(t, err, scimErrors.ScimTypeNoTarget)
+}
+
 func TestApplyPatch_ReplaceWithNoPath(t *testing.T) {
 	s := testUserSchema()
 	attrs := ResourceAttributes{
@@ -374,8 +416,8 @@ func TestApplyPatch_ReplaceWithValueExpression(t *testing.T) {
 	}
 }
 
-func mustParsePath(s string) *filterlib.Path {
-	p, err := filterlib.ParsePath([]byte(s))
+func mustParsePath(s string) *filter.Path {
+	p, err := filter.ParsePath([]byte(s))
 	if err != nil {
 		panic(err)
 	}
