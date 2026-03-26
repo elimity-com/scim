@@ -3,6 +3,7 @@ package scim
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/schema"
@@ -334,6 +335,132 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 }
 
+// rootResourcesGetHandler receives an HTTP GET request to the server root endpoint to query across all resource types.
+func (s Server) rootResourcesGetHandler(w http.ResponseWriter, r *http.Request) {
+	count, startIndex, scimErr := s.parsePaginationParams(r)
+	if scimErr != nil {
+		s.errorHandler(w, scimErr)
+		return
+	}
+
+	params := ListRequestParams{
+		Count:      count,
+		Filter:     strings.TrimSpace(r.URL.Query().Get("filter")),
+		StartIndex: startIndex,
+	}
+
+	page, getError := s.rootQueryHandler.GetAll(r, params)
+	if getError != nil {
+		scimErr := errors.CheckScimError(getError, http.MethodGet)
+		s.errorHandler(w, &scimErr)
+		return
+	}
+
+	lr := listResponse{
+		TotalResults: page.TotalResults,
+		Resources:    page.rawResources(),
+		StartIndex:   params.StartIndex,
+		ItemsPerPage: params.Count,
+	}
+	raw, err := json.Marshal(lr)
+	if err != nil {
+		s.errorHandler(w, &errors.ScimErrorInternal)
+		s.log.Error(
+			"failed marshaling list response",
+			"listResponse", lr,
+			"error", err,
+		)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		s.log.Error(
+			"failed writing response",
+			"error", err,
+		)
+	}
+}
+
+// rootSearchHandler receives an HTTP POST request to /.search to query across all resource types.
+// Per RFC 7644 Section 3.4.3, this is an alternative to GET / with query parameters.
+func (s Server) rootSearchHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := readBody(r)
+	if err != nil {
+		s.errorHandler(w, &errors.ScimErrorInternal)
+		return
+	}
+
+	var sr searchRequest
+	if err := json.Unmarshal(data, &sr); err != nil {
+		scimErr := errors.ScimError{
+			Status: http.StatusBadRequest,
+			Detail: "Invalid search request body.",
+		}
+		s.errorHandler(w, &scimErr)
+		return
+	}
+
+	defaultCount := s.config.getItemsPerPage()
+
+	count := defaultCount
+	if sr.Count != nil {
+		count = *sr.Count
+	}
+	if count > defaultCount {
+		count = defaultCount
+	}
+	if count < 0 {
+		count = 0
+	}
+
+	startIndex := defaultStartIndex
+	if sr.StartIndex != nil {
+		startIndex = *sr.StartIndex
+	}
+	if startIndex < 1 {
+		startIndex = defaultStartIndex
+	}
+
+	params := ListRequestParams{
+		Count:      count,
+		Filter:     sr.Filter,
+		StartIndex: startIndex,
+	}
+
+	page, getError := s.rootQueryHandler.GetAll(r, params)
+	if getError != nil {
+		scimErr := errors.CheckScimError(getError, http.MethodPost)
+		s.errorHandler(w, &scimErr)
+		return
+	}
+
+	lr := listResponse{
+		TotalResults: page.TotalResults,
+		Resources:    page.rawResources(),
+		StartIndex:   params.StartIndex,
+		ItemsPerPage: params.Count,
+	}
+	raw, err := json.Marshal(lr)
+	if err != nil {
+		s.errorHandler(w, &errors.ScimErrorInternal)
+		s.log.Error(
+			"failed marshaling list response",
+			"listResponse", lr,
+			"error", err,
+		)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		s.log.Error(
+			"failed writing response",
+			"error", err,
+		)
+	}
+}
+
 // schemaHandler receives an HTTP GET to retrieve individual schema definitions which can be returned by appending the
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User".
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
@@ -439,4 +566,12 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 			"error", err,
 		)
 	}
+}
+
+// searchRequest represents the JSON body of a POST /.search request per RFC 7644 Section 3.4.3.
+type searchRequest struct {
+	Schemas    []string `json:"schemas"`
+	Filter     string   `json:"filter"`
+	StartIndex *int     `json:"startIndex"`
+	Count      *int     `json:"count"`
 }

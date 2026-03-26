@@ -24,7 +24,11 @@ func getFilterValidator(r *http.Request, s schema.Schema, extensions ...schema.S
 		return nil, nil // No filter present.
 	}
 
-	validator, err := filter.NewValidator(f, s, extensions...)
+	withCommon := s
+	attrs := make([]schema.CoreAttribute, len(s.Attributes), len(s.Attributes)+len(schema.CommonAttributes()))
+	copy(attrs, s.Attributes)
+	withCommon.Attributes = append(attrs, schema.CommonAttributes()...)
+	validator, err := filter.NewValidator(f, withCommon, extensions...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +72,11 @@ func resourceLocation(resourceType ResourceType, id string, baseURL string) stri
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol
 // that makes managing identities in multi-domain scenarios easier to support via a standardized service.
 type Server struct {
-	config        ServiceProviderConfig
-	resourceTypes []ResourceType
-	log           Logger
-	baseURL       string
+	config           ServiceProviderConfig
+	resourceTypes    []ResourceType
+	rootQueryHandler RootQueryHandler
+	log              Logger
+	baseURL          string
 }
 
 func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
@@ -108,6 +113,20 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/v2")
 
 	switch {
+	case (path == "/" || path == "") && r.Method == http.MethodGet:
+		if s.rootQueryHandler == nil {
+			s.errorHandler(w, &errors.ScimErrorTooMany)
+			return
+		}
+		s.rootResourcesGetHandler(w, r)
+		return
+	case path == "/.search" && r.Method == http.MethodPost:
+		if s.rootQueryHandler == nil {
+			s.errorHandler(w, &errors.ScimErrorTooMany)
+			return
+		}
+		s.rootSearchHandler(w, r)
+		return
 	case path == "/Me":
 		s.errorHandler(w, &errors.ScimError{
 			Status: http.StatusNotImplemented,
@@ -215,7 +234,7 @@ func (s Server) getSchemas() []schema.Schema {
 	return schemas
 }
 
-func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, refExtensions ...schema.Schema) (ListRequestParams, *errors.ScimError) {
+func (s Server) parsePaginationParams(r *http.Request) (count, startIndex int, _ *errors.ScimError) {
 	invalidParams := make([]string, 0)
 
 	defaultCount := s.config.getItemsPerPage()
@@ -224,11 +243,9 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 		invalidParams = append(invalidParams, "count")
 	}
 	if count > defaultCount {
-		// Ensure the count isn't more then the allowable max.
 		count = defaultCount
 	}
 	if count < 0 {
-		// A negative value shall be interpreted as 0.
 		count = 0
 	}
 
@@ -242,7 +259,16 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 
 	if len(invalidParams) > 0 {
 		scimErr := errors.ScimErrorBadParams(invalidParams)
-		return ListRequestParams{}, &scimErr
+		return 0, 0, &scimErr
+	}
+
+	return count, startIndex, nil
+}
+
+func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, refExtensions ...schema.Schema) (ListRequestParams, *errors.ScimError) {
+	count, startIndex, scimErr := s.parsePaginationParams(r)
+	if scimErr != nil {
+		return ListRequestParams{}, scimErr
 	}
 
 	validator, err := getFilterValidator(r, refSchema, refExtensions...)
@@ -252,6 +278,7 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 
 	return ListRequestParams{
 		Count:           count,
+		Filter:          strings.TrimSpace(r.URL.Query().Get("filter")),
 		FilterValidator: validator,
 		StartIndex:      startIndex,
 	}, nil
@@ -278,6 +305,17 @@ func WithLogger(logger Logger) ServerOption {
 	return func(s *Server) {
 		if logger != nil {
 			s.log = logger
+		}
+	}
+}
+
+// WithRootQueryHandler sets a handler for queries against the server root endpoint (GET /).
+// Per RFC 7644 Section 3.4.2.1, a query against the server root indicates that all resources
+// within the server shall be included, subject to filtering.
+func WithRootQueryHandler(h RootQueryHandler) ServerOption {
+	return func(s *Server) {
+		if h != nil {
+			s.rootQueryHandler = h
 		}
 	}
 }

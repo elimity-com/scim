@@ -82,7 +82,9 @@ func (t ResourceType) schemaWithCommon() schema.Schema {
 		}),
 	)
 
-	s.Attributes = append(s.Attributes, externalID)
+	attrs := make([]schema.CoreAttribute, len(s.Attributes), len(s.Attributes)+1)
+	copy(attrs, s.Attributes)
+	s.Attributes = append(attrs, externalID)
 
 	return s
 }

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
@@ -913,6 +914,28 @@ func TestServerResourcesGetHandler(t *testing.T) {
 	assertEqual(t, 20, len(response.Resources))
 }
 
+func TestServerResourcesGetHandlerFilterOnCommonAttribute(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter string
+	}{
+		{name: "meta.lastModified", filter: `meta.lastModified gt "2011-05-13T04:42:34Z"`},
+		{name: "meta.resourceType", filter: `meta.resourceType eq "User"`},
+		{name: "id", filter: `id eq "0001"`},
+		{name: "externalId", filter: `externalId eq "external1"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			target := fmt.Sprintf("/Users?filter=%s", url.QueryEscape(tt.filter))
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(t).ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+		})
+	}
+}
+
 func TestServerResourcesGetHandlerMaxCount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/Users?count=20000", nil)
 	rr := httptest.NewRecorder()
@@ -957,6 +980,452 @@ func TestServerResourcesGetHandlerWithBaseURL(t *testing.T) {
 		assertTypeOk(t, ok, "string")
 
 		assertTrue(t, strings.HasPrefix(location, "https://example.com/v2/Users/"))
+	}
+}
+
+func TestServerRootQuery(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 3, len(response.Resources))
+}
+
+func TestServerRootQueryExplicitStatusCode(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	w := &statusRecordingResponseWriter{ResponseWriter: rr}
+	s.ServeHTTP(w, req)
+
+	if !w.calledWriteHeader {
+		t.Error("handler did not explicitly call WriteHeader")
+	}
+	assertEqualStatusCode(t, http.StatusOK, w.status)
+}
+
+func TestServerRootQueryFilter(t *testing.T) {
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{},
+		},
+		WithRootQueryHandler(testRootQueryHandlerCapture{}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, `/?filter=meta.resourceType+eq+"User"`, nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 1, response.TotalResults)
+	assertEqual(t, 1, len(response.Resources))
+
+	resource := response.Resources[0].(map[string]interface{})
+	assertEqual(t, `meta.resourceType eq "User"`, resource["capturedFilter"])
+}
+
+func TestServerRootQueryHandlerError(t *testing.T) {
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{},
+		},
+		WithRootQueryHandler(testRootQueryHandlerError{}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusInternalServerError, rr.Code)
+}
+
+func TestServerRootQueryInjectsResourceFields(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+
+	// First resource has ID and ExternalID set on the Resource struct.
+	first := response.Resources[0].(map[string]interface{})
+	assertEqual(t, "u1", first["id"])
+	assertEqual(t, "ext-u1", first["externalId"])
+
+	// Second resource has ID but no ExternalID.
+	second := response.Resources[1].(map[string]interface{})
+	assertEqual(t, "u2", second["id"])
+	if _, ok := second["externalId"]; ok {
+		t.Error("externalId should not be present when not set on Resource")
+	}
+
+	// The caller-provided "meta" map (with "resourceType") is preserved.
+	firstMeta := first["meta"].(map[string]interface{})
+	assertEqual(t, "User", firstMeta["resourceType"])
+}
+
+func TestServerRootQueryInvalidCount(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/?count=BadBanana", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerRootQueryMergesMetaFields(t *testing.T) {
+	created := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	modified := time.Date(2024, 6, 20, 14, 0, 0, 0, time.UTC)
+
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{},
+		},
+		WithRootQueryHandler(testRootQueryHandlerWithMeta{
+			created:  &created,
+			modified: &modified,
+			version:  `W/"abc123"`,
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+
+	resource := response.Resources[0].(map[string]interface{})
+	assertEqual(t, "r1", resource["id"])
+
+	// Meta fields from Resource.Meta are merged with the caller-provided "meta" map.
+	m := resource["meta"].(map[string]interface{})
+	assertEqual(t, "User", m["resourceType"])
+	assertEqual(t, created.Format(time.RFC3339), m["created"])
+	assertEqual(t, modified.Format(time.RFC3339), m["lastModified"])
+	assertEqual(t, `W/"abc123"`, m["version"])
+}
+
+func TestServerRootQueryNonGetMethod(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/", nil)
+			rr := httptest.NewRecorder()
+			s.ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+		})
+	}
+}
+
+func TestServerRootQueryNotConfigured(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var scimErr errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqual(t, errors.ScimTypeTooMany, scimErr.ScimType)
+}
+
+func TestServerRootQueryNotConfiguredWithV2Prefix(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/v2", nil)
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var scimErr errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqual(t, errors.ScimTypeTooMany, scimErr.ScimType)
+}
+
+func TestServerRootQueryNotConfiguredWithV2PrefixTrailingSlash(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/v2/", nil)
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var scimErr errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqual(t, errors.ScimTypeTooMany, scimErr.ScimType)
+}
+
+func TestServerRootQueryPagination(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/?count=1&startIndex=2", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 1, len(response.Resources))
+	assertEqual(t, 2, response.StartIndex)
+	assertEqual(t, 1, response.ItemsPerPage)
+}
+
+func TestServerRootQueryWithV2Prefix(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+}
+
+func TestServerRootQueryWithV2PrefixTrailingSlash(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/", nil)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+}
+
+func TestServerRootSearch(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"]}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 3, len(response.Resources))
+}
+
+func TestServerRootSearchCountExceedsMax(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{"count":999999}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 3, len(response.Resources))
+}
+
+func TestServerRootSearchDefaultParams(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 3, len(response.Resources))
+	assertEqual(t, 1, response.StartIndex)
+}
+
+func TestServerRootSearchExplicitStatusCode(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	w := &statusRecordingResponseWriter{ResponseWriter: rr}
+	s.ServeHTTP(w, req)
+
+	if !w.calledWriteHeader {
+		t.Error("handler did not explicitly call WriteHeader")
+	}
+	assertEqualStatusCode(t, http.StatusOK, w.status)
+}
+
+func TestServerRootSearchFilter(t *testing.T) {
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{},
+		},
+		WithRootQueryHandler(testRootQueryHandlerCapture{}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"filter":"meta.resourceType eq \"User\""}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 1, response.TotalResults)
+
+	resource := response.Resources[0].(map[string]interface{})
+	assertEqual(t, `meta.resourceType eq "User"`, resource["capturedFilter"])
+}
+
+func TestServerRootSearchHandlerError(t *testing.T) {
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{},
+		},
+		WithRootQueryHandler(testRootQueryHandlerError{}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := strings.NewReader(`{}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusInternalServerError, rr.Code)
+}
+
+func TestServerRootSearchInvalidBody(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`not json`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerRootSearchNegativeCount(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{"count":-5}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 0, len(response.Resources))
+	assertEqual(t, 0, response.ItemsPerPage)
+}
+
+func TestServerRootSearchNotConfigured(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/.search", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+
+	var scimErr errors.ScimError
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &scimErr))
+	assertEqual(t, errors.ScimTypeTooMany, scimErr.ScimType)
+}
+
+func TestServerRootSearchPagination(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"startIndex":2,"count":1}`)
+	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+	assertEqual(t, 1, len(response.Resources))
+	assertEqual(t, 2, response.StartIndex)
+	assertEqual(t, 1, response.ItemsPerPage)
+}
+
+func TestServerRootSearchWithV2Prefix(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"]}`)
+	req := httptest.NewRequest(http.MethodPost, "/v2/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 3, response.TotalResults)
+}
+
+func TestServerRootSearchWrongMethod(t *testing.T) {
+	s := newTestServerWithRootQueryHandler(t)
+
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/.search", nil)
+			rr := httptest.NewRecorder()
+			s.ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+		})
 	}
 }
 
@@ -1262,6 +1731,30 @@ func newTestServerWithBaseURL(t *testing.T) Server {
 	return s
 }
 
+func newTestServerWithRootQueryHandler(t *testing.T) Server {
+	userSchema := getUserSchema()
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes: []ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      userSchema,
+					Handler:     newTestResourceHandler(),
+				},
+			},
+		},
+		WithRootQueryHandler(testRootQueryHandler{}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
 // statusRecordingResponseWriter wraps an http.ResponseWriter and records
 // whether WriteHeader was called explicitly, simulating logging middleware.
 type statusRecordingResponseWriter struct {
@@ -1274,4 +1767,67 @@ func (w *statusRecordingResponseWriter) WriteHeader(status int) {
 	w.calledWriteHeader = true
 	w.status = status
 	w.ResponseWriter.WriteHeader(status)
+}
+
+type testRootQueryHandler struct{}
+
+func (h testRootQueryHandler) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	resources := []Resource{
+		{ID: "u1", ExternalID: optional.NewString("ext-u1"), Attributes: ResourceAttributes{"userName": "alice", "meta": map[string]interface{}{"resourceType": "User"}}},
+		{ID: "u2", Attributes: ResourceAttributes{"userName": "bob", "meta": map[string]interface{}{"resourceType": "User"}}},
+		{ID: "g1", Attributes: ResourceAttributes{"displayName": "admins", "meta": map[string]interface{}{"resourceType": "Group"}}},
+	}
+
+	start := params.StartIndex - 1
+	if start > len(resources) {
+		start = len(resources)
+	}
+	end := start + params.Count
+	if end > len(resources) {
+		end = len(resources)
+	}
+
+	return Page{
+		TotalResults: len(resources),
+		Resources:    resources[start:end],
+	}, nil
+}
+
+type testRootQueryHandlerCapture struct{}
+
+func (h testRootQueryHandlerCapture) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	return Page{
+		TotalResults: 1,
+		Resources: []Resource{
+			{ID: "1", Attributes: ResourceAttributes{"capturedFilter": params.Filter}},
+		},
+	}, nil
+}
+
+type testRootQueryHandlerError struct{}
+
+func (h testRootQueryHandlerError) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	return Page{}, errors.ScimError{
+		Status: http.StatusInternalServerError,
+		Detail: "something went wrong",
+	}
+}
+
+type testRootQueryHandlerWithMeta struct {
+	created  *time.Time
+	modified *time.Time
+	version  string
+}
+
+func (h testRootQueryHandlerWithMeta) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	return Page{
+		TotalResults: 1,
+		Resources: []Resource{
+			{
+				ID:         "r1",
+				Meta:       Meta{Created: h.created, LastModified: h.modified, Version: h.version},
+				Attributes: ResourceAttributes{"meta": map[string]interface{}{"resourceType": "User"}},
+			},
+		},
+	}, nil
 }

@@ -15,8 +15,15 @@ type ListRequestParams struct {
 	// A value of "0" indicates that no resource results are to be returned except for "totalResults".
 	Count int
 
-	// Filter represents the parsed and tokenized filter query parameter.
+	// Filter is the raw filter expression string. For resource-type-specific queries, the filter
+	// is also parsed and available via FilterValidator. For root queries (RootQueryHandler),
+	// only this raw string is provided since filter validation requires a known schema.
+	Filter string
+
+	// FilterValidator represents the parsed and tokenized filter query parameter.
 	// It is an optional parameter and thus will be nil when the parameter is not present.
+	// For root queries (RootQueryHandler), this is always nil since filter validation requires
+	// a known schema.
 	FilterValidator *filter.Validator
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
@@ -111,4 +118,52 @@ type ResourceHandler interface {
 	// 2. the Remove operation should return No Content when the value to be remove is already absent.
 	// More information in Section 3.5.2 of RFC 7644: https://tools.ietf.org/html/rfc7644#section-3.5.2
 	Patch(r *http.Request, id string, operations []PatchOperation) (Resource, error)
+}
+
+// ResourceTypeFilter associates a resource type with a validated filter.
+type ResourceTypeFilter struct {
+	// ResourceType is the resource type whose schema the filter validated against.
+	ResourceType ResourceType
+	// Validator is the filter validator for this resource type's schema.
+	Validator filter.Validator
+}
+
+// ValidateFilterForResourceTypes validates a raw filter expression against each of the given resource types' schemas.
+// It returns a ResourceTypeFilter for each resource type whose schema the filter is valid for.
+// This is useful for RootQueryHandler implementations to determine which resource types a filter applies to.
+// An empty result means the filter is not valid for any of the given resource types.
+// A parse error in the filter expression results in an empty result.
+func ValidateFilterForResourceTypes(rawFilter string, resourceTypes []ResourceType) []ResourceTypeFilter {
+	var results []ResourceTypeFilter
+	for _, rt := range resourceTypes {
+		s := rt.Schema
+		attrs := make([]schema.CoreAttribute, len(s.Attributes), len(s.Attributes)+len(schema.CommonAttributes()))
+		copy(attrs, s.Attributes)
+		s.Attributes = append(attrs, schema.CommonAttributes()...)
+		v, err := filter.NewValidator(rawFilter, s, rt.getSchemaExtensions()...)
+		if err != nil {
+			return nil
+		}
+		if err := v.Validate(); err != nil {
+			continue
+		}
+		results = append(results, ResourceTypeFilter{
+			ResourceType: rt,
+			Validator:    v,
+		})
+	}
+	return results
+}
+
+// RootQueryHandler represents an optional callback that handles queries against the server root endpoint (GET /).
+// Per RFC 7644 Section 3.4.2.1, a query against the server root indicates that all resources within the server
+// shall be included, subject to filtering.
+//
+// The server does not validate or parse the filter for root queries because there is no single target schema.
+// ListRequestParams.FilterValidator will always be nil for root queries. The raw filter string can be
+// obtained from the request via r.URL.Query().Get("filter"). The handler is responsible for interpreting
+// the filter (e.g. meta.resourceType eq "User") as appropriate for its backing store.
+type RootQueryHandler interface {
+	// GetAll returns a paginated list of resources across all resource types.
+	GetAll(r *http.Request, params ListRequestParams) (Page, error)
 }
