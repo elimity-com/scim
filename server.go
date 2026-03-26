@@ -120,7 +120,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		s.rootResourcesGetHandler(w, r)
 		return
-	case path == "/.search" && r.Method == http.MethodPost:
+	case path == "/.search":
+		if r.Method != http.MethodPost {
+			s.errorHandler(w, &errors.ScimError{Status: http.StatusMethodNotAllowed})
+			return
+		}
 		if s.rootQueryHandler == nil {
 			s.errorHandler(w, &errors.ScimErrorTooMany)
 			return
@@ -159,6 +163,15 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				s.resourcesGetHandler(w, r, resourceType)
 				return
 			}
+		}
+
+		if path == resourceType.Endpoint+"/.search" {
+			if r.Method != http.MethodPost {
+				s.errorHandler(w, &errors.ScimError{Status: http.StatusMethodNotAllowed})
+				return
+			}
+			s.resourceSearchHandler(w, r, resourceType)
+			return
 		}
 
 		if strings.HasPrefix(path, resourceType.Endpoint+"/") {
@@ -278,7 +291,6 @@ func (s Server) parseRequestParams(r *http.Request, refSchema schema.Schema, ref
 
 	return ListRequestParams{
 		Count:           count,
-		Filter:          strings.TrimSpace(r.URL.Query().Get("filter")),
 		FilterValidator: validator,
 		StartIndex:      startIndex,
 	}, nil

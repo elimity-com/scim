@@ -1,6 +1,7 @@
 package scim
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -783,6 +784,164 @@ func TestServerResourcePutHandlerWithBaseURL(t *testing.T) {
 	assertEqual(t, "https://example.com/v2/Users/0001", meta["location"])
 }
 
+func TestServerResourceSearch(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	count := 10
+	startIndex := 1
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas:            []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		Filter:             `userName eq "test01"`,
+		StartIndex:         &startIndex,
+		Count:              &count,
+		SortBy:             "userName",
+		SortOrder:          "ascending",
+		Attributes:         []string{"userName", "emails"},
+		ExcludedAttributes: []string{"displayName"},
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 1, response.TotalResults)
+	assertEqual(t, 1, len(response.Resources))
+
+	resource := response.Resources[0].(map[string]interface{})
+	assertEqual(t, `userName eq "test01"`, resource["capturedFilter"])
+	assertTrue(t, resource["capturedFilterValid"].(bool))
+	assertEqual(t, float64(10), resource["capturedCount"])
+	assertEqual(t, float64(1), resource["capturedStartIndex"])
+	assertEqual(t, "userName", resource["capturedSortBy"])
+	assertEqual(t, "ascending", resource["capturedSortOrder"])
+
+	attrs := resource["capturedAttributes"].([]interface{})
+	assertLen(t, attrs, 2)
+	assertEqual(t, "userName", attrs[0])
+	assertEqual(t, "emails", attrs[1])
+
+	excluded := resource["capturedExcludedAttributes"].([]interface{})
+	assertLen(t, excluded, 1)
+	assertEqual(t, "displayName", excluded[0])
+}
+
+func TestServerResourceSearchInvalidBody(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	body := strings.NewReader(`not json`)
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", body)
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourceSearchInvalidFilter(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		Filter:  `invalidAttr eq "value"`,
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourceSearchInvalidSchemas(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"wrong"},
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourceSearchInvalidSortOrder(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas:   []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		SortOrder: "invalid",
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourceSearchMissingSchemas(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestServerResourceSearchNotImplemented(t *testing.T) {
+	body := strings.NewReader(`{}`)
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", body)
+	rr := httptest.NewRecorder()
+	newTestServer(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusNotImplemented, rr.Code)
+}
+
+func TestServerResourceSearchPagination(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	startIndex := 2
+	count := 1
+	req := httptest.NewRequest(http.MethodPost, "/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas:    []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		StartIndex: &startIndex,
+		Count:      &count,
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response listResponse
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assertEqual(t, 2, response.StartIndex)
+	assertEqual(t, 1, response.ItemsPerPage)
+}
+
+func TestServerResourceSearchWithV2Prefix(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/v2/Users/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
+	rr := httptest.NewRecorder()
+	s.ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+}
+
+func TestServerResourceSearchWrongMethod(t *testing.T) {
+	s := newTestServerWithSearchHandler(t)
+
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/Users/.search", nil)
+			rr := httptest.NewRecorder()
+			s.ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusMethodNotAllowed, rr.Code)
+		})
+	}
+}
+
 func TestServerResourceTypeHandlerValid(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -1234,8 +1393,9 @@ func TestServerRootQueryWithV2PrefixTrailingSlash(t *testing.T) {
 func TestServerRootSearch(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"]}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1250,8 +1410,11 @@ func TestServerRootSearch(t *testing.T) {
 func TestServerRootSearchCountExceedsMax(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{"count":999999}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	count := 999999
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		Count:   &count,
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1266,8 +1429,9 @@ func TestServerRootSearchCountExceedsMax(t *testing.T) {
 func TestServerRootSearchDefaultParams(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1283,8 +1447,9 @@ func TestServerRootSearchDefaultParams(t *testing.T) {
 func TestServerRootSearchExplicitStatusCode(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
 	rr := httptest.NewRecorder()
 	w := &statusRecordingResponseWriter{ResponseWriter: rr}
 	s.ServeHTTP(w, req)
@@ -1307,8 +1472,10 @@ func TestServerRootSearchFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"filter":"meta.resourceType eq \"User\""}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		Filter:  `meta.resourceType eq "User"`,
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1334,8 +1501,9 @@ func TestServerRootSearchHandlerError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	body := strings.NewReader(`{}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1356,8 +1524,11 @@ func TestServerRootSearchInvalidBody(t *testing.T) {
 func TestServerRootSearchNegativeCount(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{"count":-5}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	count := -5
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		Count:   &count,
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1385,8 +1556,13 @@ func TestServerRootSearchNotConfigured(t *testing.T) {
 func TestServerRootSearchPagination(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"startIndex":2,"count":1}`)
-	req := httptest.NewRequest(http.MethodPost, "/.search", body)
+	startIndex := 2
+	count := 1
+	req := httptest.NewRequest(http.MethodPost, "/.search", marshalSearchRequest(t, searchRequest{
+		Schemas:    []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+		StartIndex: &startIndex,
+		Count:      &count,
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1403,8 +1579,9 @@ func TestServerRootSearchPagination(t *testing.T) {
 func TestServerRootSearchWithV2Prefix(t *testing.T) {
 	s := newTestServerWithRootQueryHandler(t)
 
-	body := strings.NewReader(`{"schemas":["urn:ietf:params:scim:api:messages:2.0:SearchRequest"]}`)
-	req := httptest.NewRequest(http.MethodPost, "/v2/.search", body)
+	req := httptest.NewRequest(http.MethodPost, "/v2/.search", marshalSearchRequest(t, searchRequest{
+		Schemas: []string{"urn:ietf:params:scim:api:messages:2.0:SearchRequest"},
+	}))
 	rr := httptest.NewRecorder()
 	s.ServeHTTP(rr, req)
 
@@ -1424,7 +1601,7 @@ func TestServerRootSearchWrongMethod(t *testing.T) {
 			rr := httptest.NewRecorder()
 			s.ServeHTTP(rr, req)
 
-			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+			assertEqualStatusCode(t, http.StatusMethodNotAllowed, rr.Code)
 		})
 	}
 }
@@ -1642,6 +1819,15 @@ func getUserSchema() schema.Schema {
 	}
 }
 
+func marshalSearchRequest(t *testing.T, sr searchRequest) *bytes.Reader {
+	t.Helper()
+	data, err := json.Marshal(sr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bytes.NewReader(data)
+}
+
 func newTestResourceHandler() ResourceHandler {
 	data := make(map[string]testData)
 
@@ -1755,6 +1941,29 @@ func newTestServerWithRootQueryHandler(t *testing.T) Server {
 	return s
 }
 
+func newTestServerWithSearchHandler(t *testing.T) Server {
+	userSchema := getUserSchema()
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes: []ResourceType{
+				{
+					ID:          optional.NewString("User"),
+					Name:        "User",
+					Endpoint:    "/Users",
+					Description: optional.NewString("User Account"),
+					Schema:      userSchema,
+					Handler:     testSearchHandler{testResourceHandler: newTestResourceHandler().(testResourceHandler)},
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
 // statusRecordingResponseWriter wraps an http.ResponseWriter and records
 // whether WriteHeader was called explicitly, simulating logging middleware.
 type statusRecordingResponseWriter struct {
@@ -1796,6 +2005,16 @@ func (h testRootQueryHandler) GetAll(r *http.Request, params ListRequestParams) 
 type testRootQueryHandlerCapture struct{}
 
 func (h testRootQueryHandlerCapture) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
+	f := r.URL.Query().Get("filter")
+	return Page{
+		TotalResults: 1,
+		Resources: []Resource{
+			{ID: "1", Attributes: ResourceAttributes{"capturedFilter": f}},
+		},
+	}, nil
+}
+
+func (h testRootQueryHandlerCapture) Search(r *http.Request, params SearchParams) (Page, error) {
 	return Page{
 		TotalResults: 1,
 		Resources: []Resource{
@@ -1827,6 +2046,39 @@ func (h testRootQueryHandlerWithMeta) GetAll(r *http.Request, params ListRequest
 				ID:         "r1",
 				Meta:       Meta{Created: h.created, LastModified: h.modified, Version: h.version},
 				Attributes: ResourceAttributes{"meta": map[string]interface{}{"resourceType": "User"}},
+			},
+		},
+	}, nil
+}
+
+type testSearchHandler struct {
+	testResourceHandler
+}
+
+func (h testSearchHandler) Search(r *http.Request, params SearchParams) (Page, error) {
+	attrs := make([]interface{}, len(params.Attributes))
+	for i, a := range params.Attributes {
+		attrs[i] = a
+	}
+	excluded := make([]interface{}, len(params.ExcludedAttributes))
+	for i, a := range params.ExcludedAttributes {
+		excluded[i] = a
+	}
+	return Page{
+		TotalResults: 1,
+		Resources: []Resource{
+			{
+				ID: "s1",
+				Attributes: ResourceAttributes{
+					"capturedFilter":             params.Filter,
+					"capturedFilterValid":        params.FilterValidator != nil,
+					"capturedCount":              params.Count,
+					"capturedStartIndex":         params.StartIndex,
+					"capturedSortBy":             params.SortBy,
+					"capturedSortOrder":          params.SortOrder,
+					"capturedAttributes":         attrs,
+					"capturedExcludedAttributes": excluded,
+				},
 			},
 		},
 	}, nil

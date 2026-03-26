@@ -3,9 +3,9 @@ package scim
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/filter"
 	"github.com/elimity-com/scim/schema"
 )
 
@@ -28,6 +28,62 @@ func (s Server) errorHandler(w http.ResponseWriter, scimErr *errors.ScimError) {
 			"error", err,
 		)
 	}
+}
+
+// parseSearchRequest reads and parses a search request body, returning a SearchParams.
+func (s Server) parseSearchRequest(r *http.Request) (searchRequest, SearchParams, *errors.ScimError) {
+	data, err := readBody(r)
+	if err != nil {
+		return searchRequest{}, SearchParams{}, &errors.ScimErrorInternal
+	}
+
+	var sr searchRequest
+	if err := json.Unmarshal(data, &sr); err != nil {
+		scimErr := errors.ScimError{
+			Status: 400,
+			Detail: "Invalid search request body.",
+		}
+		return searchRequest{}, SearchParams{}, &scimErr
+	}
+
+	if len(sr.Schemas) != 1 || sr.Schemas[0] != "urn:ietf:params:scim:api:messages:2.0:SearchRequest" {
+		return searchRequest{}, SearchParams{}, &errors.ScimErrorInvalidValue
+	}
+
+	if sr.SortOrder != "" && sr.SortOrder != "ascending" && sr.SortOrder != "descending" {
+		return searchRequest{}, SearchParams{}, &errors.ScimErrorInvalidValue
+	}
+
+	defaultCount := s.config.getItemsPerPage()
+
+	count := defaultCount
+	if sr.Count != nil {
+		count = *sr.Count
+	}
+	if count > defaultCount {
+		count = defaultCount
+	}
+	if count < 0 {
+		count = 0
+	}
+
+	startIndex := defaultStartIndex
+	if sr.StartIndex != nil {
+		startIndex = *sr.StartIndex
+	}
+	if startIndex < 1 {
+		startIndex = defaultStartIndex
+	}
+
+	return sr, SearchParams{
+		Attributes:         sr.Attributes,
+		Count:              count,
+		ExcludedAttributes: sr.ExcludedAttributes,
+		Filter:             sr.Filter,
+		SortBy:             sr.SortBy,
+		SortOrder:          sr.SortOrder,
+		StartIndex:         startIndex,
+	}, nil
 }
 
 // resourceDeleteHandler receives an HTTP DELETE request to the resource endpoint, e.g., "/Users/{id}" or "/Groups/{id}",
@@ -215,6 +271,70 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 	}
 }
 
+// resourceSearchHandler receives an HTTP POST request to a resource endpoint's /.search
+// (e.g. /Users/.search) to query resources of that type.
+func (s Server) resourceSearchHandler(w http.ResponseWriter, r *http.Request, resourceType ResourceType) {
+	searcher, ok := resourceType.Handler.(ResourceSearcher)
+	if !ok {
+		s.errorHandler(w, &errors.ScimError{
+			Status: 501,
+			Detail: "Search is not supported for this resource type.",
+		})
+		return
+	}
+
+	_, params, scimErr := s.parseSearchRequest(r)
+	if scimErr != nil {
+		s.errorHandler(w, scimErr)
+		return
+	}
+
+	if params.Filter != "" {
+		validator, err := filter.NewValidator(params.Filter, resourceType.Schema, resourceType.getSchemaExtensions()...)
+		if err != nil {
+			s.errorHandler(w, &errors.ScimErrorInvalidFilter)
+			return
+		}
+		if err := validator.Validate(); err != nil {
+			s.errorHandler(w, &errors.ScimErrorInvalidFilter)
+			return
+		}
+		params.FilterValidator = &validator
+	}
+
+	page, searchErr := searcher.Search(r, params)
+	if searchErr != nil {
+		scimErr := errors.CheckScimError(searchErr, http.MethodPost)
+		s.errorHandler(w, &scimErr)
+		return
+	}
+
+	lr := listResponse{
+		TotalResults: page.TotalResults,
+		Resources:    page.resources(resourceType, s.baseURL),
+		StartIndex:   params.StartIndex,
+		ItemsPerPage: params.Count,
+	}
+	raw, err := json.Marshal(lr)
+	if err != nil {
+		s.errorHandler(w, &errors.ScimErrorInternal)
+		s.log.Error(
+			"failed marshaling list response",
+			"listResponse", lr,
+			"error", err,
+		)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		s.log.Error(
+			"failed writing response",
+			"error", err,
+		)
+	}
+}
+
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
 // resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User".
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
@@ -345,7 +465,6 @@ func (s Server) rootResourcesGetHandler(w http.ResponseWriter, r *http.Request) 
 
 	params := ListRequestParams{
 		Count:      count,
-		Filter:     strings.TrimSpace(r.URL.Query().Get("filter")),
 		StartIndex: startIndex,
 	}
 
@@ -384,51 +503,27 @@ func (s Server) rootResourcesGetHandler(w http.ResponseWriter, r *http.Request) 
 
 // rootSearchHandler receives an HTTP POST request to /.search to query across all resource types.
 // Per RFC 7644 Section 3.4.3, this is an alternative to GET / with query parameters.
+// If the RootQueryHandler also implements ResourceSearcher, the Search method is called
+// with full SearchParams. Otherwise, GetAll is called with only Count and StartIndex.
 func (s Server) rootSearchHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := readBody(r)
-	if err != nil {
-		s.errorHandler(w, &errors.ScimErrorInternal)
+	_, params, scimErr := s.parseSearchRequest(r)
+	if scimErr != nil {
+		s.errorHandler(w, scimErr)
 		return
 	}
 
-	var sr searchRequest
-	if err := json.Unmarshal(data, &sr); err != nil {
-		scimErr := errors.ScimError{
-			Status: http.StatusBadRequest,
-			Detail: "Invalid search request body.",
-		}
-		s.errorHandler(w, &scimErr)
-		return
+	var (
+		page     Page
+		getError error
+	)
+	if searcher, ok := s.rootQueryHandler.(ResourceSearcher); ok {
+		page, getError = searcher.Search(r, params)
+	} else {
+		page, getError = s.rootQueryHandler.GetAll(r, ListRequestParams{
+			Count:      params.Count,
+			StartIndex: params.StartIndex,
+		})
 	}
-
-	defaultCount := s.config.getItemsPerPage()
-
-	count := defaultCount
-	if sr.Count != nil {
-		count = *sr.Count
-	}
-	if count > defaultCount {
-		count = defaultCount
-	}
-	if count < 0 {
-		count = 0
-	}
-
-	startIndex := defaultStartIndex
-	if sr.StartIndex != nil {
-		startIndex = *sr.StartIndex
-	}
-	if startIndex < 1 {
-		startIndex = defaultStartIndex
-	}
-
-	params := ListRequestParams{
-		Count:      count,
-		Filter:     sr.Filter,
-		StartIndex: startIndex,
-	}
-
-	page, getError := s.rootQueryHandler.GetAll(r, params)
 	if getError != nil {
 		scimErr := errors.CheckScimError(getError, http.MethodPost)
 		s.errorHandler(w, &scimErr)
@@ -570,8 +665,12 @@ func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Requ
 
 // searchRequest represents the JSON body of a POST /.search request per RFC 7644 Section 3.4.3.
 type searchRequest struct {
-	Schemas    []string `json:"schemas"`
-	Filter     string   `json:"filter"`
-	StartIndex *int     `json:"startIndex"`
-	Count      *int     `json:"count"`
+	Schemas            []string `json:"schemas"`
+	Attributes         []string `json:"attributes"`
+	ExcludedAttributes []string `json:"excludedAttributes"`
+	Filter             string   `json:"filter"`
+	SortBy             string   `json:"sortBy"`
+	SortOrder          string   `json:"sortOrder"`
+	StartIndex         *int     `json:"startIndex"`
+	Count              *int     `json:"count"`
 }

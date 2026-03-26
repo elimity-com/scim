@@ -15,15 +15,8 @@ type ListRequestParams struct {
 	// A value of "0" indicates that no resource results are to be returned except for "totalResults".
 	Count int
 
-	// Filter is the raw filter expression string. For resource-type-specific queries, the filter
-	// is also parsed and available via FilterValidator. For root queries (RootQueryHandler),
-	// only this raw string is provided since filter validation requires a known schema.
-	Filter string
-
 	// FilterValidator represents the parsed and tokenized filter query parameter.
 	// It is an optional parameter and thus will be nil when the parameter is not present.
-	// For root queries (RootQueryHandler), this is always nil since filter validation requires
-	// a known schema.
 	FilterValidator *filter.Validator
 
 	// StartIndex The 1-based index of the first query result. A value less than 1 SHALL be interpreted as 1.
@@ -120,6 +113,13 @@ type ResourceHandler interface {
 	Patch(r *http.Request, id string, operations []PatchOperation) (Resource, error)
 }
 
+// ResourceSearcher is an optional interface that a ResourceHandler can implement to support
+// POST /.search on a resource endpoint (e.g. POST /Users/.search).
+// Per RFC 7644 Section 3.4.3, this provides an alternative to GET with query parameters.
+type ResourceSearcher interface {
+	Search(r *http.Request, params SearchParams) (Page, error)
+}
+
 // ResourceTypeFilter associates a resource type with a validated filter.
 type ResourceTypeFilter struct {
 	// ResourceType is the resource type whose schema the filter validated against.
@@ -166,4 +166,37 @@ func ValidateFilterForResourceTypes(rawFilter string, resourceTypes []ResourceTy
 type RootQueryHandler interface {
 	// GetAll returns a paginated list of resources across all resource types.
 	GetAll(r *http.Request, params ListRequestParams) (Page, error)
+}
+
+// SearchParams contains the parameters from a POST /.search request body.
+// Per RFC 7644 Section 3.4.3, this includes all query parameters that would normally be sent
+// as URL query parameters in a GET request.
+type SearchParams struct {
+	// Attributes is a list of attribute names to return in the response.
+	// If empty, all attributes are returned.
+	Attributes []string
+
+	// Count specifies the desired maximum number of query results per page.
+	Count int
+
+	// ExcludedAttributes is a list of attribute names to exclude from the response.
+	ExcludedAttributes []string
+
+	// Filter is the raw filter expression string.
+	Filter string
+
+	// FilterValidator represents the parsed and tokenized filter.
+	// For resource-level search, this is set by the server after validating
+	// against the resource type's schema. For root-level search, this is nil.
+	FilterValidator *filter.Validator
+
+	// SortBy specifies the attribute whose value will be used to order the returned responses.
+	SortBy string
+
+	// SortOrder specifies the order in which the sortBy parameter is applied. Allowed values
+	// are "ascending" and "descending".
+	SortOrder string
+
+	// StartIndex is the 1-based index of the first query result.
+	StartIndex int
 }

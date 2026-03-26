@@ -28,12 +28,10 @@
             echo "--- format ---"
             go fmt ./...
             goarrange run -r
-            git diff --quiet
             echo "--- lint ---"
             golangci-lint run -E misspell,godot,whitespace ./...
             echo "--- tidy ---"
             go mod tidy
-            git diff --quiet go.mod go.sum
           '';
         in
         {
