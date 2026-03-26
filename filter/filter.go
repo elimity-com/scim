@@ -48,7 +48,17 @@ func validateExpression(ref schema.Schema, e filter.Expression) error {
 		}
 		return nil
 	case *filter.AttributeExpression:
-		if _, err := validateAttributePath(ref, e.AttributePath); err != nil {
+		attr, err := validateAttributePath(ref, e.AttributePath)
+		if err != nil {
+			return err
+		}
+		resolved := attr
+		if sub := e.AttributePath.SubAttributeName(); sub != "" {
+			if a, ok := attr.SubAttributes().ContainsAttribute(sub); ok {
+				resolved = a
+			}
+		}
+		if err := validateOperator(resolved, e.Operator); err != nil {
 			return err
 		}
 		return nil
@@ -68,6 +78,19 @@ func validateExpression(ref schema.Schema, e filter.Expression) error {
 	default:
 		panic(fmt.Sprintf("unknown expression type: %s", e))
 	}
+}
+
+// validateOperator checks whether the given operator is compatible with the attribute type.
+// Per RFC 7644 Section 3.4.2.2, boolean and binary attributes do not support gt, lt, ge, or le.
+func validateOperator(attr schema.CoreAttribute, op filter.CompareOperator) error {
+	switch attr.AttributeType() {
+	case "boolean", "binary":
+		switch op {
+		case filter.GT, filter.LT, filter.GE, filter.LE:
+			return fmt.Errorf("operator %q is not supported for %s attributes", op, attr.AttributeType())
+		}
+	}
+	return nil
 }
 
 // validateSubAttribute checks whether the given attribute name is a attribute within the given reference attribute.
