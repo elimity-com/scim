@@ -34,6 +34,24 @@ func TestApplyPatch_AddDistinctTypeValuePair(t *testing.T) {
 	}
 }
 
+func TestApplyPatch_AddDuplicatePrimary(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"emails": []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com", "primary": true},
+		},
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{Op: PatchOperationAdd, Path: mustParsePath("emails"), Value: []interface{}{
+			map[string]interface{}{"type": "home", "value": "john@home.com", "primary": true},
+		}},
+	}, s)
+	if err == nil {
+		t.Error("expected error for duplicate primary after add")
+	}
+}
+
 func TestApplyPatch_AddDuplicateTypeValuePair(t *testing.T) {
 	s := testUserSchema()
 	attrs := ResourceAttributes{

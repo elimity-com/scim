@@ -16,6 +16,26 @@ var (
 	schemaAllowStringValues = false
 )
 
+// HasDuplicatePrimary reports whether more than one element in the given list
+// has primary set to true. RFC 7643 Section 2.4: "The primary attribute value
+// 'true' MUST appear no more than once".
+func HasDuplicatePrimary(elements []interface{}) bool {
+	count := 0
+	for _, elem := range elements {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if p, ok := m["primary"].(bool); ok && p {
+			count++
+			if count > 1 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // HasDuplicateTypeValuePairs reports whether the given list of multi-valued
 // complex attribute elements contains duplicate (type, value) pairs.
 func HasDuplicateTypeValuePairs(elements []interface{}) bool {
@@ -154,6 +174,17 @@ func (a CoreAttribute) CaseExact() bool {
 // Description returns whether the description of the attribute.
 func (a CoreAttribute) Description() string {
 	return a.description.Value()
+}
+
+// HasPrimarySubAttr reports whether the attribute has a "primary"
+// sub-attribute, which requires at-most-one-true enforcement per RFC 7643.
+func (a CoreAttribute) HasPrimarySubAttr() bool {
+	for _, sub := range a.subAttributes {
+		if strings.EqualFold(sub.name, "primary") {
+			return true
+		}
+	}
+	return false
 }
 
 // HasSubAttributes returns whether the attribute is complex and has sub attributes.
@@ -457,8 +488,11 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 			}
 			attributes = append(attributes, attr)
 		}
-		if a.typ == attributeDataTypeComplex && a.HasTypeAndValueSubAttrs() {
-			if HasDuplicateTypeValuePairs(attributes) {
+		if a.typ == attributeDataTypeComplex {
+			if a.HasTypeAndValueSubAttrs() && HasDuplicateTypeValuePairs(attributes) {
+				return nil, &errors.ScimErrorUniqueness
+			}
+			if a.HasPrimarySubAttr() && HasDuplicatePrimary(attributes) {
 				return nil, &errors.ScimErrorUniqueness
 			}
 		}

@@ -67,14 +67,14 @@ func attrFromTarget(target interface{}) schema.CoreAttribute {
 	panic("unknown target type")
 }
 
-func checkDuplicateTypeValuePairs(attrs ResourceAttributes, s schema.Schema, extensions []schema.Schema) error {
+func checkMultiValuedUniqueness(attrs ResourceAttributes, s schema.Schema, extensions []schema.Schema) error {
 	allAttrs := make([]schema.CoreAttribute, 0, len(s.Attributes))
 	allAttrs = append(allAttrs, s.Attributes...)
 	for _, ext := range extensions {
 		allAttrs = append(allAttrs, ext.Attributes...)
 	}
 	for _, attr := range allAttrs {
-		if !attr.MultiValued() || !attr.HasSubAttributes() || !attr.HasTypeAndValueSubAttrs() {
+		if !attr.MultiValued() || !attr.HasSubAttributes() {
 			continue
 		}
 		val, ok := attrs[attr.Name()]
@@ -85,7 +85,10 @@ func checkDuplicateTypeValuePairs(attrs ResourceAttributes, s schema.Schema, ext
 		if !ok {
 			continue
 		}
-		if schema.HasDuplicateTypeValuePairs(list) {
+		if attr.HasTypeAndValueSubAttrs() && schema.HasDuplicateTypeValuePairs(list) {
+			return scimErrors.ScimErrorUniqueness
+		}
+		if attr.HasPrimarySubAttr() && schema.HasDuplicatePrimary(list) {
 			return scimErrors.ScimErrorUniqueness
 		}
 	}
@@ -269,7 +272,7 @@ func ApplyPatch(attrs ResourceAttributes, ops []PatchOperation, s schema.Schema,
 			return nil, err
 		}
 	}
-	if err := checkDuplicateTypeValuePairs(result, s, extensions); err != nil {
+	if err := checkMultiValuedUniqueness(result, s, extensions); err != nil {
 		return nil, err
 	}
 	return result, nil
