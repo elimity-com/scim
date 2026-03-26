@@ -5,10 +5,12 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
+	"github.com/elimity-com/scim/schema"
 )
 
 func ExampleResourceHandler() {
@@ -16,6 +18,79 @@ func ExampleResourceHandler() {
 	_, ok := r.(ResourceHandler)
 	fmt.Println(ok)
 	// Output: true
+}
+
+func TestValidateFilterForResourceTypes(t *testing.T) {
+	userSchema := getUserSchema()
+	groupSchema := schema.CoreGroupSchema()
+
+	resourceTypes := []ResourceType{
+		{
+			Name:     "User",
+			Endpoint: "/Users",
+			Schema:   userSchema,
+		},
+		{
+			Name:     "Group",
+			Endpoint: "/Groups",
+			Schema:   groupSchema,
+		},
+	}
+
+	t.Run("filter matching only User", func(t *testing.T) {
+		results := ValidateFilterForResourceTypes(`userName eq "john"`, resourceTypes)
+		assertLen(t, results, 1)
+		assertEqual(t, "User", results[0].ResourceType.Name)
+	})
+
+	t.Run("filter matching only Group", func(t *testing.T) {
+		results := ValidateFilterForResourceTypes(`members.value eq "123"`, resourceTypes)
+		assertLen(t, results, 1)
+		assertEqual(t, "Group", results[0].ResourceType.Name)
+	})
+
+	t.Run("filter matching both", func(t *testing.T) {
+		results := ValidateFilterForResourceTypes(`displayName eq "test"`, resourceTypes)
+		assertLen(t, results, 2)
+	})
+
+	t.Run("meta.resourceType filter matches all", func(t *testing.T) {
+		results := ValidateFilterForResourceTypes(`meta.resourceType eq "User"`, resourceTypes)
+		assertLen(t, results, 2)
+	})
+
+	t.Run("unparseable filter", func(t *testing.T) {
+		results := ValidateFilterForResourceTypes(`not a valid ((( filter`, resourceTypes)
+		assertLen(t, results, 0)
+	})
+
+	t.Run("does not mutate original schema attributes", func(t *testing.T) {
+		// Create a schema with spare capacity so append can mutate the backing array.
+		commonAttrs := schema.CommonAttributes()
+		attrs := make([]schema.CoreAttribute, 1, 1+len(commonAttrs))
+		attrs[0] = schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
+			Name: "userName",
+		}))
+
+		// Extend into spare capacity to observe backing array writes.
+		full := attrs[:cap(attrs)]
+
+		rt := []ResourceType{
+			{
+				Name:     "User",
+				Endpoint: "/Users",
+				Schema: schema.Schema{
+					ID:         "urn:ietf:params:scim:schemas:core:2.0:User",
+					Attributes: attrs,
+				},
+			},
+		}
+
+		ValidateFilterForResourceTypes(`userName eq "john"`, rt)
+
+		// If append mutated the backing array, full[1] now holds a common attribute.
+		assertEqual(t, "", full[1].Name())
+	})
 }
 
 type testData struct {
