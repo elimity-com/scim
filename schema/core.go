@@ -490,10 +490,10 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 		}
 		if a.typ == attributeDataTypeComplex {
 			if a.HasTypeAndValueSubAttrs() && HasDuplicateTypeValuePairs(attributes) {
-				return nil, &errors.ScimErrorUniqueness
+				return nil, &errors.ScimErrorInvalidValue
 			}
 			if a.HasPrimarySubAttr() && HasDuplicatePrimary(attributes) {
-				return nil, &errors.ScimErrorUniqueness
+				return nil, &errors.ScimErrorInvalidValue
 			}
 		}
 		return attributes, nil

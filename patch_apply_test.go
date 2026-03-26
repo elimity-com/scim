@@ -34,7 +34,9 @@ func TestApplyPatch_AddDistinctTypeValuePair(t *testing.T) {
 	}
 }
 
-func TestApplyPatch_AddDuplicatePrimary(t *testing.T) {
+// RFC 7644 Section 3.5.2: the server SHALL set primary to false on the
+// existing value when a new value with primary: true is added.
+func TestApplyPatch_AddDuplicatePrimary_AutoClears(t *testing.T) {
 	s := testUserSchema()
 	attrs := ResourceAttributes{
 		"emails": []interface{}{
@@ -42,13 +44,25 @@ func TestApplyPatch_AddDuplicatePrimary(t *testing.T) {
 		},
 	}
 
-	_, err := ApplyPatch(attrs, []PatchOperation{
+	result, err := ApplyPatch(attrs, []PatchOperation{
 		{Op: PatchOperationAdd, Path: mustParsePath("emails"), Value: []interface{}{
 			map[string]interface{}{"type": "home", "value": "john@home.com", "primary": true},
 		}},
 	}, s)
-	if err == nil {
-		t.Error("expected error for duplicate primary after add")
+	if err != nil {
+		t.Fatalf("expected auto-clear of old primary, got error: %v", err)
+	}
+	emails := result["emails"].([]interface{})
+	if len(emails) != 2 {
+		t.Fatalf("expected 2 emails, got %d", len(emails))
+	}
+	work := emails[0].(map[string]interface{})
+	if p, _ := work["primary"].(bool); p {
+		t.Error("expected old primary (work) to be cleared")
+	}
+	home := emails[1].(map[string]interface{})
+	if p, _ := home["primary"].(bool); !p {
+		t.Error("expected new primary (home) to remain true")
 	}
 }
 
@@ -66,9 +80,7 @@ func TestApplyPatch_AddDuplicateTypeValuePair(t *testing.T) {
 			map[string]interface{}{"type": "work", "value": "john@work.com"},
 		}},
 	}, s)
-	if err == nil {
-		t.Error("expected error for duplicate (type, value) pair after add")
-	}
+	assertScimError(t, err, scimErrors.ScimTypeInvalidValue)
 }
 
 func TestApplyPatch_AddSimpleAttribute(t *testing.T) {
@@ -569,9 +581,7 @@ func TestApplyPatch_ReplaceDuplicateTypeValuePair(t *testing.T) {
 			map[string]interface{}{"type": "work", "value": "john@work.com"},
 		}},
 	}, s)
-	if err == nil {
-		t.Error("expected error for duplicate (type, value) pair after replace")
-	}
+	assertScimError(t, err, scimErrors.ScimTypeInvalidValue)
 }
 
 func TestApplyPatch_ReplaceMultiValuedWithoutFilter(t *testing.T) {
@@ -633,6 +643,39 @@ func TestApplyPatch_ReplaceNonExistentAttribute_TreatedAsAdd(t *testing.T) {
 
 	if result["displayName"] != "John Doe" {
 		t.Errorf("expected displayName to be 'John Doe', got %v", result["displayName"])
+	}
+}
+
+// RFC 7644 Section 3.5.2: when primary is set to true via a value expression,
+// the server SHALL clear primary on all other values, even when the modified
+// element appears before the existing primary in the list.
+func TestApplyPatch_ReplacePrimaryViaValueExpr_AutoClears(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"emails": []interface{}{
+			map[string]interface{}{"type": "home", "value": "john@home.com"},
+			map[string]interface{}{"type": "work", "value": "john@work.com", "primary": true},
+		},
+	}
+
+	result, err := ApplyPatch(attrs, []PatchOperation{
+		{
+			Op:    PatchOperationReplace,
+			Path:  mustParsePath(`emails[type eq "home"].primary`),
+			Value: true,
+		},
+	}, s)
+	if err != nil {
+		t.Fatalf("expected auto-clear, got error: %v", err)
+	}
+	emails := result["emails"].([]interface{})
+	home := emails[0].(map[string]interface{})
+	if p, _ := home["primary"].(bool); !p {
+		t.Error("expected home to become primary")
+	}
+	work := emails[1].(map[string]interface{})
+	if p, _ := work["primary"].(bool); p {
+		t.Error("expected work primary to be cleared")
 	}
 }
 

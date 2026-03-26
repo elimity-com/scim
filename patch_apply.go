@@ -14,6 +14,7 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 	copy(result, list)
 
 	matched := false
+	matchedIndices := make(map[int]bool)
 	for i, elem := range result {
 		m, ok := elem.(map[string]interface{})
 		if !ok {
@@ -23,6 +24,7 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 			continue
 		}
 		matched = true
+		matchedIndices[i] = true
 		if t.subAttrName != "" {
 			updated := copyMap(m)
 			updated[t.subAttrName] = value
@@ -52,6 +54,11 @@ func applyToMatching(list []interface{}, t *valueExprTarget, value interface{}, 
 			}
 		}
 	}
+
+	if t.attr.HasPrimarySubAttr() {
+		clearOtherPrimaries(result, matchedIndices)
+	}
+
 	return result, matched, nil
 }
 
@@ -67,7 +74,7 @@ func attrFromTarget(target interface{}) schema.CoreAttribute {
 	panic("unknown target type")
 }
 
-func checkMultiValuedUniqueness(attrs ResourceAttributes, s schema.Schema, extensions []schema.Schema) error {
+func checkMultiValuedConstraints(attrs ResourceAttributes, s schema.Schema, extensions []schema.Schema) error {
 	allAttrs := make([]schema.CoreAttribute, 0, len(s.Attributes))
 	allAttrs = append(allAttrs, s.Attributes...)
 	for _, ext := range extensions {
@@ -86,10 +93,10 @@ func checkMultiValuedUniqueness(attrs ResourceAttributes, s schema.Schema, exten
 			continue
 		}
 		if attr.HasTypeAndValueSubAttrs() && schema.HasDuplicateTypeValuePairs(list) {
-			return scimErrors.ScimErrorUniqueness
+			return scimErrors.ScimErrorInvalidValue
 		}
-		if attr.HasPrimarySubAttr() && schema.HasDuplicatePrimary(list) {
-			return scimErrors.ScimErrorUniqueness
+		if attr.HasPrimarySubAttr() {
+			clearDuplicatePrimary(list)
 		}
 	}
 	return nil
@@ -108,6 +115,67 @@ func checkMutability(op string, attr schema.CoreAttribute, exists bool) error {
 		return scimErrors.ScimErrorMutability
 	}
 	return nil
+}
+
+// clearDuplicatePrimary ensures at most one element has primary set to true.
+// RFC 7644 Section 3.5.2: the server SHALL set the value of the existing
+// "primary" attribute to false when a new primary value is added via PATCH.
+// The last element with primary: true wins.
+func clearDuplicatePrimary(list []interface{}) {
+	lastPrimary := -1
+	for i, elem := range list {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if p, ok := m["primary"].(bool); ok && p {
+			lastPrimary = i
+		}
+	}
+	if lastPrimary < 0 {
+		return
+	}
+	for i, elem := range list {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if p, ok := m["primary"].(bool); ok && p && i != lastPrimary {
+			m["primary"] = false
+		}
+	}
+}
+
+// clearOtherPrimaries clears primary on all elements outside modifiedIndices
+// when any modified element has primary set to true. Among modified elements,
+// only the last one with primary=true is kept.
+func clearOtherPrimaries(list []interface{}, modifiedIndices map[int]bool) {
+	lastModifiedPrimary := -1
+	for i, elem := range list {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		p, _ := m["primary"].(bool)
+		if p && modifiedIndices[i] {
+			lastModifiedPrimary = i
+		}
+	}
+	if lastModifiedPrimary < 0 {
+		return
+	}
+	for i, elem := range list {
+		if i == lastModifiedPrimary {
+			continue
+		}
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if p, _ := m["primary"].(bool); p {
+			m["primary"] = false
+		}
+	}
 }
 
 func copyMap(m map[string]interface{}) map[string]interface{} {
@@ -272,7 +340,7 @@ func ApplyPatch(attrs ResourceAttributes, ops []PatchOperation, s schema.Schema,
 			return nil, err
 		}
 	}
-	if err := checkMultiValuedUniqueness(result, s, extensions); err != nil {
+	if err := checkMultiValuedConstraints(result, s, extensions); err != nil {
 		return nil, err
 	}
 	return result, nil
