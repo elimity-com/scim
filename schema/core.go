@@ -16,6 +16,30 @@ var (
 	schemaAllowStringValues = false
 )
 
+// HasDuplicateTypeValuePairs reports whether the given list of multi-valued
+// complex attribute elements contains duplicate (type, value) pairs.
+func HasDuplicateTypeValuePairs(elements []interface{}) bool {
+	type pair struct{ typ, val string }
+	seen := make(map[pair]bool)
+	for _, elem := range elements {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		typ, hasType := m["type"].(string)
+		val, hasValue := m["value"].(string)
+		if !hasType || !hasValue {
+			continue
+		}
+		p := pair{typ, val}
+		if seen[p] {
+			return true
+		}
+		seen[p] = true
+	}
+	return false
+}
+
 // SetAllowStringValues sets whether string values are allowed.
 // If enabled, string values are allowed for booleans, integer and decimal attributes.
 // NOTE: This is NOT a standard SCIM behaviour, and should only be used for compatibility with non-compliant SCIM
@@ -135,6 +159,22 @@ func (a CoreAttribute) Description() string {
 // HasSubAttributes returns whether the attribute is complex and has sub attributes.
 func (a CoreAttribute) HasSubAttributes() bool {
 	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
+}
+
+// HasTypeAndValueSubAttrs reports whether the attribute has both "type" and
+// "value" sub-attributes, which is the combination RFC 7643 Section 2.4 uses
+// for duplicate detection in multi-valued attributes.
+func (a CoreAttribute) HasTypeAndValueSubAttrs() bool {
+	hasType, hasValue := false, false
+	for _, sub := range a.subAttributes {
+		switch strings.ToLower(sub.name) {
+		case "type":
+			hasType = true
+		case "value":
+			hasValue = true
+		}
+	}
+	return hasType && hasValue
 }
 
 // MultiValued returns whether the attribute is multi valued.
@@ -416,6 +456,11 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 				return nil, scimErr
 			}
 			attributes = append(attributes, attr)
+		}
+		if a.typ == attributeDataTypeComplex && a.HasTypeAndValueSubAttrs() {
+			if HasDuplicateTypeValuePairs(attributes) {
+				return nil, &errors.ScimErrorUniqueness
+			}
 		}
 		return attributes, nil
 

@@ -8,6 +8,51 @@ import (
 	filter "github.com/scim2/filter-parser/v2"
 )
 
+func TestApplyPatch_AddDistinctTypeValuePair(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"userName": "john",
+		"emails": []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+		},
+	}
+
+	result, err := ApplyPatch(attrs, []PatchOperation{
+		{Op: PatchOperationAdd, Path: mustParsePath("emails"), Value: []interface{}{
+			map[string]interface{}{"type": "home", "value": "john@home.com"},
+		}},
+	}, s)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	emails, ok := result["emails"].([]interface{})
+	if !ok {
+		t.Fatal("expected emails to be a list")
+	}
+	if len(emails) != 2 {
+		t.Errorf("expected 2 emails, got %d", len(emails))
+	}
+}
+
+func TestApplyPatch_AddDuplicateTypeValuePair(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"userName": "john",
+		"emails": []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+		},
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{Op: PatchOperationAdd, Path: mustParsePath("emails"), Value: []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+		}},
+	}, s)
+	if err == nil {
+		t.Error("expected error for duplicate (type, value) pair after add")
+	}
+}
+
 func TestApplyPatch_AddSimpleAttribute(t *testing.T) {
 	s := testUserSchema()
 	attrs := ResourceAttributes{
@@ -488,6 +533,26 @@ func TestApplyPatch_ReplaceComplexAttribute_MergesSubAttributes(t *testing.T) {
 	}
 	if name["givenName"] != "John" {
 		t.Errorf("expected givenName to remain 'John', got %v", name["givenName"])
+	}
+}
+
+func TestApplyPatch_ReplaceDuplicateTypeValuePair(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"userName": "john",
+		"emails": []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+		},
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{Op: PatchOperationReplace, Path: mustParsePath("emails"), Value: []interface{}{
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+			map[string]interface{}{"type": "work", "value": "john@work.com"},
+		}},
+	}, s)
+	if err == nil {
+		t.Error("expected error for duplicate (type, value) pair after replace")
 	}
 }
 
