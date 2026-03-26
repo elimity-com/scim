@@ -377,6 +377,9 @@ func applyRemove(attrs ResourceAttributes, op PatchOperation, s schema.Schema, e
 
 	switch t := target.(type) {
 	case *attributeTarget:
+		if t.attr.Required() {
+			return nil, scimErrors.ScimErrorInvalidValue
+		}
 		delete(attrs, attrName)
 	case *subAttributeTarget:
 		existing, exists := attrs[attrName]

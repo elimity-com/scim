@@ -323,6 +323,19 @@ func TestApplyPatch_RemoveAttribute(t *testing.T) {
 	}
 }
 
+func TestApplyPatch_RemoveRequiredAttribute(t *testing.T) {
+	s := testUserSchema()
+	attrs := ResourceAttributes{
+		"userName":    "john",
+		"displayName": "John Doe",
+	}
+
+	_, err := ApplyPatch(attrs, []PatchOperation{
+		{Op: PatchOperationRemove, Path: mustParsePath("userName")},
+	}, s)
+	assertScimError(t, err, scimErrors.ScimTypeInvalidValue)
+}
+
 func TestApplyPatch_RemoveSubAttribute(t *testing.T) {
 	s := testUserSchema()
 	attrs := ResourceAttributes{
@@ -680,7 +693,8 @@ func testUserSchema() schema.Schema {
 		ID: schema.UserSchema,
 		Attributes: schema.Attributes{
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "userName",
+				Name:     "userName",
+				Required: true,
 			})),
 			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
 				Name: "displayName",
