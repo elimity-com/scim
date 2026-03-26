@@ -279,6 +279,22 @@ func TestServerResourceGetHandlerNotFound(t *testing.T) {
 	assertEqualSCIMErrors(t, expectedError, scimErr)
 }
 
+func TestServerResourceGetHandlerWithBaseURL(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users/0001", nil)
+	rr := httptest.NewRecorder()
+	newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	assertTypeOk(t, ok, "object")
+
+	assertEqual(t, "https://example.com/v2/Users/0001", meta["location"])
+}
+
 func TestServerResourcePatchHandlerFailOnBadType(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
 		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -529,6 +545,31 @@ func TestServerResourcePatchHandlerValidRemoveOp(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusNoContent, rr.Code)
 }
 
+func TestServerResourcePatchHandlerWithBaseURL(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/Users/0001", strings.NewReader(`{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations":[
+		  {
+		    "op":"replace",
+		    "path":"active",
+		    "value":false
+		  }
+		]
+	}`))
+	rr := httptest.NewRecorder()
+	newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	assertTypeOk(t, ok, "object")
+
+	assertEqual(t, "https://example.com/v2/Users/0001", meta["location"])
+}
+
 func TestServerResourcePostHandlerMissingSchemas(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(`{"userName": "test1"}`))
 	rr := httptest.NewRecorder()
@@ -599,8 +640,31 @@ func TestServerResourcePostHandlerValid(t *testing.T) {
 			assertEqual(t, fmt.Sprintf("v%s", resource["id"]), meta["version"])
 			// ETag and version needs to be the same.
 			assertEqual(t, rr.Header().Get("Etag"), meta["version"])
+			// Location header must match meta.location (RFC 7644 Section 3.3).
+			assertEqual(t, meta["location"], rr.Header().Get("Location"))
 		})
 	}
+}
+
+func TestServerResourcePostHandlerWithBaseURL(t *testing.T) {
+	body := `{"userName": "test1", "schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`
+	req := httptest.NewRequest(http.MethodPost, "/Users", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusCreated, rr.Code)
+
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	assertTypeOk(t, ok, "object")
+
+	location, ok := meta["location"].(string)
+	assertTypeOk(t, ok, "string")
+
+	assertEqual(t, fmt.Sprintf("https://example.com/v2/Users/%s", resource["id"]), location)
+	assertEqual(t, location, rr.Header().Get("Location"))
 }
 
 func TestServerResourcePostHandlerWithExtension(t *testing.T) {
@@ -699,6 +763,23 @@ func TestServerResourcePutHandlerValid(t *testing.T) {
 			assertEqual(t, "User", meta["resourceType"])
 		})
 	}
+}
+
+func TestServerResourcePutHandlerWithBaseURL(t *testing.T) {
+	body := `{"userName": "test1", "schemas":["urn:ietf:params:scim:schemas:core:2.0:User"]}`
+	req := httptest.NewRequest(http.MethodPut, "/Users/0001", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+	newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var resource map[string]interface{}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+	meta, ok := resource["meta"].(map[string]interface{})
+	assertTypeOk(t, ok, "object")
+
+	assertEqual(t, "https://example.com/v2/Users/0001", meta["location"])
 }
 
 func TestServerResourceTypeHandlerValid(t *testing.T) {
@@ -854,6 +935,29 @@ func TestServerResourcesGetHandlerPagination(t *testing.T) {
 	var response listResponse
 	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	assertEqual(t, 20, response.TotalResults)
+}
+
+func TestServerResourcesGetHandlerWithBaseURL(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/Users?count=2&startIndex=1", nil)
+	rr := httptest.NewRecorder()
+	newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+	assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+	var response struct {
+		Resources []map[string]interface{}
+	}
+	assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+
+	for _, resource := range response.Resources {
+		meta, ok := resource["meta"].(map[string]interface{})
+		assertTypeOk(t, ok, "object")
+
+		location, ok := meta["location"].(string)
+		assertTypeOk(t, ok, "string")
+
+		assertTrue(t, strings.HasPrefix(location, "https://example.com/v2/Users/"))
+	}
 }
 
 func TestServerSchemaEndpointValid(t *testing.T) {
@@ -1128,6 +1232,29 @@ func newTestServer(t *testing.T) Server {
 				},
 			},
 		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func newTestServerWithBaseURL(t *testing.T) Server {
+	userSchema := getUserSchema()
+	s, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes: []ResourceType{
+				{
+					ID:       optional.NewString("User"),
+					Name:     "User",
+					Endpoint: "/Users",
+					Schema:   userSchema,
+					Handler:  newTestResourceHandler(),
+				},
+			},
+		},
+		WithBaseURL("https://example.com/v2"),
 	)
 	if err != nil {
 		t.Fatal(err)

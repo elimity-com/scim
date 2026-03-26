@@ -52,7 +52,8 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType))
+	location := resourceLocation(resourceType, id, s.baseURL)
+	raw, err := json.Marshal(resource.response(resourceType, location))
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -97,7 +98,8 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType))
+	location := resourceLocation(resourceType, id, s.baseURL)
+	raw, err := json.Marshal(resource.response(resourceType, location))
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -141,7 +143,8 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType))
+	location := resourceLocation(resourceType, resource.ID, s.baseURL)
+	raw, err := json.Marshal(resource.response(resourceType, location))
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -152,6 +155,7 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 		return
 	}
 
+	w.Header().Set("Location", location)
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
@@ -185,7 +189,8 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	raw, err := json.Marshal(resource.response(resourceType))
+	location := resourceLocation(resourceType, id, s.baseURL)
+	raw, err := json.Marshal(resource.response(resourceType, location))
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -305,7 +310,7 @@ func (s Server) resourcesGetHandler(w http.ResponseWriter, r *http.Request, reso
 
 	lr := listResponse{
 		TotalResults: page.TotalResults,
-		Resources:    page.resources(resourceType),
+		Resources:    page.resources(resourceType, s.baseURL),
 		StartIndex:   params.StartIndex,
 		ItemsPerPage: params.Count,
 	}

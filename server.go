@@ -52,12 +52,26 @@ func parseIdentifier(path, endpoint string) (string, error) {
 	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
 }
 
+func resourceLocation(resourceType ResourceType, id string, baseURL string) string {
+	relativePath := resourceType.Endpoint[1:] + "/" + url.PathEscape(id)
+	if baseURL == "" {
+		return relativePath
+	}
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return relativePath
+	}
+	u.Path = u.Path + "/" + relativePath
+	return u.String()
+}
+
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol
 // that makes managing identities in multi-domain scenarios easier to support via a standardized service.
 type Server struct {
 	config        ServiceProviderConfig
 	resourceTypes []ResourceType
 	log           Logger
+	baseURL       string
 }
 
 func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
@@ -249,6 +263,15 @@ type ServerArgs struct {
 }
 
 type ServerOption func(*Server)
+
+// WithBaseURL configures the server to use absolute URIs for resource
+// locations. The base URL is prepended to all meta.location values and
+// Location headers. For example, "https://example.com/v2".
+func WithBaseURL(baseURL string) ServerOption {
+	return func(s *Server) {
+		s.baseURL = strings.TrimRight(baseURL, "/")
+	}
+}
 
 // WithLogger sets the logger for the server.
 func WithLogger(logger Logger) ServerOption {

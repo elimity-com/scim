@@ -12,7 +12,7 @@ type Page struct {
 	Resources []Resource
 }
 
-func (p Page) resources(resourceType ResourceType) []interface{} {
+func (p Page) resources(resourceType ResourceType, baseURL string) []interface{} {
 	// If the page.Resources is nil, then it will also be represented as a `null` in the response.
 	// Otherwise is it is an empty slice then it will result in an empty array `[]`.
 	if len(p.Resources) == 0 {
@@ -24,9 +24,10 @@ func (p Page) resources(resourceType ResourceType) []interface{} {
 
 	var resources []interface{}
 	for _, v := range p.Resources {
+		location := resourceLocation(resourceType, v.ID, baseURL)
 		resources = append(
 			resources,
-			v.response(resourceType),
+			v.response(resourceType, location),
 		)
 	}
 	return resources
