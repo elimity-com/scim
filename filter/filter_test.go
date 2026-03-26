@@ -211,6 +211,7 @@ func TestValidator_Validate(t *testing.T) {
 		`userType eq "Employee" and (emails.type eq "work")`,
 		`userType eq "Employee" and emails[type eq "work" and value co "@example.com"]`,
 		`emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]`,
+		`active eq true`,
 	} {
 		validator, err := filter.NewValidator(f, userSchema)
 		if err != nil {
@@ -218,6 +219,40 @@ func TestValidator_Validate(t *testing.T) {
 		}
 		if err := validator.Validate(); err != nil {
 			t.Errorf("(%s) %v", f, err)
+		}
+	}
+}
+
+func TestValidator_Validate_orderingOperatorOnBinaryAttribute(t *testing.T) {
+	ref := schema.Schema{
+		Attributes: []schema.CoreAttribute{
+			schema.SimpleCoreAttribute(schema.SimpleBinaryParams(schema.BinaryParams{
+				Name: "bin",
+			})),
+		},
+	}
+	for _, op := range []string{"gt", "lt", "ge", "le"} {
+		f := `bin ` + op + ` "aGVsbG8="`
+		validator, err := filter.NewValidator(f, ref)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := validator.Validate(); err == nil {
+			t.Errorf("expected error for %q on binary attribute, got nil", f)
+		}
+	}
+}
+
+func TestValidator_Validate_orderingOperatorOnBooleanAttribute(t *testing.T) {
+	userSchema := schema.CoreUserSchema()
+	for _, op := range []string{"gt", "lt", "ge", "le"} {
+		f := "active " + op + " true"
+		validator, err := filter.NewValidator(f, userSchema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := validator.Validate(); err == nil {
+			t.Errorf("expected error for %q on boolean attribute, got nil", f)
 		}
 	}
 }
