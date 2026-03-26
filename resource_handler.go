@@ -1,9 +1,7 @@
 package scim
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/elimity-com/scim/filter"
@@ -47,7 +45,7 @@ type Resource struct {
 	Meta Meta
 }
 
-func (r Resource) response(resourceType ResourceType) ResourceAttributes {
+func (r Resource) response(resourceType ResourceType, location string) ResourceAttributes {
 	response := r.Attributes
 	if response == nil {
 		response = ResourceAttributes{}
@@ -66,7 +64,7 @@ func (r Resource) response(resourceType ResourceType) ResourceAttributes {
 
 	m := meta{
 		ResourceType: resourceType.Name,
-		Location:     fmt.Sprintf("%s/%s", resourceType.Endpoint[1:], url.PathEscape(r.ID)),
+		Location:     location,
 	}
 
 	if r.Meta.Created != nil {
