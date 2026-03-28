@@ -16,6 +16,50 @@ var (
 	schemaAllowStringValues = false
 )
 
+// HasDuplicatePrimary reports whether more than one element in the given list
+// has primary set to true. RFC 7643 Section 2.4: "The primary attribute value
+// 'true' MUST appear no more than once".
+func HasDuplicatePrimary(elements []interface{}) bool {
+	count := 0
+	for _, elem := range elements {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if p, ok := m["primary"].(bool); ok && p {
+			count++
+			if count > 1 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasDuplicateTypeValuePairs reports whether the given list of multi-valued
+// complex attribute elements contains duplicate (type, value) pairs.
+func HasDuplicateTypeValuePairs(elements []interface{}) bool {
+	type pair struct{ typ, val string }
+	seen := make(map[pair]bool)
+	for _, elem := range elements {
+		m, ok := elem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		typ, hasType := m["type"].(string)
+		val, hasValue := m["value"].(string)
+		if !hasType || !hasValue {
+			continue
+		}
+		p := pair{typ, val}
+		if seen[p] {
+			return true
+		}
+		seen[p] = true
+	}
+	return false
+}
+
 // SetAllowStringValues sets whether string values are allowed.
 // If enabled, string values are allowed for booleans, integer and decimal attributes.
 // NOTE: This is NOT a standard SCIM behaviour, and should only be used for compatibility with non-compliant SCIM
@@ -132,9 +176,36 @@ func (a CoreAttribute) Description() string {
 	return a.description.Value()
 }
 
+// HasPrimarySubAttr reports whether the attribute has a "primary"
+// sub-attribute, which requires at-most-one-true enforcement per RFC 7643.
+func (a CoreAttribute) HasPrimarySubAttr() bool {
+	for _, sub := range a.subAttributes {
+		if strings.EqualFold(sub.name, "primary") {
+			return true
+		}
+	}
+	return false
+}
+
 // HasSubAttributes returns whether the attribute is complex and has sub attributes.
 func (a CoreAttribute) HasSubAttributes() bool {
 	return a.typ == attributeDataTypeComplex && len(a.subAttributes) != 0
+}
+
+// HasTypeAndValueSubAttrs reports whether the attribute has both "type" and
+// "value" sub-attributes, which is the combination RFC 7643 Section 2.4 uses
+// for duplicate detection in multi-valued attributes.
+func (a CoreAttribute) HasTypeAndValueSubAttrs() bool {
+	hasType, hasValue := false, false
+	for _, sub := range a.subAttributes {
+		switch strings.ToLower(sub.name) {
+		case "type":
+			hasType = true
+		case "value":
+			hasValue = true
+		}
+	}
+	return hasType && hasValue
 }
 
 // MultiValued returns whether the attribute is multi valued.
@@ -416,6 +487,14 @@ func (a CoreAttribute) validate(attribute interface{}) (interface{}, *errors.Sci
 				return nil, scimErr
 			}
 			attributes = append(attributes, attr)
+		}
+		if a.typ == attributeDataTypeComplex {
+			if a.HasTypeAndValueSubAttrs() && HasDuplicateTypeValuePairs(attributes) {
+				return nil, &errors.ScimErrorInvalidValue
+			}
+			if a.HasPrimarySubAttr() && HasDuplicatePrimary(attributes) {
+				return nil, &errors.ScimErrorInvalidValue
+			}
 		}
 		return attributes, nil
 
