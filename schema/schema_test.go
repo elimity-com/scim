@@ -103,6 +103,292 @@ func TestJSONMarshalling(t *testing.T) {
 	}
 }
 
+func TestJSONUnmarshalling(t *testing.T) {
+	t.Run("round trip", func(t *testing.T) {
+		originalJSON, err := testSchema.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(originalJSON, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		gotJSON, err := got.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		normalizedOriginal, err := normalizeJSON(originalJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalizedGot, err := normalizeJSON(gotJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if normalizedOriginal != normalizedGot {
+			t.Errorf("round trip mismatch.\nWant: %s\nGot:  %s", normalizedOriginal, normalizedGot)
+		}
+	})
+
+	t.Run("user schema round trip", func(t *testing.T) {
+		originalJSON, err := CoreUserSchema().MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(originalJSON, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		gotJSON, err := got.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		normalizedOriginal, err := normalizeJSON(originalJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalizedGot, err := normalizeJSON(gotJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if normalizedOriginal != normalizedGot {
+			t.Errorf("round trip mismatch.\nWant: %s\nGot:  %s", normalizedOriginal, normalizedGot)
+		}
+	})
+
+	t.Run("group schema round trip", func(t *testing.T) {
+		originalJSON, err := CoreGroupSchema().MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(originalJSON, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		gotJSON, err := got.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		normalizedOriginal, err := normalizeJSON(originalJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalizedGot, err := normalizeJSON(gotJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if normalizedOriginal != normalizedGot {
+			t.Errorf("round trip mismatch.\nWant: %s\nGot:  %s", normalizedOriginal, normalizedGot)
+		}
+	})
+
+	t.Run("from file", func(t *testing.T) {
+		data, err := os.ReadFile("./testdata/schema_test.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		if got.ID != "test-schema-id" {
+			t.Errorf("ID: want %q, got %q", "test-schema-id", got.ID)
+		}
+		if got.Name.Value() != "test" {
+			t.Errorf("Name: want %q, got %q", "test", got.Name.Value())
+		}
+		if len(got.Attributes) != 11 {
+			t.Errorf("Attributes: want 11, got %d", len(got.Attributes))
+		}
+	})
+
+	t.Run("enterprise user extension round trip", func(t *testing.T) {
+		originalJSON, err := ExtensionEnterpriseUser().MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(originalJSON, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		gotJSON, err := got.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		normalizedOriginal, err := normalizeJSON(originalJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalizedGot, err := normalizeJSON(gotJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if normalizedOriginal != normalizedGot {
+			t.Errorf("round trip mismatch.\nWant: %s\nGot:  %s", normalizedOriginal, normalizedGot)
+		}
+	})
+
+	t.Run("custom schema round trip", func(t *testing.T) {
+		custom := Schema{
+			ID:          "urn:example:custom:1.0:Device",
+			Name:        optional.NewString("Device"),
+			Description: optional.NewString("A custom device resource"),
+			Attributes: []CoreAttribute{
+				SimpleCoreAttribute(SimpleStringParams(StringParams{
+					Name:       "serialNumber",
+					Required:   true,
+					Uniqueness: AttributeUniquenessServer(),
+					CaseExact:  true,
+				})),
+				SimpleCoreAttribute(SimpleBooleanParams(BooleanParams{
+					Name:       "active",
+					Mutability: AttributeMutabilityReadWrite(),
+				})),
+				SimpleCoreAttribute(SimpleNumberParams(NumberParams{
+					Name: "firmwareVersion",
+					Type: AttributeTypeDecimal(),
+				})),
+				SimpleCoreAttribute(SimpleDateTimeParams(DateTimeParams{
+					Name:       "lastSeen",
+					Mutability: AttributeMutabilityReadOnly(),
+					Returned:   AttributeReturnedAlways(),
+				})),
+				SimpleCoreAttribute(SimpleReferenceParams(ReferenceParams{
+					Name:           "owner",
+					ReferenceTypes: []AttributeReferenceType{AttributeReferenceTypeExternal, AttributeReferenceTypeURI},
+				})),
+				SimpleCoreAttribute(SimpleStringParams(StringParams{
+					Name:            "status",
+					CanonicalValues: []string{"online", "offline", "maintenance"},
+				})),
+				ComplexCoreAttribute(ComplexParams{
+					Name:        "location",
+					MultiValued: false,
+					SubAttributes: []SimpleParams{
+						SimpleStringParams(StringParams{Name: "building"}),
+						SimpleNumberParams(NumberParams{
+							Name: "floor",
+							Type: AttributeTypeInteger(),
+						}),
+					},
+				}),
+			},
+		}
+
+		originalJSON, err := custom.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got Schema
+		if err := json.Unmarshal(originalJSON, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		if got.ID != custom.ID {
+			t.Errorf("ID: want %q, got %q", custom.ID, got.ID)
+		}
+		if got.Name.Value() != custom.Name.Value() {
+			t.Errorf("Name: want %q, got %q", custom.Name.Value(), got.Name.Value())
+		}
+		if got.Description.Value() != custom.Description.Value() {
+			t.Errorf("Description: want %q, got %q", custom.Description.Value(), got.Description.Value())
+		}
+
+		gotJSON, err := got.MarshalJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		normalizedOriginal, err := normalizeJSON(originalJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+		normalizedGot, err := normalizeJSON(gotJSON)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if normalizedOriginal != normalizedGot {
+			t.Errorf("round trip mismatch.\nWant: %s\nGot:  %s", normalizedOriginal, normalizedGot)
+		}
+	})
+
+	t.Run("unknown type", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"unknown"}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for unknown attribute type")
+		}
+	})
+
+	t.Run("unknown mutability", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"string","mutability":"unknown"}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for unknown mutability")
+		}
+	})
+
+	t.Run("unknown returned", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"string","returned":"unknown"}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for unknown returned")
+		}
+	})
+
+	t.Run("unknown uniqueness", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"string","uniqueness":"unknown"}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for unknown uniqueness")
+		}
+	})
+
+	t.Run("invalid attribute name", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"_invalid","type":"string"}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for invalid attribute name")
+		}
+	})
+
+	t.Run("invalid sub-attribute name", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"complex","subAttributes":[{"name":"1bad","type":"string"}]}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for invalid sub-attribute name")
+		}
+	})
+
+	t.Run("duplicate sub-attribute names", func(t *testing.T) {
+		data := []byte(`{"id":"x","attributes":[{"name":"a","type":"complex","subAttributes":[{"name":"b","type":"string"},{"name":"b","type":"string"}]}]}`)
+		var got Schema
+		if err := json.Unmarshal(data, &got); err == nil {
+			t.Error("expected error for duplicate sub-attribute names")
+		}
+	})
+}
+
 func TestResourceInvalid(t *testing.T) {
 	var resource interface{}
 	if _, scimErr := testSchema.Validate(resource); scimErr == nil {

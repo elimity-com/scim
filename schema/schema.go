@@ -2,6 +2,7 @@ package schema
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/elimity-com/scim/errors"
@@ -28,8 +29,31 @@ func isReadOnly(attr CoreAttribute) bool {
 	return attr.mutability == attributeMutabilityReadOnly
 }
 
+// validateUnmarshalAttributeName validates an attribute name for JSON
+// unmarshaling. It applies the same rules as the constructors but also
+// accepts "$ref", which RFC 7643 Section 2.4 defines as a standard
+// sub-attribute despite it violating the ABNF grammar.
+func validateUnmarshalAttributeName(name string) error {
+	if name == "$ref" {
+		return nil
+	}
+	return validateAttributeName(name)
+}
+
 // Attributes represent a list of Core Attributes.
 type Attributes []CoreAttribute
+
+func unmarshalAttributes(rawAttrs []json.RawMessage) (Attributes, error) {
+	attrs := make(Attributes, 0, len(rawAttrs))
+	for _, raw := range rawAttrs {
+		a, err := unmarshalCoreAttribute(raw)
+		if err != nil {
+			return nil, err
+		}
+		attrs = append(attrs, a)
+	}
+	return attrs, nil
+}
 
 // ContainsAttribute checks whether the list of Core Attributes contains an attribute with the given name.
 func (as Attributes) ContainsAttribute(name string) (CoreAttribute, bool) {
@@ -39,6 +63,91 @@ func (as Attributes) ContainsAttribute(name string) (CoreAttribute, bool) {
 		}
 	}
 	return CoreAttribute{}, false
+}
+
+func unmarshalCoreAttribute(data json.RawMessage) (CoreAttribute, error) {
+	var raw struct {
+		Name            string            `json:"name"`
+		Type            string            `json:"type"`
+		Description     optional.String   `json:"description"`
+		MultiValued     bool              `json:"multiValued"`
+		Required        bool              `json:"required"`
+		CaseExact       bool              `json:"caseExact"`
+		Mutability      string            `json:"mutability"`
+		Returned        string            `json:"returned"`
+		Uniqueness      string            `json:"uniqueness"`
+		CanonicalValues []string          `json:"canonicalValues"`
+		ReferenceTypes  []string          `json:"referenceTypes"`
+		SubAttributes   []json.RawMessage `json:"subAttributes"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return CoreAttribute{}, err
+	}
+
+	if err := validateUnmarshalAttributeName(raw.Name); err != nil {
+		return CoreAttribute{}, err
+	}
+
+	typ, err := parseAttributeType(raw.Type)
+	if err != nil {
+		return CoreAttribute{}, err
+	}
+
+	mut, err := parseAttributeMutability(raw.Mutability)
+	if err != nil {
+		return CoreAttribute{}, err
+	}
+
+	ret, err := parseAttributeReturned(raw.Returned)
+	if err != nil {
+		return CoreAttribute{}, err
+	}
+
+	uniq, err := parseAttributeUniqueness(raw.Uniqueness)
+	if err != nil {
+		return CoreAttribute{}, err
+	}
+
+	if typ == attributeDataTypeComplex {
+		subParams, err := unmarshalSimpleParams(raw.SubAttributes)
+		if err != nil {
+			return CoreAttribute{}, err
+		}
+		subAttrs, err := buildSubAttributes(subParams)
+		if err != nil {
+			return CoreAttribute{}, err
+		}
+		return CoreAttribute{
+			description:   raw.Description,
+			multiValued:   raw.MultiValued,
+			mutability:    mut,
+			name:          raw.Name,
+			required:      raw.Required,
+			returned:      ret,
+			subAttributes: subAttrs,
+			typ:           attributeDataTypeComplex,
+			uniqueness:    uniq,
+		}, nil
+	}
+
+	var refTypes []AttributeReferenceType
+	for _, r := range raw.ReferenceTypes {
+		refTypes = append(refTypes, AttributeReferenceType(r))
+	}
+
+	return CoreAttribute{
+		canonicalValues: raw.CanonicalValues,
+		caseExact:       raw.CaseExact,
+		description:     raw.Description,
+		multiValued:     raw.MultiValued,
+		mutability:      mut,
+		name:            raw.Name,
+		referenceTypes:  refTypes,
+		required:        raw.Required,
+		returned:        ret,
+		typ:             typ,
+		uniqueness:      uniq,
+	}, nil
 }
 
 // Schema is a collection of attribute definitions that describe the contents of an entire or partial resource.
@@ -63,6 +172,30 @@ func (s Schema) ToMap() map[string]interface{} {
 		"attributes":  s.getRawAttributes(),
 		"schemas":     []string{"urn:ietf:params:scim:schemas:core:2.0:Schema"},
 	}
+}
+
+// UnmarshalJSON parses a JSON-encoded schema into the Schema struct.
+func (s *Schema) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		ID          string            `json:"id"`
+		Name        optional.String   `json:"name"`
+		Description optional.String   `json:"description"`
+		Attributes  []json.RawMessage `json:"attributes"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	attrs, err := unmarshalAttributes(raw.Attributes)
+	if err != nil {
+		return err
+	}
+
+	s.ID = raw.ID
+	s.Name = raw.Name
+	s.Description = raw.Description
+	s.Attributes = attrs
+	return nil
 }
 
 // Validate validates given resource based on the schema, including the
@@ -202,4 +335,144 @@ func (s Schema) validateSchemaID(resource map[string]interface{}) *errors.ScimEr
 	}
 
 	return nil
+}
+
+func unmarshalSimpleParam(data json.RawMessage) (SimpleParams, error) {
+	var raw struct {
+		Name            string          `json:"name"`
+		Type            string          `json:"type"`
+		Description     optional.String `json:"description"`
+		MultiValued     bool            `json:"multiValued"`
+		Required        bool            `json:"required"`
+		CaseExact       bool            `json:"caseExact"`
+		Mutability      string          `json:"mutability"`
+		Returned        string          `json:"returned"`
+		Uniqueness      string          `json:"uniqueness"`
+		CanonicalValues []string        `json:"canonicalValues"`
+		ReferenceTypes  []string        `json:"referenceTypes"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return SimpleParams{}, err
+	}
+
+	if err := validateUnmarshalAttributeName(raw.Name); err != nil {
+		return SimpleParams{}, err
+	}
+
+	typ, err := parseAttributeType(raw.Type)
+	if err != nil {
+		return SimpleParams{}, err
+	}
+
+	mut, err := parseAttributeMutability(raw.Mutability)
+	if err != nil {
+		return SimpleParams{}, err
+	}
+
+	ret, err := parseAttributeReturned(raw.Returned)
+	if err != nil {
+		return SimpleParams{}, err
+	}
+
+	uniq, err := parseAttributeUniqueness(raw.Uniqueness)
+	if err != nil {
+		return SimpleParams{}, err
+	}
+
+	var refTypes []AttributeReferenceType
+	for _, r := range raw.ReferenceTypes {
+		refTypes = append(refTypes, AttributeReferenceType(r))
+	}
+
+	return SimpleParams{
+		canonicalValues: raw.CanonicalValues,
+		caseExact:       raw.CaseExact,
+		description:     raw.Description,
+		multiValued:     raw.MultiValued,
+		mutability:      mut,
+		name:            raw.Name,
+		referenceTypes:  refTypes,
+		required:        raw.Required,
+		returned:        ret,
+		typ:             typ,
+		uniqueness:      uniq,
+	}, nil
+}
+
+func unmarshalSimpleParams(rawAttrs []json.RawMessage) ([]SimpleParams, error) {
+	params := make([]SimpleParams, 0, len(rawAttrs))
+	for _, raw := range rawAttrs {
+		p, err := unmarshalSimpleParam(raw)
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, p)
+	}
+	return params, nil
+}
+
+func parseAttributeMutability(s string) (attributeMutability, error) {
+	switch s {
+	case "readWrite", "":
+		return attributeMutabilityReadWrite, nil
+	case "immutable":
+		return attributeMutabilityImmutable, nil
+	case "readOnly":
+		return attributeMutabilityReadOnly, nil
+	case "writeOnly":
+		return attributeMutabilityWriteOnly, nil
+	default:
+		return 0, fmt.Errorf("unknown mutability: %q", s)
+	}
+}
+
+func parseAttributeReturned(s string) (attributeReturned, error) {
+	switch s {
+	case "default", "":
+		return attributeReturnedDefault, nil
+	case "always":
+		return attributeReturnedAlways, nil
+	case "never":
+		return attributeReturnedNever, nil
+	case "request":
+		return attributeReturnedRequest, nil
+	default:
+		return 0, fmt.Errorf("unknown returned: %q", s)
+	}
+}
+
+func parseAttributeType(s string) (attributeType, error) {
+	switch s {
+	case "string":
+		return attributeDataTypeString, nil
+	case "boolean":
+		return attributeDataTypeBoolean, nil
+	case "decimal":
+		return attributeDataTypeDecimal, nil
+	case "integer":
+		return attributeDataTypeInteger, nil
+	case "dateTime":
+		return attributeDataTypeDateTime, nil
+	case "reference":
+		return attributeDataTypeReference, nil
+	case "complex":
+		return attributeDataTypeComplex, nil
+	case "binary":
+		return attributeDataTypeBinary, nil
+	default:
+		return 0, fmt.Errorf("unknown attribute type: %q", s)
+	}
+}
+
+func parseAttributeUniqueness(s string) (attributeUniqueness, error) {
+	switch s {
+	case "none", "":
+		return attributeUniquenessNone, nil
+	case "server":
+		return attributeUniquenessServer, nil
+	case "global":
+		return attributeUniquenessGlobal, nil
+	default:
+		return 0, fmt.Errorf("unknown uniqueness: %q", s)
+	}
 }

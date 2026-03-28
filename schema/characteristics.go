@@ -7,15 +7,20 @@ import (
 )
 
 func checkAttributeName(name string) {
-	// starts w/ a A-Za-z followed by a A-Za-z0-9, a dollar sign, a hyphen or an underscore
-	match, err := regexp.MatchString(`^[A-Za-z][\w$-]*$`, name)
-	if err != nil {
+	if err := validateAttributeName(name); err != nil {
 		panic(err)
 	}
+}
 
-	if !match {
-		panic(fmt.Sprintf("invalid attribute name %q", name))
+func validateAttributeName(name string) error {
+	match, err := regexp.MatchString(`^[A-Za-z][\w$-]*$`, name)
+	if err != nil {
+		return err
 	}
+	if !match {
+		return fmt.Errorf("invalid attribute name %q", name)
+	}
+	return nil
 }
 
 // AttributeDataType is a single keyword indicating the derived data type from JSON.
