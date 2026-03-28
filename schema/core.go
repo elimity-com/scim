@@ -45,30 +45,9 @@ type CoreAttribute struct {
 func ComplexCoreAttribute(params ComplexParams) CoreAttribute {
 	checkAttributeName(params.Name)
 
-	names := map[string]int{}
-	var sa []CoreAttribute
-
-	for i, a := range params.SubAttributes {
-		name := strings.ToLower(a.name)
-		if j, ok := names[name]; ok {
-			panic(fmt.Errorf("duplicate name %q for sub-attributes %d and %d", name, i, j))
-		}
-
-		names[name] = i
-
-		sa = append(sa, CoreAttribute{
-			canonicalValues: a.canonicalValues,
-			caseExact:       a.caseExact,
-			description:     a.description,
-			multiValued:     a.multiValued,
-			mutability:      a.mutability,
-			name:            a.name,
-			referenceTypes:  a.referenceTypes,
-			required:        a.required,
-			returned:        a.returned,
-			typ:             a.typ,
-			uniqueness:      a.uniqueness,
-		})
+	sa, err := buildSubAttributes(params.SubAttributes)
+	if err != nil {
+		panic(err)
 	}
 
 	return CoreAttribute{
@@ -101,6 +80,36 @@ func SimpleCoreAttribute(params SimpleParams) CoreAttribute {
 		typ:             params.typ,
 		uniqueness:      params.uniqueness,
 	}
+}
+
+func buildSubAttributes(subAttributes []SimpleParams) ([]CoreAttribute, error) {
+	names := map[string]int{}
+	var sa []CoreAttribute
+
+	for i, a := range subAttributes {
+		name := strings.ToLower(a.name)
+		if j, ok := names[name]; ok {
+			return nil, fmt.Errorf("duplicate name %q for sub-attributes %d and %d", name, i, j)
+		}
+
+		names[name] = i
+
+		sa = append(sa, CoreAttribute{
+			canonicalValues: a.canonicalValues,
+			caseExact:       a.caseExact,
+			description:     a.description,
+			multiValued:     a.multiValued,
+			mutability:      a.mutability,
+			name:            a.name,
+			referenceTypes:  a.referenceTypes,
+			required:        a.required,
+			returned:        a.returned,
+			typ:             a.typ,
+			uniqueness:      a.uniqueness,
+		})
+	}
+
+	return sa, nil
 }
 
 // AttributeType returns the attribute type.
