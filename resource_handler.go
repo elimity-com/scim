@@ -46,9 +46,10 @@ type Resource struct {
 }
 
 func (r Resource) response(resourceType ResourceType, location string) ResourceAttributes {
-	response := r.Attributes
-	if response == nil {
-		response = ResourceAttributes{}
+	// Copy attributes to avoid mutating the map returned by the handler.
+	response := make(ResourceAttributes, len(r.Attributes))
+	for k, v := range r.Attributes {
+		response[k] = v
 	}
 
 	response[schema.CommonAttributeID] = r.ID

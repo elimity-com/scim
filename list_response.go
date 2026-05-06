@@ -44,9 +44,10 @@ func (p Page) rawResources() []interface{} {
 
 	var resources []interface{}
 	for _, v := range p.Resources {
-		attrs := v.Attributes
-		if attrs == nil {
-			attrs = ResourceAttributes{}
+		// Copy outer map to avoid mutating handler-owned attributes.
+		attrs := make(ResourceAttributes, len(v.Attributes)+3)
+		for k, val := range v.Attributes {
+			attrs[k] = val
 		}
 
 		attrs[schema.CommonAttributeID] = v.ID
@@ -55,10 +56,14 @@ func (p Page) rawResources() []interface{} {
 		}
 
 		// Merge Meta fields into the existing "meta" map if present, or create a new one.
+		// Copy the nested meta map too, to avoid mutating a handler-owned nested map.
 		var metaMap map[string]interface{}
 		if existing, ok := attrs[schema.CommonAttributeMeta]; ok {
 			if m, ok := existing.(map[string]interface{}); ok {
-				metaMap = m
+				metaMap = make(map[string]interface{}, len(m)+3)
+				for k, val := range m {
+					metaMap[k] = val
+				}
 			}
 		}
 		hasMeta := false
