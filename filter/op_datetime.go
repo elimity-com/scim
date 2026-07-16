@@ -2,7 +2,7 @@ package filter
 
 import (
 	"fmt"
-	datetime "github.com/di-wu/xsd-datetime"
+	datetime "github.com/q-uint/xsd-datetime"
 	"github.com/scim2/filter-parser/v2"
 	"strings"
 	"time"
