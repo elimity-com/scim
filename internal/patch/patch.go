@@ -184,6 +184,28 @@ func (v OperationValidator) validateEmptyPath() (interface{}, error) {
 
 	rootValue := map[string]interface{}{}
 	for p, value := range attributes {
+		// A key that exactly matches a schema URI is a JSON container for that
+		// extension's attributes, not an attribute path (RFC 7643 Section 3.3,
+		// RFC 7644 Section 3.5.2). Validate its members against the extension schema.
+		if extSchema, ok := v.schemas[p]; ok {
+			extAttributes, ok := value.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("the value of %s should be a complex attribute", p)
+			}
+			extValidator := OperationValidator{
+				Op:      v.Op,
+				value:   extAttributes,
+				schema:  extSchema,
+				schemas: v.schemas,
+			}
+			extValue, err := extValidator.validateEmptyPath()
+			if err != nil {
+				return nil, err
+			}
+			rootValue[p] = extValue
+			continue
+		}
+
 		path, err := filter.ParsePath([]byte(p))
 		if err != nil {
 			return nil, fmt.Errorf("invalid attribute path: %s", p)
