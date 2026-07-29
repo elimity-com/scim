@@ -2,8 +2,10 @@ package schema
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
 )
 
@@ -71,5 +73,134 @@ func TestCoreAttribute_WithReturned(t *testing.T) {
 	}
 	if attr.Returned() != "default" {
 		t.Error("WithReturned modified the original attribute")
+	}
+}
+
+func TestCoreAttribute_validate_allowsDistinctTypeValuePairs(t *testing.T) {
+	emails := ComplexCoreAttribute(ComplexParams{
+		Name:        "emails",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "type"}),
+			SimpleBooleanParams(BooleanParams{Name: "primary"}),
+		},
+	})
+
+	_, scimErr := emails.validate([]interface{}{
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+		map[string]interface{}{"type": "home", "value": "john@home.com"},
+	})
+	if scimErr != nil {
+		t.Errorf("unexpected error for distinct (type, value) pairs: %v", scimErr)
+	}
+}
+
+func TestCoreAttribute_validate_allowsDuplicateTypeWithDifferentValue(t *testing.T) {
+	emails := ComplexCoreAttribute(ComplexParams{
+		Name:        "emails",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "type"}),
+		},
+	})
+
+	_, scimErr := emails.validate([]interface{}{
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+		map[string]interface{}{"type": "work", "value": "jane@work.com"},
+	})
+	if scimErr != nil {
+		t.Errorf("unexpected error for same type with different value: %v", scimErr)
+	}
+}
+
+func TestCoreAttribute_validate_rejectsDuplicatePrimary(t *testing.T) {
+	emails := ComplexCoreAttribute(ComplexParams{
+		Name:        "emails",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "type"}),
+			SimpleBooleanParams(BooleanParams{Name: "primary"}),
+		},
+	})
+
+	_, scimErr := emails.validate([]interface{}{
+		map[string]interface{}{"type": "work", "value": "john@work.com", "primary": true},
+		map[string]interface{}{"type": "home", "value": "john@home.com", "primary": true},
+	})
+	if scimErr == nil {
+		t.Fatal("expected error for duplicate primary")
+	}
+	if scimErr.Status != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", scimErr.Status)
+	}
+	if scimErr.ScimType != errors.ScimTypeInvalidValue {
+		t.Errorf("expected scimType %q, got %q", errors.ScimTypeInvalidValue, scimErr.ScimType)
+	}
+}
+
+func TestCoreAttribute_validate_rejectsDuplicateTypeValuePairs(t *testing.T) {
+	emails := ComplexCoreAttribute(ComplexParams{
+		Name:        "emails",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "type"}),
+			SimpleBooleanParams(BooleanParams{Name: "primary"}),
+		},
+	})
+
+	_, scimErr := emails.validate([]interface{}{
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+	})
+	if scimErr == nil {
+		t.Error("expected error for duplicate (type, value) pairs")
+	}
+}
+
+func TestCoreAttribute_validate_rejectsDuplicateTypeValuePairsWithBadRequest(t *testing.T) {
+	emails := ComplexCoreAttribute(ComplexParams{
+		Name:        "emails",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "type"}),
+		},
+	})
+
+	_, scimErr := emails.validate([]interface{}{
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+		map[string]interface{}{"type": "work", "value": "john@work.com"},
+	})
+	if scimErr == nil {
+		t.Fatal("expected error for duplicate (type, value) pairs")
+	}
+	if scimErr.Status != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", scimErr.Status)
+	}
+	if scimErr.ScimType != errors.ScimTypeInvalidValue {
+		t.Errorf("expected scimType %q, got %q", errors.ScimTypeInvalidValue, scimErr.ScimType)
+	}
+}
+
+func TestCoreAttribute_validate_skipsDuplicateCheckWithoutTypeSubAttr(t *testing.T) {
+	members := ComplexCoreAttribute(ComplexParams{
+		Name:        "members",
+		MultiValued: true,
+		SubAttributes: []SimpleParams{
+			SimpleStringParams(StringParams{Name: "value"}),
+			SimpleStringParams(StringParams{Name: "displayName"}),
+		},
+	})
+
+	_, scimErr := members.validate([]interface{}{
+		map[string]interface{}{"value": "user1", "displayName": "User 1"},
+		map[string]interface{}{"value": "user1", "displayName": "User 1"},
+	})
+	if scimErr != nil {
+		t.Errorf("unexpected error for attribute without type sub-attribute: %v", scimErr)
 	}
 }

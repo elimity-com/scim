@@ -69,6 +69,20 @@ func assertNotNil(t *testing.T, object interface{}, name string) {
 	}
 }
 
+func assertScimError(t *testing.T, err error, expectedType errors.ScimType) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected scimType %q error, got nil", expectedType)
+	}
+	scimErr, ok := err.(errors.ScimError)
+	if !ok {
+		t.Fatalf("expected ScimError, got %T: %v", err, err)
+	}
+	if scimErr.ScimType != expectedType {
+		t.Errorf("expected scimType %q, got %q", expectedType, scimErr.ScimType)
+	}
+}
+
 func assertTrue(t *testing.T, ok bool) {
 	if !ok {
 		t.Error("value should be true")
