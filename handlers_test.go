@@ -118,6 +118,44 @@ func TestNewServerReportsBaseURL(t *testing.T) {
 	}
 }
 
+// An endpoint that cannot address a resource must fail construction. Before,
+// "" panicked in resourceLocation and "Users" silently produced "sers/0001".
+func TestNewServerValidatesEndpoints(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		endpoints []string
+		valid     bool
+	}{
+		{name: "rooted", endpoints: []string{"/Users", "/Groups"}, valid: true},
+		{name: "nested", endpoints: []string{"/v2/Users"}, valid: true},
+		{name: "empty", endpoints: []string{""}},
+		{name: "root", endpoints: []string{"/"}},
+		{name: "not rooted", endpoints: []string{"Users"}},
+		{name: "trailing slash", endpoints: []string{"/Users/"}},
+		{name: "needs escaping", endpoints: []string{"/My Users"}},
+		{name: "duplicate", endpoints: []string{"/Users", "/Users"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceTypes := make([]ResourceType, 0, len(tt.endpoints))
+			for _, e := range tt.endpoints {
+				resourceTypes = append(resourceTypes, ResourceType{Endpoint: e})
+			}
+
+			_, err := NewServer(&ServerArgs{
+				ServiceProviderConfig: &ServiceProviderConfig{},
+				ResourceTypes:         resourceTypes,
+			})
+			if tt.valid {
+				assertNil(t, err, "err")
+				return
+			}
+			if err == nil {
+				t.Errorf("endpoints %q should have been rejected", tt.endpoints)
+			}
+		})
+	}
+}
+
 func TestResourceLocation(t *testing.T) {
 	users := ResourceType{Endpoint: "/Users"}
 	for _, tt := range []struct {

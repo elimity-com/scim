@@ -55,15 +55,42 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 // resourceLocation returns the location of id under baseURL. A nil baseURL
 // yields the endpoint and id on their own, without a prefix.
 func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) string {
-	relativePath := resourceType.Endpoint[1:] + "/" + url.PathEscape(id)
+	relativePath := strings.TrimPrefix(resourceType.Endpoint, "/") + "/" + url.PathEscape(id)
 	if baseURL == nil {
 		return relativePath
 	}
 
 	u := *baseURL
 	u.RawPath = u.EscapedPath() + "/" + relativePath
-	u.Path = u.Path + "/" + resourceType.Endpoint[1:] + "/" + id
+	u.Path = u.Path + "/" + strings.TrimPrefix(resourceType.Endpoint, "/") + "/" + id
 	return u.String()
+}
+
+// validateEndpoints reports a resource type endpoint that cannot address a
+// resource. Routing matches it against the request path and resourceLocation
+// puts it in a URL, so it must be rooted and usable as a path unescaped.
+func validateEndpoints(resourceTypes []ResourceType) error {
+	seen := make(map[string]struct{}, len(resourceTypes))
+	for _, t := range resourceTypes {
+		switch {
+		case t.Endpoint == "", t.Endpoint == "/":
+			return fmt.Errorf("resource type %q has no endpoint", t.Name)
+		case !strings.HasPrefix(t.Endpoint, "/"):
+			return fmt.Errorf("endpoint %q of resource type %q must start with %q", t.Endpoint, t.Name, "/")
+		case strings.HasSuffix(t.Endpoint, "/"):
+			return fmt.Errorf("endpoint %q of resource type %q must not end with %q", t.Endpoint, t.Name, "/")
+		}
+
+		if escaped := (&url.URL{Path: t.Endpoint}).EscapedPath(); escaped != t.Endpoint {
+			return fmt.Errorf("endpoint %q of resource type %q must not need escaping", t.Endpoint, t.Name)
+		}
+
+		if _, ok := seen[t.Endpoint]; ok {
+			return fmt.Errorf("endpoint %q is used by more than one resource type", t.Endpoint)
+		}
+		seen[t.Endpoint] = struct{}{}
+	}
+	return nil
 }
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol
@@ -88,6 +115,10 @@ func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 
 	if args.ResourceTypes == nil {
 		return Server{}, fmt.Errorf("resource types not provided")
+	}
+
+	if err := validateEndpoints(args.ResourceTypes); err != nil {
+		return Server{}, err
 	}
 
 	s := &Server{

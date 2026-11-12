@@ -652,7 +652,7 @@ func ResourceTypeSchema() Schema {
 				Name:        "description",
 			})),
 			SimpleCoreAttribute(SimpleStringParams(StringParams{
-				Description: optional.NewString("The resource type’s HTTP-addressable endpoint relative to the Base URL of the service provider, e.g., \"Users\"."),
+				Description: optional.NewString("The resource type’s HTTP-addressable endpoint relative to the Base URL of the service provider, e.g., \"/Users\"."),
 				Mutability:  AttributeMutabilityReadOnly(),
 				Name:        "endpoint",
 				Required:    true,
