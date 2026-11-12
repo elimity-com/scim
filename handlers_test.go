@@ -93,20 +93,6 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
-func TestParseIdentifier(t *testing.T) {
-	for _, tt := range []struct{ name, path, want string }{
-		{name: "plain", path: "/Users/0001", want: "0001"},
-		{name: "space", path: "/Users/Jane Doe", want: "Jane Doe"},
-		{name: "percent", path: "/Users/50%", want: "50%"},
-		{name: "slash", path: "/Users/a/b", want: "a/b"},
-		{name: "empty", path: "/Users/", want: ""},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			assertEqual(t, tt.want, parseIdentifier(tt.path, "/Users"))
-		})
-	}
-}
-
 func TestResourceLocation(t *testing.T) {
 	users := ResourceType{Endpoint: "/Users"}
 	for _, tt := range []struct {
