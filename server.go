@@ -52,18 +52,15 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
-// resourceLocation returns the location of the resource id of resourceType:
-// its endpoint and the identifier, path-escaped, under baseURL when one is
-// set. A baseURL that does not parse yields the relative location.
-func resourceLocation(resourceType ResourceType, id string, baseURL string) string {
+// resourceLocation returns the location of id under baseURL. A nil baseURL
+// yields the endpoint and id on their own, without a prefix.
+func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) string {
 	relativePath := resourceType.Endpoint[1:] + "/" + url.PathEscape(id)
-	if baseURL == "" {
+	if baseURL == nil {
 		return relativePath
 	}
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return relativePath
-	}
+
+	u := *baseURL
 	u.RawPath = u.EscapedPath() + "/" + relativePath
 	u.Path = u.Path + "/" + resourceType.Endpoint[1:] + "/" + id
 	return u.String()
@@ -76,7 +73,8 @@ type Server struct {
 	resourceTypes    []ResourceType
 	rootQueryHandler RootQueryHandler
 	log              Logger
-	baseURL          string
+	baseURL          *url.URL
+	baseURLErr       error
 }
 
 func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
@@ -100,6 +98,10 @@ func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	if s.baseURLErr != nil {
+		return Server{}, s.baseURLErr
 	}
 
 	return *s, nil
@@ -301,12 +303,38 @@ type ServerArgs struct {
 
 type ServerOption func(*Server)
 
-// WithBaseURL configures the server to use absolute URIs for resource
-// locations. The base URL is prepended to all meta.location values and
-// Location headers. For example, "https://example.com/v2".
+// WithBaseURL prefixes all meta.location values and Location headers with
+// baseURL, for example "https://example.com/v2". It must be absolute or start
+// with "/", and carry no query or fragment. NewServer reports it otherwise.
+//
+// An empty baseURL leaves locations unprefixed, as "Users/0001".
 func WithBaseURL(baseURL string) ServerOption {
 	return func(s *Server) {
-		s.baseURL = strings.TrimRight(baseURL, "/")
+		if baseURL == "" {
+			s.baseURL = nil
+			return
+		}
+
+		trimmed := strings.TrimRight(baseURL, "/")
+		u, err := url.Parse(trimmed)
+		if err != nil {
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: %w", baseURL, err)
+			return
+		}
+
+		switch {
+		case u.Opaque != "":
+			// "https:example.com/v2" has no path to extend, so the location
+			// would be dropped.
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must be hierarchical", baseURL)
+		case u.RawQuery != "" || u.ForceQuery || u.Fragment != "":
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must not have a query or fragment", baseURL)
+		case u.Scheme == "" && u.Host == "" && trimmed != "" && !strings.HasPrefix(trimmed, "/"):
+			// "example.com/v2" is a relative path reference, not a host.
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must be absolute or start with %q", baseURL, "/")
+		default:
+			s.baseURL = u
+		}
 	}
 }
 

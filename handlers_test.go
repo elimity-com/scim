@@ -93,6 +93,31 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
+// A rejected base URL must fail construction rather than yield broken locations.
+func TestNewServerReportsBaseURL(t *testing.T) {
+	_, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+		},
+		WithBaseURL("https:example.com/v2"),
+	)
+	if err == nil {
+		t.Error("expected an error for a base URL that is not hierarchical")
+	}
+
+	_, err = NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+		},
+		WithBaseURL("https://example.com/v2"),
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 func TestResourceLocation(t *testing.T) {
 	users := ResourceType{Endpoint: "/Users"}
 	for _, tt := range []struct {
@@ -107,12 +132,15 @@ func TestResourceLocation(t *testing.T) {
 		{name: "percent under base", id: "50%", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/50%25"},
 		{name: "unicode under base", id: "Jöhn", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/J%C3%B6hn"},
 		{name: "empty under base", id: "", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/"},
-		{name: "base with a query", id: "Jane Doe", baseURL: "https://example.com/v2?x=1", want: "https://example.com/v2/Users/Jane%20Doe?x=1"},
 		{name: "base with an escaped path", id: "Jane Doe", baseURL: "https://example.com/my%20api", want: "https://example.com/my%20api/Users/Jane%20Doe"},
-		{name: "base that does not parse", id: "Jane Doe", baseURL: "://bad", want: "Users/Jane%20Doe"},
+		{name: "base with a trailing slash", id: "0001", baseURL: "https://example.com/v2/", want: "https://example.com/v2/Users/0001"},
+		{name: "root base", id: "0001", baseURL: "/", want: "/Users/0001"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assertEqual(t, tt.want, resourceLocation(users, tt.id, tt.baseURL))
+			var s Server
+			WithBaseURL(tt.baseURL)(&s)
+			assertNil(t, s.baseURLErr, "baseURLErr")
+			assertEqual(t, tt.want, resourceLocation(users, tt.id, s.baseURL))
 		})
 	}
 }
@@ -1758,6 +1786,35 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+		})
+	}
+}
+
+func TestWithBaseURL(t *testing.T) {
+	for _, tt := range []struct {
+		name, baseURL string
+		valid         bool
+	}{
+		{name: "empty", baseURL: "", valid: true},
+		{name: "absolute", baseURL: "https://example.com/v2", valid: true},
+		{name: "path only", baseURL: "/v2", valid: true},
+		{name: "network path", baseURL: "//example.com/v2", valid: true},
+		{name: "query", baseURL: "https://example.com/v2?x=1"},
+		{name: "fragment", baseURL: "https://example.com/v2#frag"},
+		{name: "missing slashes", baseURL: "https:example.com/v2"},
+		{name: "missing scheme", baseURL: "example.com/v2"},
+		{name: "does not parse", baseURL: "://bad"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var s Server
+			WithBaseURL(tt.baseURL)(&s)
+			if tt.valid {
+				assertNil(t, s.baseURLErr, "baseURLErr")
+				return
+			}
+			if s.baseURLErr == nil {
+				t.Errorf("base URL %q should have been rejected", tt.baseURL)
+			}
 		})
 	}
 }
