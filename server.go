@@ -52,10 +52,15 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
-func parseIdentifier(path, endpoint string) (string, error) {
-	return url.PathUnescape(strings.TrimPrefix(path, endpoint+"/"))
+// parseIdentifier returns the resource identifier in path, which the HTTP
+// server has decoded.
+func parseIdentifier(path, endpoint string) string {
+	return strings.TrimPrefix(path, endpoint+"/")
 }
 
+// resourceLocation returns the location of the resource id of resourceType:
+// its endpoint and the identifier, path-escaped, under baseURL when one is
+// set. A baseURL that does not parse yields the relative location.
 func resourceLocation(resourceType ResourceType, id string, baseURL string) string {
 	relativePath := resourceType.Endpoint[1:] + "/" + url.PathEscape(id)
 	if baseURL == "" {
@@ -65,7 +70,8 @@ func resourceLocation(resourceType ResourceType, id string, baseURL string) stri
 	if err != nil {
 		return relativePath
 	}
-	u.Path = u.Path + "/" + relativePath
+	u.RawPath = u.EscapedPath() + "/" + relativePath
+	u.Path = u.Path + "/" + resourceType.Endpoint[1:] + "/" + id
 	return u.String()
 }
 
@@ -175,10 +181,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if strings.HasPrefix(path, resourceType.Endpoint+"/") {
-			id, err := parseIdentifier(path, resourceType.Endpoint)
-			if err != nil {
-				break
-			}
+			id := parseIdentifier(path, resourceType.Endpoint)
 
 			switch r.Method {
 			case http.MethodGet:
