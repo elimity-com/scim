@@ -93,6 +93,30 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
+func TestResourceLocation(t *testing.T) {
+	users := ResourceType{Endpoint: "/Users"}
+	for _, tt := range []struct {
+		name, id, baseURL, want string
+	}{
+		{name: "relative", id: "0001", want: "Users/0001"},
+		{name: "absolute", id: "0001", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/0001"},
+		{name: "path only base", id: "0001", baseURL: "/v2", want: "/v2/Users/0001"},
+		{name: "space", id: "Jane Doe", want: "Users/Jane%20Doe"},
+		{name: "space under base", id: "Jane Doe", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/Jane%20Doe"},
+		{name: "slash under base", id: "a/b", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/a%2Fb"},
+		{name: "percent under base", id: "50%", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/50%25"},
+		{name: "unicode under base", id: "Jöhn", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/J%C3%B6hn"},
+		{name: "empty under base", id: "", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/"},
+		{name: "base with a query", id: "Jane Doe", baseURL: "https://example.com/v2?x=1", want: "https://example.com/v2/Users/Jane%20Doe?x=1"},
+		{name: "base with an escaped path", id: "Jane Doe", baseURL: "https://example.com/my%20api", want: "https://example.com/my%20api/Users/Jane%20Doe"},
+		{name: "base that does not parse", id: "Jane Doe", baseURL: "://bad", want: "Users/Jane%20Doe"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assertEqual(t, tt.want, resourceLocation(users, tt.id, tt.baseURL))
+		})
+	}
+}
+
 func TestServerExplicitStatusCodes(t *testing.T) {
 	tests := []struct {
 		name           string
