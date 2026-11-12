@@ -272,6 +272,45 @@ func TestServerMeEndpoint(t *testing.T) {
 	assertEqualStatusCode(t, http.StatusNotImplemented, rr.Code)
 }
 
+// Every response carrying a resource must repeat meta.location in the
+// Content-Location header (RFC 7643 Section 3.1).
+func TestServerResourceContentLocation(t *testing.T) {
+	patch := `{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations": [{"op": "replace", "path": "active", "value": false}]
+	}`
+	replace := `{"userName": "test", "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]}`
+
+	for _, tt := range []struct {
+		name, method, target, body string
+	}{
+		{name: "get", method: http.MethodGet, target: "/Users/0001"},
+		{name: "put", method: http.MethodPut, target: "/Users/0001", body: replace},
+		{name: "patch", method: http.MethodPatch, target: "/Users/0001", body: patch},
+		{name: "post", method: http.MethodPost, target: "/Users", body: replace},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.target, strings.NewReader(tt.body))
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			var resource map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+			meta, ok := resource["meta"].(map[string]interface{})
+			assertTypeOk(t, ok, "object")
+
+			location, ok := meta["location"].(string)
+			assertTypeOk(t, ok, "string")
+			if !strings.HasPrefix(location, "https://example.com/v2/Users/") {
+				t.Errorf("unexpected location %q", location)
+			}
+
+			assertEqual(t, location, rr.Header().Get("Content-Location"))
+		})
+	}
+}
+
 func TestServerResourceDeleteHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodDelete, "/Users/0001", nil)
 	rr := httptest.NewRecorder()
