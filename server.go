@@ -29,6 +29,33 @@ var reservedEndpoints = []string{
 	"/Bulk", "/Me", "/ResourceTypes", "/Schemas", "/ServiceProviderConfig",
 }
 
+// isReserved reports an endpoint that this server routes to something other
+// than a resource type. A reserved endpoint claims its subtree too, as
+// ServeHTTP answers every path under /Schemas and /ResourceTypes.
+func isReserved(endpoint string) bool {
+	if strings.HasSuffix(endpoint, "/.search") {
+		return true
+	}
+	for _, reserved := range reservedEndpoints {
+		if endpoint == reserved || strings.HasPrefix(endpoint, reserved+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// trimVersion strips the version identifier that may precede the endpoint. Only
+// a whole segment is the identifier, so "/v2Users" keeps its path.
+func trimVersion(path string) string {
+	if path == versionSegment {
+		return "/"
+	}
+	if strings.HasPrefix(path, versionSegment+"/") {
+		return strings.TrimPrefix(path, versionSegment)
+	}
+	return path
+}
+
 // endpointLocation returns the location of ids under endpoint and baseURL. The
 // endpoint is used as is, every id is escaped. A nil baseURL yields the path on
 // its own, without a prefix.
@@ -110,7 +137,7 @@ func validateEndpoints(resourceTypes []ResourceType) error {
 			return fmt.Errorf("endpoint %q of resource type %q must not need escaping", t.Endpoint, t.Name)
 		}
 
-		if contains(reservedEndpoints, t.Endpoint) || strings.HasSuffix(t.Endpoint, "/.search") {
+		if isReserved(t.Endpoint) {
 			return fmt.Errorf("endpoint %q of resource type %q is reserved", t.Endpoint, t.Name)
 		}
 
@@ -186,7 +213,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 	w = &statusResponseWriter{ResponseWriter: w}
 
-	path := strings.TrimPrefix(r.URL.Path, versionSegment)
+	path := trimVersion(r.URL.Path)
 
 	switch {
 	case (path == "/" || path == "") && r.Method == http.MethodGet:
@@ -384,8 +411,11 @@ type ServerOption func(*Server)
 // An empty baseURL leaves locations unprefixed, as "Users/0001".
 func WithBaseURL(baseURL string) ServerOption {
 	return func(s *Server) {
+		// The last option wins, so an earlier base URL and its error are both
+		// dropped.
+		s.baseURL, s.baseURLErr = nil, nil
+
 		if baseURL == "" {
-			s.baseURL = nil
 			return
 		}
 

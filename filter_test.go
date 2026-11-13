@@ -147,7 +147,6 @@ func newTestServerForFilter(t *testing.T) scim.Server {
 							"0001": {attributes: map[string]interface{}{"userName": "testUser"}},
 							"0002": {attributes: map[string]interface{}{"userName": "testUser+test"}},
 						},
-						schema: schema.CoreUserSchema(),
 					},
 				},
 				{
@@ -161,7 +160,6 @@ func newTestServerForFilter(t *testing.T) scim.Server {
 							"0001": {attributes: map[string]interface{}{"displayName": "testGroup"}},
 							"0002": {attributes: map[string]interface{}{"displayName": "testGroup+test"}},
 						},
-						schema: schema.CoreGroupSchema(),
 					},
 				},
 			},

@@ -366,15 +366,18 @@ func (s Server) resourceSearchHandler(w http.ResponseWriter, r *http.Request, re
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
 // resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User".
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	var resourceType ResourceType
+	var (
+		resourceType ResourceType
+		found        bool
+	)
 	for _, r := range s.resourceTypes {
 		if r.Name == name {
-			resourceType = r
+			resourceType, found = r, true
 			break
 		}
 	}
 
-	if resourceType.Name != name {
+	if !found {
 		scimErr := errors.ScimErrorResourceNotFound(name)
 		s.errorHandler(w, &scimErr)
 		return
@@ -599,7 +602,8 @@ func (s Server) rootSearchHandler(w http.ResponseWriter, r *http.Request) {
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User".
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	getSchema := s.getSchema(id)
-	if getSchema.ID != id {
+	// A schema is identified by its URI, which is never empty.
+	if id == "" || getSchema.ID != id {
 		scimErr := errors.ScimErrorResourceNotFound(id)
 		s.errorHandler(w, &scimErr)
 		return
