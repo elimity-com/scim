@@ -118,43 +118,6 @@ func TestNewServerReportsBaseURL(t *testing.T) {
 	}
 }
 
-// The last WithBaseURL wins, so an earlier base URL and the error it reported
-// are both dropped.
-func TestWithBaseURLLastWins(t *testing.T) {
-	notHierarchical := "https:example.com/v2"
-	for _, tt := range []struct {
-		name     string
-		baseURLs []string
-		want     string
-		wantErr  bool
-	}{
-		{name: "valid after invalid", baseURLs: []string{notHierarchical, "https://example.com/v2"}, want: "https://example.com/v2/Users/0001"},
-		{name: "empty after invalid", baseURLs: []string{notHierarchical, ""}, want: "Users/0001"},
-		{name: "invalid after valid", baseURLs: []string{"https://example.com/v2", notHierarchical}, wantErr: true},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			opts := make([]ServerOption, 0, len(tt.baseURLs))
-			for _, baseURL := range tt.baseURLs {
-				opts = append(opts, WithBaseURL(baseURL))
-			}
-
-			s, err := NewServer(&ServerArgs{
-				ServiceProviderConfig: &ServiceProviderConfig{},
-				ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
-			}, opts...)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("base URLs %q should have been rejected", tt.baseURLs)
-				}
-				return
-			}
-
-			assertNil(t, err, "err")
-			assertEqual(t, tt.want, resourceLocation(ResourceType{Endpoint: "/Users"}, "0001", s.baseURL))
-		})
-	}
-}
-
 // An endpoint that cannot address a resource must fail construction. Before,
 // "" panicked in resourceLocation and "Users" silently produced "sers/0001".
 func TestNewServerValidatesEndpoints(t *testing.T) {
@@ -202,57 +165,6 @@ func TestNewServerValidatesEndpoints(t *testing.T) {
 	}
 }
 
-// Only a whole segment is the version identifier, so an endpoint that merely
-// starts with it keeps its path (RFC 7644 Section 3.13).
-func TestServerVersionSegment(t *testing.T) {
-	s, err := NewServer(&ServerArgs{
-		ServiceProviderConfig: &ServiceProviderConfig{},
-		ResourceTypes: []ResourceType{
-			{
-				ID:       optional.NewString("User"),
-				Name:     "User",
-				Endpoint: "/v2Users",
-				Schema:   getUserSchema(),
-				Handler:  newTestResourceHandler(),
-			},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, tt := range []struct {
-		name, target string
-		want         int
-	}{
-		{name: "endpoint", target: "/v2Users/0001", want: http.StatusOK},
-		{name: "endpoint under the version identifier", target: "/v2/v2Users/0001", want: http.StatusOK},
-		{name: "endpoint with the identifier stripped", target: "/Users/0001", want: http.StatusNotFound},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
-			rr := httptest.NewRecorder()
-			s.ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, tt.want, rr.Code)
-		})
-	}
-}
-
-// The configuration endpoints address one resource by identifier, so a request
-// that carries none is not found.
-func TestServerConfigurationEndpointsEmptyIdentifier(t *testing.T) {
-	for _, target := range []string{"/Schemas/", "/ResourceTypes/"} {
-		t.Run(target, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, target, nil)
-			rr := httptest.NewRecorder()
-			newTestServer(t).ServeHTTP(rr, req)
-
-			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
-		})
-	}
-}
-
 func TestResourceLocation(t *testing.T) {
 	users := ResourceType{Endpoint: "/Users"}
 	for _, tt := range []struct {
@@ -276,6 +188,20 @@ func TestResourceLocation(t *testing.T) {
 			WithBaseURL(tt.baseURL)(&s)
 			assertNil(t, s.baseURLErr, "baseURLErr")
 			assertEqual(t, tt.want, resourceLocation(users, tt.id, s.baseURL))
+		})
+	}
+}
+
+// The configuration endpoints address one resource by identifier, so a request
+// that carries none is not found.
+func TestServerConfigurationEndpointsEmptyIdentifier(t *testing.T) {
+	for _, target := range []string{"/Schemas/", "/ResourceTypes/"} {
+		t.Run(target, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(t).ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
 		})
 	}
 }
@@ -2049,6 +1975,43 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 	}
 }
 
+// Only a whole segment is the version identifier, so an endpoint that merely
+// starts with it keeps its path (RFC 7644 Section 3.13).
+func TestServerVersionSegment(t *testing.T) {
+	s, err := NewServer(&ServerArgs{
+		ServiceProviderConfig: &ServiceProviderConfig{},
+		ResourceTypes: []ResourceType{
+			{
+				ID:       optional.NewString("User"),
+				Name:     "User",
+				Endpoint: "/v2Users",
+				Schema:   getUserSchema(),
+				Handler:  newTestResourceHandler(),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name, target string
+		want         int
+	}{
+		{name: "endpoint", target: "/v2Users/0001", want: http.StatusOK},
+		{name: "endpoint under the version identifier", target: "/v2/v2Users/0001", want: http.StatusOK},
+		{name: "endpoint with the identifier stripped", target: "/Users/0001", want: http.StatusNotFound},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			s.ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, tt.want, rr.Code)
+		})
+	}
+}
+
 func TestWithBaseURL(t *testing.T) {
 	for _, tt := range []struct {
 		name, baseURL string
@@ -2074,6 +2037,43 @@ func TestWithBaseURL(t *testing.T) {
 			if s.baseURLErr == nil {
 				t.Errorf("base URL %q should have been rejected", tt.baseURL)
 			}
+		})
+	}
+}
+
+// The last WithBaseURL wins, so an earlier base URL and the error it reported
+// are both dropped.
+func TestWithBaseURLLastWins(t *testing.T) {
+	notHierarchical := "https:example.com/v2"
+	for _, tt := range []struct {
+		name     string
+		baseURLs []string
+		want     string
+		wantErr  bool
+	}{
+		{name: "valid after invalid", baseURLs: []string{notHierarchical, "https://example.com/v2"}, want: "https://example.com/v2/Users/0001"},
+		{name: "empty after invalid", baseURLs: []string{notHierarchical, ""}, want: "Users/0001"},
+		{name: "invalid after valid", baseURLs: []string{"https://example.com/v2", notHierarchical}, wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := make([]ServerOption, 0, len(tt.baseURLs))
+			for _, baseURL := range tt.baseURLs {
+				opts = append(opts, WithBaseURL(baseURL))
+			}
+
+			s, err := NewServer(&ServerArgs{
+				ServiceProviderConfig: &ServiceProviderConfig{},
+				ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+			}, opts...)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("base URLs %q should have been rejected", tt.baseURLs)
+				}
+				return
+			}
+
+			assertNil(t, err, "err")
+			assertEqual(t, tt.want, resourceLocation(ResourceType{Endpoint: "/Users"}, "0001", s.baseURL))
 		})
 	}
 }

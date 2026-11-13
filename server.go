@@ -29,33 +29,6 @@ var reservedEndpoints = []string{
 	"/Bulk", "/Me", "/ResourceTypes", "/Schemas", "/ServiceProviderConfig",
 }
 
-// isReserved reports an endpoint that this server routes to something other
-// than a resource type. A reserved endpoint claims its subtree too, as
-// ServeHTTP answers every path under /Schemas and /ResourceTypes.
-func isReserved(endpoint string) bool {
-	if strings.HasSuffix(endpoint, "/.search") {
-		return true
-	}
-	for _, reserved := range reservedEndpoints {
-		if endpoint == reserved || strings.HasPrefix(endpoint, reserved+"/") {
-			return true
-		}
-	}
-	return false
-}
-
-// trimVersion strips the version identifier that may precede the endpoint. Only
-// a whole segment is the identifier, so "/v2Users" keeps its path.
-func trimVersion(path string) string {
-	if path == versionSegment {
-		return "/"
-	}
-	if strings.HasPrefix(path, versionSegment+"/") {
-		return strings.TrimPrefix(path, versionSegment)
-	}
-	return path
-}
-
 // endpointLocation returns the location of ids under endpoint and baseURL. The
 // endpoint is used as is, every id is escaped. A nil baseURL yields the path on
 // its own, without a prefix.
@@ -111,10 +84,37 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
+// isReserved reports an endpoint that this server routes to something other
+// than a resource type. A reserved endpoint claims its subtree too, as
+// ServeHTTP answers every path under /Schemas and /ResourceTypes.
+func isReserved(endpoint string) bool {
+	if strings.HasSuffix(endpoint, "/.search") {
+		return true
+	}
+	for _, reserved := range reservedEndpoints {
+		if endpoint == reserved || strings.HasPrefix(endpoint, reserved+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // resourceLocation returns the location of id under baseURL. A nil baseURL
 // yields the endpoint and id on their own, without a prefix.
 func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) string {
 	return endpointLocation(baseURL, strings.TrimPrefix(resourceType.Endpoint, "/"), id)
+}
+
+// trimVersion strips the version identifier that may precede the endpoint. Only
+// a whole segment is the identifier, so "/v2Users" keeps its path.
+func trimVersion(path string) string {
+	if path == versionSegment {
+		return "/"
+	}
+	if strings.HasPrefix(path, versionSegment+"/") {
+		return strings.TrimPrefix(path, versionSegment)
+	}
+	return path
 }
 
 // validateEndpoints reports a resource type endpoint that cannot address a
