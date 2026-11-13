@@ -136,6 +136,8 @@ func TestNewServerValidatesEndpoints(t *testing.T) {
 		{name: "reserved", endpoints: []string{"/Schemas"}},
 		{name: "reserved and unimplemented", endpoints: []string{"/Bulk"}},
 		{name: "reserved search", endpoints: []string{"/Users/.search"}},
+		{name: "version identifier", endpoints: []string{"/v2/Users"}},
+		{name: "other version", endpoints: []string{"/v3/Users"}, valid: true},
 		{name: "under another endpoint", endpoints: []string{"/Users", "/Users/Admins"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -15,11 +15,16 @@ import (
 const (
 	defaultStartIndex = 1
 	fallbackCount     = 100
+
+	// versionSegment is the optional SCIM version identifier that may precede
+	// the resource endpoint (RFC 7644 Section 3.13).
+	versionSegment = "/v2"
 )
 
-// reservedEndpoints are the endpoints defined by RFC 7644 Table 2. A resource
-// type must not claim one of them, including the ones this server does not
-// implement yet.
+// reservedEndpoints are the endpoints RFC 7644 Table 2 defines for something
+// other than a resource type, including /Bulk, which this server does not
+// implement yet. Table 2 also lists /Users and /Groups, which are resource
+// types and stay available.
 var reservedEndpoints = []string{
 	"/Bulk", "/Me", "/ResourceTypes", "/Schemas", "/ServiceProviderConfig",
 }
@@ -109,6 +114,12 @@ func validateEndpoints(resourceTypes []ResourceType) error {
 			return fmt.Errorf("endpoint %q of resource type %q is reserved", t.Endpoint, t.Name)
 		}
 
+		// The version identifier precedes the endpoint and ServeHTTP strips it
+		// (RFC 7644 Section 3.13).
+		if t.Endpoint == versionSegment || strings.HasPrefix(t.Endpoint, versionSegment+"/") {
+			return fmt.Errorf("endpoint %q of resource type %q must not carry the %q version identifier", t.Endpoint, t.Name, versionSegment)
+		}
+
 		if _, ok := seen[t.Endpoint]; ok {
 			return fmt.Errorf("endpoint %q is used by more than one resource type", t.Endpoint)
 		}
@@ -175,7 +186,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 	w = &statusResponseWriter{ResponseWriter: w}
 
-	path := strings.TrimPrefix(r.URL.Path, "/v2")
+	path := strings.TrimPrefix(r.URL.Path, versionSegment)
 
 	switch {
 	case (path == "/" || path == "") && r.Method == http.MethodGet:

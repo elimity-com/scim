@@ -121,8 +121,9 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	// Content-Location must be absolute, as it resolves against the request URI
-	// (RFC 7231 Section 3.1.4.2).
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
 	if s.baseURL != nil {
 		w.Header().Set("Content-Location", location)
 	}
@@ -173,8 +174,9 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	// Content-Location must be absolute, as it resolves against the request URI
-	// (RFC 7231 Section 3.1.4.2).
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
 	if s.baseURL != nil {
 		w.Header().Set("Content-Location", location)
 	}
@@ -225,8 +227,9 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	w.Header().Set("Location", location)
-	// Content-Location must be absolute, as it resolves against the request URI
-	// (RFC 7231 Section 3.1.4.2).
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
 	if s.baseURL != nil {
 		w.Header().Set("Content-Location", location)
 	}
@@ -276,8 +279,9 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	// Content-Location must be absolute, as it resolves against the request URI
-	// (RFC 7231 Section 3.1.4.2).
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
 	if s.baseURL != nil {
 		w.Header().Set("Content-Location", location)
 	}

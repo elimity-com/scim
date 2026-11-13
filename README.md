@@ -131,13 +131,49 @@ serverOpts := []ServerOption{
 server, err := NewServer(serverArgs, serverOpts...)
 ```
 
+## Mounting the Server
+
+`Server` is an `http.Handler`. Serving it at the root needs nothing further.
+
+```go
+http.ListenAndServe(":7643", server)
+```
+
+### Version identifier
+
+The server accepts the optional `/v2` segment that RFC 7644 Section 3.13 places immediately before the resource
+endpoint, so `/v2/Users/0001` and `/Users/0001` both reach the same handler. It is handled for you, so a resource type
+endpoint must not include it, and `Endpoint: "/v2/Users"` is rejected by `NewServer`.
+
+### Mount prefix
+
+A prefix is yours to strip, and the server never sees it.
+
+```go
+http.Handle("/scim/", http.StripPrefix("/scim", server))
+```
+
+### Base URL
+
+The server cannot derive its prefix or scheme from a request, so set the URL a client sees to get absolute locations.
+It carries both the mount prefix and the version identifier.
+
+```go
+server, err := NewServer(serverArgs, WithBaseURL("https://example.com/scim/v2"))
+```
+
+That returns a `meta.location` and `Location` of `https://example.com/scim/v2/Users/0001`. `NewServer` reports a base
+URL it cannot build on, such as one carrying a query or missing a scheme.
+
+Without a base URL, locations stay relative to the service provider root, which RFC 7643 Section 2.3.7 defines as
+correct for SCIM references. `Content-Location` is then omitted, since HTTP resolves that header against the request
+URI instead.
+
 ## Backwards Compatibility
 
 Even though the SCIM package has been running in some production environments, it is still in an early stage, and not
 all features are supported. So be aware that a change in the minor version could break your implementation. We will not
 make any breaking changes that takes hours to fix, but some functions might change name or signature.
-
-This was the case for `v0.1` to `v0.2.0`.
 
 ## String Values for Attributes
 
