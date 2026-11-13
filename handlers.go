@@ -364,7 +364,13 @@ func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name
 		return
 	}
 
-	raw, err := json.Marshal(resourceType.getRaw())
+	resource := resourceType.getRaw()
+	resource["meta"] = meta{
+		ResourceType: "ResourceType",
+		Location:     endpointLocation(s.baseURL, "ResourceTypes", resourceType.Name),
+	}
+
+	raw, err := json.Marshal(resource)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -396,7 +402,12 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	start, end := clamp(params.StartIndex-1, params.Count, len(s.resourceTypes))
 	var resources []interface{}
 	for _, v := range s.resourceTypes[start:end] {
-		resources = append(resources, v.getRaw())
+		resource := v.getRaw()
+		resource["meta"] = meta{
+			ResourceType: "ResourceType",
+			Location:     endpointLocation(s.baseURL, "ResourceTypes", v.Name),
+		}
+		resources = append(resources, resource)
 	}
 
 	lr := listResponse{
@@ -578,7 +589,13 @@ func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string)
 		return
 	}
 
-	raw, err := json.Marshal(getSchema)
+	resource := getSchema.ToMap()
+	resource["meta"] = meta{
+		ResourceType: "Schema",
+		Location:     endpointLocation(s.baseURL, "Schemas", getSchema.ID),
+	}
+
+	raw, err := json.Marshal(resource)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -623,6 +640,11 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		}
+
+		resource["meta"] = meta{
+			ResourceType: "Schema",
+			Location:     endpointLocation(s.baseURL, "Schemas", v.ID),
+		}
 		resources = append(resources, resource)
 	}
 
@@ -655,7 +677,13 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
 // SCIM specification features available on a service provider.
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := json.Marshal(s.config.getRaw())
+	config := s.config.getRaw()
+	config["meta"] = meta{
+		ResourceType: "ServiceProviderConfig",
+		Location:     endpointLocation(s.baseURL, "ServiceProviderConfig"),
+	}
+
+	raw, err := json.Marshal(config)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(

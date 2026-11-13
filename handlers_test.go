@@ -183,6 +183,84 @@ func TestResourceLocation(t *testing.T) {
 	}
 }
 
+// The configuration endpoints return resources, so they carry meta with a
+// location and a resource type (RFC 7643 Sections 8.5 to 8.7).
+func TestServerConfigurationEndpointsMeta(t *testing.T) {
+	user := "urn:ietf:params:scim:schemas:core:2.0:User"
+	for _, tt := range []struct {
+		name, target, resourceType, location string
+	}{
+		{
+			name: "service provider config", target: "/ServiceProviderConfig",
+			resourceType: "ServiceProviderConfig",
+			location:     "https://example.com/v2/ServiceProviderConfig",
+		},
+		{
+			name: "resource type", target: "/ResourceTypes/User",
+			resourceType: "ResourceType",
+			location:     "https://example.com/v2/ResourceTypes/User",
+		},
+		{
+			name: "schema", target: "/Schemas/" + user,
+			resourceType: "Schema",
+			location:     "https://example.com/v2/Schemas/" + user,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var resource map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+			resourceMeta, ok := resource["meta"].(map[string]interface{})
+			assertTypeOk(t, ok, "object")
+
+			assertEqual(t, tt.resourceType, resourceMeta["resourceType"])
+			assertEqual(t, tt.location, resourceMeta["location"])
+		})
+	}
+}
+
+// Listed resources carry the same meta as when they are fetched on their own.
+func TestServerConfigurationListsMeta(t *testing.T) {
+	for _, tt := range []struct {
+		name, target, resourceType string
+	}{
+		{name: "schemas", target: "/Schemas", resourceType: "Schema"},
+		{name: "resource types", target: "/ResourceTypes", resourceType: "ResourceType"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			var lr struct {
+				Resources []map[string]interface{} `json:"Resources"`
+			}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &lr))
+			if len(lr.Resources) == 0 {
+				t.Fatal("no resources returned")
+			}
+
+			for _, resource := range lr.Resources {
+				resourceMeta, ok := resource["meta"].(map[string]interface{})
+				assertTypeOk(t, ok, "object")
+
+				assertEqual(t, tt.resourceType, resourceMeta["resourceType"])
+				location, ok := resourceMeta["location"].(string)
+				assertTypeOk(t, ok, "string")
+				if !strings.HasPrefix(location, "https://example.com/v2/") {
+					t.Errorf("unexpected location %q", location)
+				}
+			}
+		})
+	}
+}
+
 func TestServerExplicitStatusCodes(t *testing.T) {
 	tests := []struct {
 		name           string

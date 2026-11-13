@@ -17,6 +17,26 @@ const (
 	fallbackCount     = 100
 )
 
+// endpointLocation returns the location of ids under endpoint and baseURL. The
+// endpoint is used as is, every id is escaped. A nil baseURL yields the path on
+// its own, without a prefix.
+func endpointLocation(baseURL *url.URL, endpoint string, ids ...string) string {
+	relativePath, rawPath := endpoint, endpoint
+	for _, id := range ids {
+		relativePath += "/" + url.PathEscape(id)
+		rawPath += "/" + id
+	}
+
+	if baseURL == nil {
+		return relativePath
+	}
+
+	u := *baseURL
+	u.RawPath = u.EscapedPath() + "/" + relativePath
+	u.Path = u.Path + "/" + rawPath
+	return u.String()
+}
+
 // getFilter returns a validated filter if present in the url query, nil otherwise.
 func getFilterValidator(r *http.Request, s schema.Schema, extensions ...schema.Schema) (*filter.Validator, error) {
 	f := strings.TrimSpace(r.URL.Query().Get("filter"))
@@ -55,15 +75,7 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 // resourceLocation returns the location of id under baseURL. A nil baseURL
 // yields the endpoint and id on their own, without a prefix.
 func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) string {
-	relativePath := strings.TrimPrefix(resourceType.Endpoint, "/") + "/" + url.PathEscape(id)
-	if baseURL == nil {
-		return relativePath
-	}
-
-	u := *baseURL
-	u.RawPath = u.EscapedPath() + "/" + relativePath
-	u.Path = u.Path + "/" + strings.TrimPrefix(resourceType.Endpoint, "/") + "/" + id
-	return u.String()
+	return endpointLocation(baseURL, strings.TrimPrefix(resourceType.Endpoint, "/"), id)
 }
 
 // validateEndpoints reports a resource type endpoint that cannot address a
