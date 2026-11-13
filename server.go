@@ -15,7 +15,39 @@ import (
 const (
 	defaultStartIndex = 1
 	fallbackCount     = 100
+
+	// versionSegment is the optional SCIM version identifier that may precede
+	// the resource endpoint (RFC 7644 Section 3.13).
+	versionSegment = "/v2"
 )
+
+// reservedEndpoints are the endpoints RFC 7644 Table 2 defines for something
+// other than a resource type, including /Bulk, which this server does not
+// implement yet. Table 2 also lists /Users and /Groups, which are resource
+// types and stay available.
+var reservedEndpoints = []string{
+	"/Bulk", "/Me", "/ResourceTypes", "/Schemas", "/ServiceProviderConfig",
+}
+
+// endpointLocation returns the location of ids under endpoint and baseURL. The
+// endpoint is used as is, every id is escaped. A nil baseURL yields the path on
+// its own, without a prefix.
+func endpointLocation(baseURL *url.URL, endpoint string, ids ...string) string {
+	relativePath, rawPath := endpoint, endpoint
+	for _, id := range ids {
+		relativePath += "/" + url.PathEscape(id)
+		rawPath += "/" + id
+	}
+
+	if baseURL == nil {
+		return relativePath
+	}
+
+	u := *baseURL
+	u.RawPath = u.EscapedPath() + "/" + relativePath
+	u.Path = u.Path + "/" + rawPath
+	return u.String()
+}
 
 // getFilter returns a validated filter if present in the url query, nil otherwise.
 func getFilterValidator(r *http.Request, s schema.Schema, extensions ...schema.Schema) (*filter.Validator, error) {
@@ -52,21 +84,83 @@ func getIntQueryParam(r *http.Request, key string, def int) (int, error) {
 	return 0, fmt.Errorf("invalid query parameter, \"%s\" must be an integer", key)
 }
 
-// resourceLocation returns the location of the resource id of resourceType:
-// its endpoint and the identifier, path-escaped, under baseURL when one is
-// set. A baseURL that does not parse yields the relative location.
-func resourceLocation(resourceType ResourceType, id string, baseURL string) string {
-	relativePath := resourceType.Endpoint[1:] + "/" + url.PathEscape(id)
-	if baseURL == "" {
-		return relativePath
+// isReserved reports an endpoint that this server routes to something other
+// than a resource type. A reserved endpoint claims its subtree too, as
+// ServeHTTP answers every path under /Schemas and /ResourceTypes.
+func isReserved(endpoint string) bool {
+	if strings.HasSuffix(endpoint, "/.search") {
+		return true
 	}
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return relativePath
+	for _, reserved := range reservedEndpoints {
+		if endpoint == reserved || strings.HasPrefix(endpoint, reserved+"/") {
+			return true
+		}
 	}
-	u.RawPath = u.EscapedPath() + "/" + relativePath
-	u.Path = u.Path + "/" + resourceType.Endpoint[1:] + "/" + id
-	return u.String()
+	return false
+}
+
+// resourceLocation returns the location of id under baseURL. A nil baseURL
+// yields the endpoint and id on their own, without a prefix.
+func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) string {
+	return endpointLocation(baseURL, strings.TrimPrefix(resourceType.Endpoint, "/"), id)
+}
+
+// trimVersion strips the version identifier that may precede the endpoint. Only
+// a whole segment is the identifier, so "/v2Users" keeps its path.
+func trimVersion(path string) string {
+	if path == versionSegment {
+		return "/"
+	}
+	if strings.HasPrefix(path, versionSegment+"/") {
+		return strings.TrimPrefix(path, versionSegment)
+	}
+	return path
+}
+
+// validateEndpoints reports a resource type endpoint that cannot address a
+// resource. An endpoint must be a rooted path that needs no escaping, and it
+// must be reachable, so it may not be claimed by a configuration endpoint or
+// sit under another endpoint.
+func validateEndpoints(resourceTypes []ResourceType) error {
+	seen := make(map[string]struct{}, len(resourceTypes))
+	for _, t := range resourceTypes {
+		switch {
+		case t.Endpoint == "", t.Endpoint == "/":
+			return fmt.Errorf("resource type %q has no endpoint", t.Name)
+		case !strings.HasPrefix(t.Endpoint, "/"):
+			return fmt.Errorf("endpoint %q of resource type %q must start with %q", t.Endpoint, t.Name, "/")
+		case strings.HasSuffix(t.Endpoint, "/"):
+			return fmt.Errorf("endpoint %q of resource type %q must not end with %q", t.Endpoint, t.Name, "/")
+		}
+
+		if escaped := (&url.URL{Path: t.Endpoint}).EscapedPath(); escaped != t.Endpoint {
+			return fmt.Errorf("endpoint %q of resource type %q must not need escaping", t.Endpoint, t.Name)
+		}
+
+		if isReserved(t.Endpoint) {
+			return fmt.Errorf("endpoint %q of resource type %q is reserved", t.Endpoint, t.Name)
+		}
+
+		// The version identifier precedes the endpoint and ServeHTTP strips it
+		// (RFC 7644 Section 3.13).
+		if t.Endpoint == versionSegment || strings.HasPrefix(t.Endpoint, versionSegment+"/") {
+			return fmt.Errorf("endpoint %q of resource type %q must not carry the %q version identifier", t.Endpoint, t.Name, versionSegment)
+		}
+
+		if _, ok := seen[t.Endpoint]; ok {
+			return fmt.Errorf("endpoint %q is used by more than one resource type", t.Endpoint)
+		}
+		seen[t.Endpoint] = struct{}{}
+	}
+
+	for _, t := range resourceTypes {
+		for other := range seen {
+			if other != t.Endpoint && strings.HasPrefix(t.Endpoint, other+"/") {
+				return fmt.Errorf("endpoint %q of resource type %q sits under endpoint %q", t.Endpoint, t.Name, other)
+			}
+		}
+	}
+	return nil
 }
 
 // Server represents a SCIM server which implements the HTTP-based SCIM protocol
@@ -76,7 +170,8 @@ type Server struct {
 	resourceTypes    []ResourceType
 	rootQueryHandler RootQueryHandler
 	log              Logger
-	baseURL          string
+	baseURL          *url.URL
+	baseURLErr       error
 }
 
 func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
@@ -92,6 +187,10 @@ func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 		return Server{}, fmt.Errorf("resource types not provided")
 	}
 
+	if err := validateEndpoints(args.ResourceTypes); err != nil {
+		return Server{}, err
+	}
+
 	s := &Server{
 		config:        *args.ServiceProviderConfig,
 		resourceTypes: args.ResourceTypes,
@@ -102,6 +201,10 @@ func NewServer(args *ServerArgs, opts ...ServerOption) (Server, error) {
 		opt(s)
 	}
 
+	if s.baseURLErr != nil {
+		return Server{}, s.baseURLErr
+	}
+
 	return *s, nil
 }
 
@@ -110,7 +213,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/scim+json")
 	w = &statusResponseWriter{ResponseWriter: w}
 
-	path := strings.TrimPrefix(r.URL.Path, "/v2")
+	path := trimVersion(r.URL.Path)
 
 	switch {
 	case (path == "/" || path == "") && r.Method == http.MethodGet:
@@ -301,12 +404,41 @@ type ServerArgs struct {
 
 type ServerOption func(*Server)
 
-// WithBaseURL configures the server to use absolute URIs for resource
-// locations. The base URL is prepended to all meta.location values and
-// Location headers. For example, "https://example.com/v2".
+// WithBaseURL prefixes all meta.location values and Location headers with
+// baseURL, for example "https://example.com/v2". It must be absolute or start
+// with "/", and carry no query or fragment. NewServer reports it otherwise.
+//
+// An empty baseURL leaves locations unprefixed, as "Users/0001".
 func WithBaseURL(baseURL string) ServerOption {
 	return func(s *Server) {
-		s.baseURL = strings.TrimRight(baseURL, "/")
+		// The last option wins, so an earlier base URL and its error are both
+		// dropped.
+		s.baseURL, s.baseURLErr = nil, nil
+
+		if baseURL == "" {
+			return
+		}
+
+		trimmed := strings.TrimRight(baseURL, "/")
+		u, err := url.Parse(trimmed)
+		if err != nil {
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: %w", baseURL, err)
+			return
+		}
+
+		switch {
+		case u.Opaque != "":
+			// "https:example.com/v2" has no path to extend, so the location
+			// would be dropped.
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must be hierarchical", baseURL)
+		case u.RawQuery != "" || u.ForceQuery || u.Fragment != "":
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must not have a query or fragment", baseURL)
+		case u.Scheme == "" && u.Host == "" && trimmed != "" && !strings.HasPrefix(trimmed, "/"):
+			// "example.com/v2" is a relative path reference, not a host.
+			s.baseURLErr = fmt.Errorf("invalid base URL %q: must be absolute or start with %q", baseURL, "/")
+		default:
+			s.baseURL = u
+		}
 	}
 }
 

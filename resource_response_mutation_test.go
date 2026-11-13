@@ -29,7 +29,6 @@ func TestResponseDoesNotMutateHandlerAttributes(t *testing.T) {
 				},
 			},
 		},
-		schema: schema.CoreUserSchema(),
 	}
 
 	s, err := scim.NewServer(&scim.ServerArgs{

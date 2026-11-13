@@ -121,6 +121,13 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
+
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
@@ -165,6 +172,13 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 			"error", err,
 		)
 		return
+	}
+
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
 	}
 
 	if resource.Meta.Version != "" {
@@ -213,6 +227,13 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	w.Header().Set("Location", location)
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
+
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
 	}
@@ -256,6 +277,13 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 			"error", err,
 		)
 		return
+	}
+
+	// RFC 7231 Section 3.1.4.2 allows a partial URI here and resolves it against
+	// the request URI, which would name another resource, so send only an
+	// absolute one.
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
 	}
 
 	if resource.Meta.Version != "" {
@@ -338,21 +366,30 @@ func (s Server) resourceSearchHandler(w http.ResponseWriter, r *http.Request, re
 // resourceTypeHandler receives an HTTP GET to retrieve individual resource types which can be returned by appending the
 // resource types name to the /ResourceTypes endpoint. For example: "/ResourceTypes/User".
 func (s Server) resourceTypeHandler(w http.ResponseWriter, r *http.Request, name string) {
-	var resourceType ResourceType
+	var (
+		resourceType ResourceType
+		found        bool
+	)
 	for _, r := range s.resourceTypes {
 		if r.Name == name {
-			resourceType = r
+			resourceType, found = r, true
 			break
 		}
 	}
 
-	if resourceType.Name != name {
+	if !found {
 		scimErr := errors.ScimErrorResourceNotFound(name)
 		s.errorHandler(w, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(resourceType.getRaw())
+	resource := resourceType.getRaw()
+	resource["meta"] = meta{
+		ResourceType: "ResourceType",
+		Location:     endpointLocation(s.baseURL, "ResourceTypes", resourceType.Name),
+	}
+
+	raw, err := json.Marshal(resource)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -384,7 +421,12 @@ func (s Server) resourceTypesHandler(w http.ResponseWriter, r *http.Request) {
 	start, end := clamp(params.StartIndex-1, params.Count, len(s.resourceTypes))
 	var resources []interface{}
 	for _, v := range s.resourceTypes[start:end] {
-		resources = append(resources, v.getRaw())
+		resource := v.getRaw()
+		resource["meta"] = meta{
+			ResourceType: "ResourceType",
+			Location:     endpointLocation(s.baseURL, "ResourceTypes", v.Name),
+		}
+		resources = append(resources, resource)
 	}
 
 	lr := listResponse{
@@ -560,13 +602,20 @@ func (s Server) rootSearchHandler(w http.ResponseWriter, r *http.Request) {
 // schema URI to the /Schemas endpoint. For example: "/Schemas/urn:ietf:params:scim:schemas:core:2.0:User".
 func (s Server) schemaHandler(w http.ResponseWriter, r *http.Request, id string) {
 	getSchema := s.getSchema(id)
-	if getSchema.ID != id {
+	// A schema is identified by its URI, which is never empty.
+	if id == "" || getSchema.ID != id {
 		scimErr := errors.ScimErrorResourceNotFound(id)
 		s.errorHandler(w, &scimErr)
 		return
 	}
 
-	raw, err := json.Marshal(getSchema)
+	resource := getSchema.ToMap()
+	resource["meta"] = meta{
+		ResourceType: "Schema",
+		Location:     endpointLocation(s.baseURL, "Schemas", getSchema.ID),
+	}
+
+	raw, err := json.Marshal(resource)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(
@@ -611,6 +660,11 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		}
+
+		resource["meta"] = meta{
+			ResourceType: "Schema",
+			Location:     endpointLocation(s.baseURL, "Schemas", v.ID),
+		}
 		resources = append(resources, resource)
 	}
 
@@ -643,7 +697,13 @@ func (s Server) schemasHandler(w http.ResponseWriter, r *http.Request) {
 // serviceProviderConfigHandler receives an HTTP GET to this endpoint will return a JSON structure that describes the
 // SCIM specification features available on a service provider.
 func (s Server) serviceProviderConfigHandler(w http.ResponseWriter, r *http.Request) {
-	raw, err := json.Marshal(s.config.getRaw())
+	config := s.config.getRaw()
+	config["meta"] = meta{
+		ResourceType: "ServiceProviderConfig",
+		Location:     endpointLocation(s.baseURL, "ServiceProviderConfig"),
+	}
+
+	raw, err := json.Marshal(config)
 	if err != nil {
 		s.errorHandler(w, &errors.ScimErrorInternal)
 		s.log.Error(

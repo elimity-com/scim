@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	internal "github.com/elimity-com/scim/filter"
-
 	"github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/errors"
 	"github.com/elimity-com/scim/optional"
@@ -57,7 +55,6 @@ func newTestServer(t *testing.T) scim.Server {
 						data: map[string]testData{
 							"0001": {attributes: map[string]interface{}{}},
 						},
-						schema: schema.CoreUserSchema(),
 					},
 				},
 				{
@@ -70,7 +67,6 @@ func newTestServer(t *testing.T) scim.Server {
 						data: map[string]testData{
 							"0001": {attributes: map[string]interface{}{}},
 						},
-						schema: schema.CoreGroupSchema(),
 					},
 				},
 			},
@@ -95,8 +91,6 @@ type testResourceHandler struct {
 	nextID int
 	// data is a map[id]resource in which the resources are stored.
 	data map[string]testData
-	// schema is the reference schema of the resource handler.
-	schema schema.Schema
 }
 
 func (h *testResourceHandler) Create(r *http.Request, attributes scim.ResourceAttributes) (scim.Resource, error) {
@@ -165,9 +159,10 @@ func (h testResourceHandler) GetAll(r *http.Request, params scim.ListRequestPara
 			break
 		}
 
-		validator := internal.NewFilterValidator(params.FilterValidator.GetFilter(), h.schema)
-		if err := validator.PassesFilter(v.attributes); err != nil {
-			continue
+		if params.FilterValidator != nil {
+			if err := params.FilterValidator.PassesFilter(v.attributes); err != nil {
+				continue
+			}
 		}
 
 		resources = append(resources, scim.Resource{

@@ -28,7 +28,8 @@ type ResourceType struct {
 	// Description is the resource type's human-readable description.
 	Description optional.String
 	// Endpoint is the resource type's HTTP-addressable endpoint relative to the Base URL of the service provider,
-	// e.g., "/Users".
+	// e.g., "/Users". It must be a rooted path and must not carry the "/v2" version identifier, which precedes the
+	// endpoint and is handled by the server (RFC 7644 Section 3.13).
 	Endpoint string
 	// Schema is the resource type's primary/base schema.
 	Schema schema.Schema

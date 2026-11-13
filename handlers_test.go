@@ -93,6 +93,78 @@ func TestInvalidRequests(t *testing.T) {
 	}
 }
 
+// A rejected base URL must fail construction rather than yield broken locations.
+func TestNewServerReportsBaseURL(t *testing.T) {
+	_, err := NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+		},
+		WithBaseURL("https:example.com/v2"),
+	)
+	if err == nil {
+		t.Error("expected an error for a base URL that is not hierarchical")
+	}
+
+	_, err = NewServer(
+		&ServerArgs{
+			ServiceProviderConfig: &ServiceProviderConfig{},
+			ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+		},
+		WithBaseURL("https://example.com/v2"),
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// An endpoint that cannot address a resource must fail construction. Before,
+// "" panicked in resourceLocation and "Users" silently produced "sers/0001".
+func TestNewServerValidatesEndpoints(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		endpoints []string
+		valid     bool
+	}{
+		{name: "rooted", endpoints: []string{"/Users", "/Groups"}, valid: true},
+		{name: "empty", endpoints: []string{""}},
+		{name: "root", endpoints: []string{"/"}},
+		{name: "not rooted", endpoints: []string{"Users"}},
+		{name: "trailing slash", endpoints: []string{"/Users/"}},
+		{name: "needs escaping", endpoints: []string{"/My Users"}},
+		{name: "duplicate", endpoints: []string{"/Users", "/Users"}},
+		{name: "reserved", endpoints: []string{"/Schemas"}},
+		{name: "reserved and unimplemented", endpoints: []string{"/Bulk"}},
+		{name: "reserved search", endpoints: []string{"/Users/.search"}},
+		{name: "under a reserved endpoint", endpoints: []string{"/Schemas/Custom"}},
+		{name: "under reserved resource types", endpoints: []string{"/ResourceTypes/Custom"}},
+		{name: "shares a reserved prefix", endpoints: []string{"/SchemasOfMine"}, valid: true},
+		{name: "version identifier", endpoints: []string{"/v2/Users"}},
+		{name: "other version", endpoints: []string{"/v3/Users"}, valid: true},
+		{name: "shares the version prefix", endpoints: []string{"/v2Users"}, valid: true},
+		{name: "under another endpoint", endpoints: []string{"/Users", "/Users/Admins"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceTypes := make([]ResourceType, 0, len(tt.endpoints))
+			for _, e := range tt.endpoints {
+				resourceTypes = append(resourceTypes, ResourceType{Endpoint: e})
+			}
+
+			_, err := NewServer(&ServerArgs{
+				ServiceProviderConfig: &ServiceProviderConfig{},
+				ResourceTypes:         resourceTypes,
+			})
+			if tt.valid {
+				assertNil(t, err, "err")
+				return
+			}
+			if err == nil {
+				t.Errorf("endpoints %q should have been rejected", tt.endpoints)
+			}
+		})
+	}
+}
+
 func TestResourceLocation(t *testing.T) {
 	users := ResourceType{Endpoint: "/Users"}
 	for _, tt := range []struct {
@@ -107,12 +179,107 @@ func TestResourceLocation(t *testing.T) {
 		{name: "percent under base", id: "50%", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/50%25"},
 		{name: "unicode under base", id: "Jöhn", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/J%C3%B6hn"},
 		{name: "empty under base", id: "", baseURL: "https://example.com/v2", want: "https://example.com/v2/Users/"},
-		{name: "base with a query", id: "Jane Doe", baseURL: "https://example.com/v2?x=1", want: "https://example.com/v2/Users/Jane%20Doe?x=1"},
 		{name: "base with an escaped path", id: "Jane Doe", baseURL: "https://example.com/my%20api", want: "https://example.com/my%20api/Users/Jane%20Doe"},
-		{name: "base that does not parse", id: "Jane Doe", baseURL: "://bad", want: "Users/Jane%20Doe"},
+		{name: "base with a trailing slash", id: "0001", baseURL: "https://example.com/v2/", want: "https://example.com/v2/Users/0001"},
+		{name: "root base", id: "0001", baseURL: "/", want: "/Users/0001"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assertEqual(t, tt.want, resourceLocation(users, tt.id, tt.baseURL))
+			var s Server
+			WithBaseURL(tt.baseURL)(&s)
+			assertNil(t, s.baseURLErr, "baseURLErr")
+			assertEqual(t, tt.want, resourceLocation(users, tt.id, s.baseURL))
+		})
+	}
+}
+
+// The configuration endpoints address one resource by identifier, so a request
+// that carries none is not found.
+func TestServerConfigurationEndpointsEmptyIdentifier(t *testing.T) {
+	for _, target := range []string{"/Schemas/", "/ResourceTypes/"} {
+		t.Run(target, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, target, nil)
+			rr := httptest.NewRecorder()
+			newTestServer(t).ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusNotFound, rr.Code)
+		})
+	}
+}
+
+// The configuration endpoints return resources, so they carry meta with a
+// location and a resource type (RFC 7643 Sections 8.5 to 8.7).
+func TestServerConfigurationEndpointsMeta(t *testing.T) {
+	user := "urn:ietf:params:scim:schemas:core:2.0:User"
+	for _, tt := range []struct {
+		name, target, resourceType, location string
+	}{
+		{
+			name: "service provider config", target: "/ServiceProviderConfig",
+			resourceType: "ServiceProviderConfig",
+			location:     "https://example.com/v2/ServiceProviderConfig",
+		},
+		{
+			name: "resource type", target: "/ResourceTypes/User",
+			resourceType: "ResourceType",
+			location:     "https://example.com/v2/ResourceTypes/User",
+		},
+		{
+			name: "schema", target: "/Schemas/" + user,
+			resourceType: "Schema",
+			location:     "https://example.com/v2/Schemas/" + user,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+
+			var resource map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+			resourceMeta, ok := resource["meta"].(map[string]interface{})
+			assertTypeOk(t, ok, "object")
+
+			assertEqual(t, tt.resourceType, resourceMeta["resourceType"])
+			assertEqual(t, tt.location, resourceMeta["location"])
+		})
+	}
+}
+
+// Listed resources carry the same meta as when they are fetched on their own.
+func TestServerConfigurationListsMeta(t *testing.T) {
+	for _, tt := range []struct {
+		name, target, resourceType string
+	}{
+		{name: "schemas", target: "/Schemas", resourceType: "Schema"},
+		{name: "resource types", target: "/ResourceTypes", resourceType: "ResourceType"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			var lr struct {
+				Resources []map[string]interface{} `json:"Resources"`
+			}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &lr))
+			if len(lr.Resources) == 0 {
+				t.Fatal("no resources returned")
+			}
+
+			for _, resource := range lr.Resources {
+				resourceMeta, ok := resource["meta"].(map[string]interface{})
+				assertTypeOk(t, ok, "object")
+
+				assertEqual(t, tt.resourceType, resourceMeta["resourceType"])
+				location, ok := resourceMeta["location"].(string)
+				assertTypeOk(t, ok, "string")
+				if !strings.HasPrefix(location, "https://example.com/v2/") {
+					t.Errorf("unexpected location %q", location)
+				}
+			}
 		})
 	}
 }
@@ -204,6 +371,52 @@ func TestServerMeEndpoint(t *testing.T) {
 	newTestServer(t).ServeHTTP(rr, req)
 
 	assertEqualStatusCode(t, http.StatusNotImplemented, rr.Code)
+}
+
+// Every response carrying a resource must repeat meta.location in the
+// Content-Location header (RFC 7643 Section 3.1).
+func TestServerResourceContentLocation(t *testing.T) {
+	patch := `{
+		"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+		"Operations": [{"op": "replace", "path": "active", "value": false}]
+	}`
+	replace := `{"userName": "test", "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]}`
+
+	for _, tt := range []struct {
+		name, method, target, body string
+	}{
+		{name: "get", method: http.MethodGet, target: "/Users/0001"},
+		{name: "put", method: http.MethodPut, target: "/Users/0001", body: replace},
+		{name: "patch", method: http.MethodPatch, target: "/Users/0001", body: patch},
+		{name: "post", method: http.MethodPost, target: "/Users", body: replace},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.target, strings.NewReader(tt.body))
+			rr := httptest.NewRecorder()
+			newTestServerWithBaseURL(t).ServeHTTP(rr, req)
+
+			var resource map[string]interface{}
+			assertUnmarshalNoError(t, json.Unmarshal(rr.Body.Bytes(), &resource))
+
+			meta, ok := resource["meta"].(map[string]interface{})
+			assertTypeOk(t, ok, "object")
+
+			location, ok := meta["location"].(string)
+			assertTypeOk(t, ok, "string")
+			if !strings.HasPrefix(location, "https://example.com/v2/Users/") {
+				t.Errorf("unexpected location %q", location)
+			}
+
+			assertEqual(t, location, rr.Header().Get("Content-Location"))
+
+			// A relative location resolves against the request URI, so it is
+			// not sent as Content-Location.
+			rr = httptest.NewRecorder()
+			req = httptest.NewRequest(tt.method, tt.target, strings.NewReader(tt.body))
+			newTestServer(t).ServeHTTP(rr, req)
+			assertEqual(t, "", rr.Header().Get("Content-Location"))
+		})
+	}
 }
 
 func TestServerResourceDeleteHandler(t *testing.T) {
@@ -1758,6 +1971,109 @@ func TestServerServiceProviderConfigHandler(t *testing.T) {
 			newTestServer(t).ServeHTTP(rr, req)
 
 			assertEqualStatusCode(t, http.StatusOK, rr.Code)
+		})
+	}
+}
+
+// Only a whole segment is the version identifier, so an endpoint that merely
+// starts with it keeps its path (RFC 7644 Section 3.13).
+func TestServerVersionSegment(t *testing.T) {
+	s, err := NewServer(&ServerArgs{
+		ServiceProviderConfig: &ServiceProviderConfig{},
+		ResourceTypes: []ResourceType{
+			{
+				ID:       optional.NewString("User"),
+				Name:     "User",
+				Endpoint: "/v2Users",
+				Schema:   getUserSchema(),
+				Handler:  newTestResourceHandler(),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name, target string
+		want         int
+	}{
+		{name: "endpoint", target: "/v2Users/0001", want: http.StatusOK},
+		{name: "endpoint under the version identifier", target: "/v2/v2Users/0001", want: http.StatusOK},
+		{name: "endpoint with the identifier stripped", target: "/Users/0001", want: http.StatusNotFound},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			rr := httptest.NewRecorder()
+			s.ServeHTTP(rr, req)
+
+			assertEqualStatusCode(t, tt.want, rr.Code)
+		})
+	}
+}
+
+func TestWithBaseURL(t *testing.T) {
+	for _, tt := range []struct {
+		name, baseURL string
+		valid         bool
+	}{
+		{name: "empty", baseURL: "", valid: true},
+		{name: "absolute", baseURL: "https://example.com/v2", valid: true},
+		{name: "path only", baseURL: "/v2", valid: true},
+		{name: "network path", baseURL: "//example.com/v2", valid: true},
+		{name: "query", baseURL: "https://example.com/v2?x=1"},
+		{name: "fragment", baseURL: "https://example.com/v2#frag"},
+		{name: "missing slashes", baseURL: "https:example.com/v2"},
+		{name: "missing scheme", baseURL: "example.com/v2"},
+		{name: "does not parse", baseURL: "://bad"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var s Server
+			WithBaseURL(tt.baseURL)(&s)
+			if tt.valid {
+				assertNil(t, s.baseURLErr, "baseURLErr")
+				return
+			}
+			if s.baseURLErr == nil {
+				t.Errorf("base URL %q should have been rejected", tt.baseURL)
+			}
+		})
+	}
+}
+
+// The last WithBaseURL wins, so an earlier base URL and the error it reported
+// are both dropped.
+func TestWithBaseURLLastWins(t *testing.T) {
+	notHierarchical := "https:example.com/v2"
+	for _, tt := range []struct {
+		name     string
+		baseURLs []string
+		want     string
+		wantErr  bool
+	}{
+		{name: "valid after invalid", baseURLs: []string{notHierarchical, "https://example.com/v2"}, want: "https://example.com/v2/Users/0001"},
+		{name: "empty after invalid", baseURLs: []string{notHierarchical, ""}, want: "Users/0001"},
+		{name: "invalid after valid", baseURLs: []string{"https://example.com/v2", notHierarchical}, wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := make([]ServerOption, 0, len(tt.baseURLs))
+			for _, baseURL := range tt.baseURLs {
+				opts = append(opts, WithBaseURL(baseURL))
+			}
+
+			s, err := NewServer(&ServerArgs{
+				ServiceProviderConfig: &ServiceProviderConfig{},
+				ResourceTypes:         []ResourceType{{Endpoint: "/Users"}},
+			}, opts...)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("base URLs %q should have been rejected", tt.baseURLs)
+				}
+				return
+			}
+
+			assertNil(t, err, "err")
+			assertEqual(t, tt.want, resourceLocation(ResourceType{Endpoint: "/Users"}, "0001", s.baseURL))
 		})
 	}
 }

@@ -2,6 +2,7 @@ package scim
 
 import (
 	"encoding/json"
+	"net/url"
 	"time"
 
 	"github.com/elimity-com/scim/schema"
@@ -97,7 +98,7 @@ func (p Page) rawResources() []interface{} {
 	return resources
 }
 
-func (p Page) resources(resourceType ResourceType, baseURL string) []interface{} {
+func (p Page) resources(resourceType ResourceType, baseURL *url.URL) []interface{} {
 	// If the page.Resources is nil, then it will also be represented as a `null` in the response.
 	// Otherwise is it is an empty slice then it will result in an empty array `[]`.
 	if len(p.Resources) == 0 {
