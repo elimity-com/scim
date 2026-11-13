@@ -121,8 +121,11 @@ func (s Server) resourceGetHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	// meta.location must equal Content-Location (RFC 7643 Section 3.1).
-	w.Header().Set("Content-Location", location)
+	// Content-Location must be absolute, as it resolves against the request URI
+	// (RFC 7231 Section 3.1.4.2).
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
 
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
@@ -170,8 +173,11 @@ func (s Server) resourcePatchHandler(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	// meta.location must equal Content-Location (RFC 7643 Section 3.1).
-	w.Header().Set("Content-Location", location)
+	// Content-Location must be absolute, as it resolves against the request URI
+	// (RFC 7231 Section 3.1.4.2).
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
 
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
@@ -219,8 +225,11 @@ func (s Server) resourcePostHandler(w http.ResponseWriter, r *http.Request, reso
 	}
 
 	w.Header().Set("Location", location)
-	// meta.location must equal Content-Location (RFC 7643 Section 3.1).
-	w.Header().Set("Content-Location", location)
+	// Content-Location must be absolute, as it resolves against the request URI
+	// (RFC 7231 Section 3.1.4.2).
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
 
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)
@@ -267,8 +276,11 @@ func (s Server) resourcePutHandler(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	// meta.location must equal Content-Location (RFC 7643 Section 3.1).
-	w.Header().Set("Content-Location", location)
+	// Content-Location must be absolute, as it resolves against the request URI
+	// (RFC 7231 Section 3.1.4.2).
+	if s.baseURL != nil {
+		w.Header().Set("Content-Location", location)
+	}
 
 	if resource.Meta.Version != "" {
 		w.Header().Set("Etag", resource.Meta.Version)

@@ -17,6 +17,13 @@ const (
 	fallbackCount     = 100
 )
 
+// reservedEndpoints are the endpoints defined by RFC 7644 Table 2. A resource
+// type must not claim one of them, including the ones this server does not
+// implement yet.
+var reservedEndpoints = []string{
+	"/Bulk", "/Me", "/ResourceTypes", "/Schemas", "/ServiceProviderConfig",
+}
+
 // endpointLocation returns the location of ids under endpoint and baseURL. The
 // endpoint is used as is, every id is escaped. A nil baseURL yields the path on
 // its own, without a prefix.
@@ -79,8 +86,9 @@ func resourceLocation(resourceType ResourceType, id string, baseURL *url.URL) st
 }
 
 // validateEndpoints reports a resource type endpoint that cannot address a
-// resource. Routing matches it against the request path and resourceLocation
-// puts it in a URL, so it must be rooted and usable as a path unescaped.
+// resource. An endpoint must be a rooted path that needs no escaping, and it
+// must be reachable, so it may not be claimed by a configuration endpoint or
+// sit under another endpoint.
 func validateEndpoints(resourceTypes []ResourceType) error {
 	seen := make(map[string]struct{}, len(resourceTypes))
 	for _, t := range resourceTypes {
@@ -97,10 +105,22 @@ func validateEndpoints(resourceTypes []ResourceType) error {
 			return fmt.Errorf("endpoint %q of resource type %q must not need escaping", t.Endpoint, t.Name)
 		}
 
+		if contains(reservedEndpoints, t.Endpoint) || strings.HasSuffix(t.Endpoint, "/.search") {
+			return fmt.Errorf("endpoint %q of resource type %q is reserved", t.Endpoint, t.Name)
+		}
+
 		if _, ok := seen[t.Endpoint]; ok {
 			return fmt.Errorf("endpoint %q is used by more than one resource type", t.Endpoint)
 		}
 		seen[t.Endpoint] = struct{}{}
+	}
+
+	for _, t := range resourceTypes {
+		for other := range seen {
+			if other != t.Endpoint && strings.HasPrefix(t.Endpoint, other+"/") {
+				return fmt.Errorf("endpoint %q of resource type %q sits under endpoint %q", t.Endpoint, t.Name, other)
+			}
+		}
 	}
 	return nil
 }

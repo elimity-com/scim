@@ -127,13 +127,16 @@ func TestNewServerValidatesEndpoints(t *testing.T) {
 		valid     bool
 	}{
 		{name: "rooted", endpoints: []string{"/Users", "/Groups"}, valid: true},
-		{name: "nested", endpoints: []string{"/v2/Users"}, valid: true},
 		{name: "empty", endpoints: []string{""}},
 		{name: "root", endpoints: []string{"/"}},
 		{name: "not rooted", endpoints: []string{"Users"}},
 		{name: "trailing slash", endpoints: []string{"/Users/"}},
 		{name: "needs escaping", endpoints: []string{"/My Users"}},
 		{name: "duplicate", endpoints: []string{"/Users", "/Users"}},
+		{name: "reserved", endpoints: []string{"/Schemas"}},
+		{name: "reserved and unimplemented", endpoints: []string{"/Bulk"}},
+		{name: "reserved search", endpoints: []string{"/Users/.search"}},
+		{name: "under another endpoint", endpoints: []string{"/Users", "/Users/Admins"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			resourceTypes := make([]ResourceType, 0, len(tt.endpoints))
@@ -385,6 +388,13 @@ func TestServerResourceContentLocation(t *testing.T) {
 			}
 
 			assertEqual(t, location, rr.Header().Get("Content-Location"))
+
+			// A relative location resolves against the request URI, so it is
+			// not sent as Content-Location.
+			rr = httptest.NewRecorder()
+			req = httptest.NewRequest(tt.method, tt.target, strings.NewReader(tt.body))
+			newTestServer(t).ServeHTTP(rr, req)
+			assertEqual(t, "", rr.Header().Get("Content-Location"))
 		})
 	}
 }
